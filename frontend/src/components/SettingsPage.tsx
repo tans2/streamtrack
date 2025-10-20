@@ -51,7 +51,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
     setSettings(prev => ({
       ...prev,
       [category]: {
-        ...prev[category as keyof typeof prev],
+        ...prev[category as keyof typeof prev] as Record<string, any>,
         [field]: value
       }
     }));
@@ -253,7 +253,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 </div>
                 <Switch
                   checked={settings.notifications.newEpisodes}
-                  onCheckedChange={(checked) => handleNestedChange('notifications', 'newEpisodes', checked)}
+                  onCheckedChange={(checked: boolean) => handleNestedChange('notifications', 'newEpisodes', checked)}
                 />
               </div>
               
@@ -264,7 +264,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 </div>
                 <Switch
                   checked={settings.notifications.seasonStart}
-                  onCheckedChange={(checked) => handleNestedChange('notifications', 'seasonStart', checked)}
+                  onCheckedChange={(checked: boolean) => handleNestedChange('notifications', 'seasonStart', checked)}
                 />
               </div>
               
@@ -275,7 +275,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 </div>
                 <Switch
                   checked={settings.notifications.friendActivity}
-                  onCheckedChange={(checked) => handleNestedChange('notifications', 'friendActivity', checked)}
+                  onCheckedChange={(checked: boolean) => handleNestedChange('notifications', 'friendActivity', checked)}
                   disabled
                 />
               </div>
@@ -287,7 +287,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 </div>
                 <Switch
                   checked={settings.notifications.weeklyDigest}
-                  onCheckedChange={(checked) => handleNestedChange('notifications', 'weeklyDigest', checked)}
+                  onCheckedChange={(checked: boolean) => handleNestedChange('notifications', 'weeklyDigest', checked)}
                 />
               </div>
             </CardContent>
@@ -306,7 +306,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 </div>
                 <Switch
                   checked={settings.privacy.publicWatchlist}
-                  onCheckedChange={(checked) => handleNestedChange('privacy', 'publicWatchlist', checked)}
+                  onCheckedChange={(checked: boolean) => handleNestedChange('privacy', 'publicWatchlist', checked)}
                 />
               </div>
               
@@ -317,7 +317,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 </div>
                 <Switch
                   checked={settings.privacy.allowFriendRequests}
-                  onCheckedChange={(checked) => handleNestedChange('privacy', 'allowFriendRequests', checked)}
+                  onCheckedChange={(checked: boolean) => handleNestedChange('privacy', 'allowFriendRequests', checked)}
                 />
               </div>
               
@@ -328,7 +328,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 </div>
                 <Switch
                   checked={settings.privacy.shareWatchingStatus}
-                  onCheckedChange={(checked) => handleNestedChange('privacy', 'shareWatchingStatus', checked)}
+                  onCheckedChange={(checked: boolean) => handleNestedChange('privacy', 'shareWatchingStatus', checked)}
                 />
               </div>
             </CardContent>
