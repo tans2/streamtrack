@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Streaming content tracking web app",
   "scripts": {
+    "start": "npm run build && npm run dev",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",
@@ -15,6 +16,10 @@
     "concurrently": "^8.2.2"
   },
   "dependencies": {
+    "@radix-ui/react-accordion": "^1.2.12",
+    "@radix-ui/react-alert-dialog": "^1.1.15",
+    "@radix-ui/react-aspect-ratio": "^1.1.7",
+    "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-label": "^2.1.2",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.1.2",
@@ -23,6 +28,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.544.0",
+    "react-day-picker": "^9.11.1",
     "react-hook-form": "^7.55.0",
     "recharts": "^3.2.1",
     "sonner": "^2.0.3",
