@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ToastProvider } from '@/components/ui/toast-provider';
 
 export const metadata: Metadata = {
   title: 'WallyWatch - Track Your Favorite Shows',
@@ -17,6 +18,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100">
         <AuthProvider>
           {children}
+          <ToastProvider />
         </AuthProvider>
       </body>
     </html>

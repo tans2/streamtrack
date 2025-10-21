@@ -1,74 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { ArrowLeft, Search, Star, Plus } from "lucide-react";
+import { Skeleton } from "./ui/skeleton";
+import { ArrowLeft, Search, Star, Plus, Loader2 } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { showService, Show } from '@/services/showService';
+import { watchlistService } from '@/services/watchlistService';
+import { toast } from 'sonner';
 
 interface SearchPageProps {
   onNavigate: (page: string) => void;
 }
-
-// Mock show data
-const mockShows = [
-  {
-    id: 1,
-    title: "Stranger Things",
-    rating: 8.7,
-    platform: "Netflix",
-    country: "US",
-    tier: "subscription",
-    poster: "https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=300&h=450&fit=crop"
-  },
-  {
-    id: 2,
-    title: "The Mandalorian",
-    rating: 8.8,
-    platform: "Disney+",
-    country: "US",
-    tier: "subscription",
-    poster: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=450&fit=crop"
-  },
-  {
-    id: 3,
-    title: "The Boys",
-    rating: 8.4,
-    platform: "Prime Video",
-    country: "US",
-    tier: "subscription",
-    poster: "https://images.unsplash.com/photo-1489599613113-21046ce2c11b?w=300&h=450&fit=crop"
-  },
-  {
-    id: 4,
-    title: "House of the Dragon",
-    rating: 8.2,
-    platform: "HBO Max",
-    country: "US",
-    tier: "subscription",
-    poster: "https://images.unsplash.com/photo-1533613220915-609f661a6fe1?w=300&h=450&fit=crop"
-  },
-  {
-    id: 5,
-    title: "Ted Lasso",
-    rating: 8.9,
-    platform: "Apple TV+",
-    country: "US",
-    tier: "subscription",
-    poster: "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=300&h=450&fit=crop"
-  },
-  {
-    id: 6,
-    title: "Yellowstone",
-    rating: 8.6,
-    platform: "Paramount+",
-    country: "US",
-    tier: "subscription",
-    poster: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=300&h=450&fit=crop"
-  }
-];
 
 const platforms = ['All Platforms', 'Netflix', 'Disney+', 'Prime Video', 'HBO Max', 'Apple TV+', 'Paramount+', 'Hulu', 'Peacock', 'YouTube TV', 'Fubo TV'];
 const countries = ['US', 'UK', 'Canada', 'Australia', 'Germany', 'France'];
@@ -79,22 +27,74 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
   const [selectedPlatform, setSelectedPlatform] = useState('All Platforms');
   const [selectedCountry, setSelectedCountry] = useState('US');
   const [selectedTier, setSelectedTier] = useState('any');
-  const [filteredShows, setFilteredShows] = useState(mockShows);
+  const [shows, setShows] = useState<Show[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [addingToWatchlist, setAddingToWatchlist] = useState<number | null>(null);
 
-  const handleSearch = () => {
-    let filtered = mockShows.filter(show => 
-      show.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  const { user } = useAuth();
+  const router = useRouter();
 
-    if (selectedPlatform !== 'All Platforms') {
-      filtered = filtered.filter(show => show.platform === selectedPlatform);
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      toast.error('Please enter a search query');
+      return;
     }
 
-    if (selectedTier !== 'any') {
-      filtered = filtered.filter(show => show.tier === selectedTier);
+    setLoading(true);
+    try {
+      const filters = {
+        country: selectedCountry,
+        subscription: selectedTier === 'any' ? undefined : selectedTier,
+        limit: 20,
+        seasonMode: 'compact' as const,
+      };
+
+      const result = await showService.searchShows(searchQuery, filters);
+      // The service now returns Show[] directly
+      const showsData = Array.isArray(result) ? result : [];
+      setShows(showsData);
+      
+      if (showsData.length === 0) {
+        toast.info('No shows found. Try a different search term.');
+      }
+    } catch (error: any) {
+      console.error('Search error:', error);
+      toast.error(error.message || 'Search failed');
+      setShows([]); // Reset shows to empty array on error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddToWatchlist = async (tmdbId: number, title: string) => {
+    if (!user) {
+      toast.error('Please sign in to add shows to your watchlist');
+      router.push('/auth');
+      return;
     }
 
-    setFilteredShows(filtered);
+    setAddingToWatchlist(tmdbId);
+    try {
+      await watchlistService.addToWatchlist(tmdbId);
+      toast.success(`"${title}" added to your watchlist!`);
+    } catch (error: any) {
+      console.error('Add to watchlist error:', error);
+      toast.error(error.message || 'Failed to add to watchlist');
+    } finally {
+      setAddingToWatchlist(null);
+    }
+  };
+
+  const getProviderNames = (show: Show) => {
+    if (!show.providers || show.providers.length === 0) {
+      return ['Unknown Platform'];
+    }
+    return show.providers.map(p => p.provider_name).slice(0, 3);
+  };
+
+  const getPosterUrl = (posterPath?: string) => {
+    if (!posterPath) return '';
+    return `https://image.tmdb.org/t/p/w300${posterPath}`;
   };
 
   return (
@@ -108,7 +108,7 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
                 variant="ghost" 
                 size="sm"
                 className="text-primary hover:text-primary hover:bg-primary/10 mr-4"
-                onClick={() => onNavigate('landing')}
+                onClick={() => router.push('/')}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
@@ -119,14 +119,14 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
               <Button 
                 variant="ghost" 
                 className="text-primary hover:text-primary hover:bg-primary/10"
-                onClick={() => onNavigate('profile')}
+                onClick={() => router.push('/profile')}
               >
                 My Watchlist
               </Button>
               <Button 
                 variant="ghost" 
                 className="text-primary hover:text-primary hover:bg-primary/10"
-                onClick={() => onNavigate('settings')}
+                onClick={() => router.push('/settings')}
               >
                 Settings
               </Button>
@@ -148,6 +148,7 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 />
               </div>
               
@@ -201,9 +202,14 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
               
               <Button 
                 onClick={handleSearch}
+                disabled={loading}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
-                <Search className="w-4 h-4 mr-2" />
+                {loading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4 mr-2" />
+                )}
                 Search
               </Button>
             </div>
@@ -212,39 +218,73 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
 
         {/* Results */}
         <div>
-          <h2 className="text-xl mb-6 text-foreground">Search Results ({filteredShows.length} shows found)</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredShows.map(show => (
-              <Card key={show.id} className="bg-card border-border hover:border-primary transition-colors shadow-lg">
-                <CardContent className="p-4">
-                  <div className="aspect-[2/3] mb-4 rounded-lg overflow-hidden bg-muted">
-                    <ImageWithFallback 
-                      src={show.poster}
-                      alt={show.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <h3 className="text-card-foreground mb-2">{show.title}</h3>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center">
-                      <Star className="w-4 h-4 text-yellow-600 mr-1" />
-                      <span className="text-muted-foreground">{show.rating}</span>
+          <h2 className="text-xl mb-6 text-foreground">
+            Search Results {shows && shows.length > 0 && `(${shows.length} shows found)`}
+          </h2>
+          
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Card key={i} className="bg-card border-border shadow-lg">
+                  <CardContent className="p-4">
+                    <Skeleton className="aspect-[2/3] mb-4 rounded-lg" />
+                    <Skeleton className="h-4 mb-2" />
+                    <Skeleton className="h-3 w-1/2 mb-3" />
+                    <Skeleton className="h-8 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : shows && shows.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {shows.map(show => (
+                <Card key={show.tmdb_id} className="bg-card border-border hover:border-primary transition-colors shadow-lg">
+                  <CardContent className="p-4">
+                    <div className="aspect-[2/3] mb-4 rounded-lg overflow-hidden bg-muted">
+                      <ImageWithFallback 
+                        src={getPosterUrl(show.poster_path)}
+                        alt={show.title}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                    <Badge variant="outline" className="border-primary/50 text-foreground">
-                      {show.platform}
-                    </Badge>
-                  </div>
-                  <Button 
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                    size="sm"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add to Watchlist
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    <h3 className="text-card-foreground mb-2 line-clamp-2">{show.title}</h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center">
+                        <Star className="w-4 h-4 text-yellow-600 mr-1" />
+                        <span className="text-muted-foreground">{show.rating?.toFixed(1) || 'N/A'}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {getProviderNames(show).map((platform, index) => (
+                          <Badge key={index} variant="outline" className="border-primary/50 text-foreground text-xs">
+                            {platform}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <Button 
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                      size="sm"
+                      onClick={() => handleAddToWatchlist(show.tmdb_id, show.title)}
+                      disabled={addingToWatchlist === show.tmdb_id}
+                    >
+                      {addingToWatchlist === show.tmdb_id ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Plus className="w-4 h-4 mr-2" />
+                      )}
+                      Add to Watchlist
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground text-lg">
+                {searchQuery ? 'No shows found. Try a different search term.' : 'Enter a search term to find shows.'}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

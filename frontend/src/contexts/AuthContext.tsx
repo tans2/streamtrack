@@ -1,25 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-  subscription_tier: 'free' | 'premium';
-  region: string;
-  connected_platforms: string[];
-  notification_preferences: {
-    email: boolean;
-    push: boolean;
-    new_episodes: boolean;
-    new_seasons: boolean;
-  };
-  privacy_settings: {
-    data_export_enabled: boolean;
-    data_delete_enabled: boolean;
-  };
-}
+import { authService, User } from '@/services/authService';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
@@ -53,25 +36,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const verifyToken = async (token: string) => {
     try {
-      const response = await fetch('http://localhost:5001/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.data);
-      } else {
-        // Token is invalid, remove it
-        localStorage.removeItem('streamtrack_token');
-        setToken(null);
-      }
+      const userData = await authService.getCurrentUser();
+      setUser(userData);
     } catch (error) {
       console.error('Token verification failed:', error);
       localStorage.removeItem('streamtrack_token');
       setToken(null);
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -79,82 +50,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch('http://localhost:5001/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-
-      setUser(data.data.user);
-      setToken(data.data.token);
-      localStorage.setItem('streamtrack_token', data.data.token);
-    } catch (error) {
+      const result = await authService.login(email, password);
+      setUser(result.user);
+      setToken(result.token);
+      localStorage.setItem('streamtrack_token', result.token);
+      toast.success('Welcome back!');
+    } catch (error: any) {
       console.error('Login error:', error);
+      toast.error(error.message || 'Login failed');
       throw error;
     }
   };
 
   const register = async (email: string, password: string, name?: string, initialShows?: number[]) => {
     try {
-      const response = await fetch('http://localhost:5001/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password, name, initialShows })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
-
-      setUser(data.data.user);
-      setToken(data.data.token);
-      localStorage.setItem('streamtrack_token', data.data.token);
-    } catch (error) {
+      const result = await authService.register(email, password, name, initialShows);
+      setUser(result.user);
+      setToken(result.token);
+      localStorage.setItem('streamtrack_token', result.token);
+      toast.success('Account created successfully!');
+    } catch (error: any) {
       console.error('Registration error:', error);
+      toast.error(error.message || 'Registration failed');
       throw error;
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('streamtrack_token');
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('streamtrack_token');
+      toast.success('Logged out successfully');
+    }
   };
 
   const updatePreferences = async (updates: Partial<User>) => {
     if (!token) throw new Error('Not authenticated');
 
     try {
-      const response = await fetch('http://localhost:5001/api/auth/preferences', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updates)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update preferences');
-      }
-
-      setUser(data.data);
-    } catch (error) {
+      const updatedUser = await authService.updatePreferences(updates);
+      setUser(updatedUser);
+      toast.success('Preferences updated successfully');
+    } catch (error: any) {
       console.error('Update preferences error:', error);
+      toast.error(error.message || 'Failed to update preferences');
       throw error;
     }
   };
@@ -163,23 +107,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!token) throw new Error('Not authenticated');
 
     try {
-      const response = await fetch('http://localhost:5001/api/auth/upgrade-premium', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to upgrade to premium');
-      }
-
-      setUser(data.data);
-    } catch (error) {
+      const updatedUser = await authService.upgradeToPremium();
+      setUser(updatedUser);
+      toast.success('Welcome to Premium!');
+    } catch (error: any) {
       console.error('Upgrade premium error:', error);
+      toast.error(error.message || 'Failed to upgrade to premium');
       throw error;
     }
   };

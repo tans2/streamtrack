@@ -1,101 +1,73 @@
+import { useState, useEffect } from 'react';
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
-import { ArrowLeft, Settings, Search, Star, Play, Calendar } from "lucide-react";
+import { Skeleton } from "./ui/skeleton";
+import { ArrowLeft, Settings, Search, Star, Play, Calendar, Loader2 } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { watchlistService, WatchlistItem } from '@/services/watchlistService';
+import { toast } from 'sonner';
 
 interface ProfilePageProps {
   onNavigate: (page: string) => void;
 }
 
-// Mock user watchlist data
-const userWatchlist = [
-  {
-    id: 1,
-    title: "Stranger Things",
-    poster: "https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=300&h=450&fit=crop",
-    seasons: 4,
-    currentSeason: 4,
-    currentEpisode: 9,
-    totalEpisodes: 34,
-    rating: 8.7,
-    platform: "Netflix",
-    nextEpisode: null,
-    status: "completed"
-  },
-  {
-    id: 2,
-    title: "The Mandalorian",
-    poster: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=450&fit=crop",
-    seasons: 3,
-    currentSeason: 2,
-    currentEpisode: 4,
-    totalEpisodes: 24,
-    rating: 8.8,
-    platform: "Disney+",
-    nextEpisode: "2025-01-15",
-    status: "watching"
-  },
-  {
-    id: 3,
-    title: "House of the Dragon",
-    poster: "https://images.unsplash.com/photo-1533613220915-609f661a6fe1?w=300&h=450&fit=crop",
-    seasons: 2,
-    currentSeason: 1,
-    currentEpisode: 3,
-    totalEpisodes: 18,
-    rating: 8.2,
-    platform: "HBO Max",
-    nextEpisode: "2025-02-20",
-    status: "watching"
-  },
-  {
-    id: 4,
-    title: "Ted Lasso",
-    poster: "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=300&h=450&fit=crop",
-    seasons: 3,
-    currentSeason: 3,
-    currentEpisode: 12,
-    totalEpisodes: 34,
-    rating: 8.9,
-    platform: "Apple TV+",
-    nextEpisode: null,
-    status: "completed"
-  },
-  {
-    id: 5,
-    title: "The Boys",
-    poster: "https://images.unsplash.com/photo-1489599613113-21046ce2c11b?w=300&h=450&fit=crop",
-    seasons: 4,
-    currentSeason: 1,
-    currentEpisode: 1,
-    totalEpisodes: 32,
-    rating: 8.4,
-    platform: "Prime Video",
-    nextEpisode: null,
-    status: "plan to watch"
-  },
-  {
-    id: 6,
-    title: "Yellowstone",
-    poster: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=300&h=450&fit=crop",
-    seasons: 5,
-    currentSeason: 2,
-    currentEpisode: 8,
-    totalEpisodes: 47,
-    rating: 8.6,
-    platform: "Paramount+",
-    nextEpisode: "2025-01-28",
-    status: "watching"
-  }
-];
-
 export default function ProfilePage({ onNavigate }: ProfilePageProps) {
-  const userName = "Alex Smith";
-  const watchingShows = userWatchlist.filter(show => show.status === "watching");
-  const completedShows = userWatchlist.filter(show => show.status === "completed");
-  const planToWatchShows = userWatchlist.filter(show => show.status === "plan to watch");
+  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+
+  const { user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    loadWatchlist();
+  }, []);
+
+  const loadWatchlist = async () => {
+    setLoading(true);
+    try {
+      const data = await watchlistService.getWatchlist();
+      setWatchlist(data);
+    } catch (error: any) {
+      console.error('Error loading watchlist:', error);
+      toast.error(error.message || 'Failed to load watchlist');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStatusUpdate = async (showId: string, newStatus: string) => {
+    setUpdatingStatus(showId);
+    try {
+      await watchlistService.updateShowStatus(showId, { status: newStatus as any });
+      toast.success('Status updated successfully');
+      loadWatchlist(); // Reload to get updated data
+    } catch (error: any) {
+      console.error('Error updating status:', error);
+      toast.error(error.message || 'Failed to update status');
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
+  const handleRemoveFromWatchlist = async (showId: string, title: string) => {
+    try {
+      await watchlistService.removeFromWatchlist(showId);
+      toast.success(`"${title}" removed from watchlist`);
+      loadWatchlist(); // Reload to get updated data
+    } catch (error: any) {
+      console.error('Error removing from watchlist:', error);
+      toast.error(error.message || 'Failed to remove from watchlist');
+    }
+  };
+
+  const watchingShows = watchlist.filter(item => item.watch_status === 'watching');
+  const completedShows = watchlist.filter(item => item.watch_status === 'completed');
+  const planToWatchShows = watchlist.filter(item => item.watch_status === 'want_to_watch');
 
   const calculateProgress = (current: number, total: number) => {
     return Math.round((current / total) * 100);
@@ -105,15 +77,62 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     const colors = {
       watching: "bg-green-600",
       completed: "bg-blue-600", 
-      "plan to watch": "bg-yellow-600"
+      want_to_watch: "bg-yellow-600",
+      dropped: "bg-red-600"
+    };
+    
+    const labels = {
+      watching: "Watching",
+      completed: "Completed",
+      want_to_watch: "Plan to Watch",
+      dropped: "Dropped"
     };
     
     return (
       <Badge className={`${colors[status as keyof typeof colors]} text-white border-0`}>
-        {status === "plan to watch" ? "Plan to Watch" : status.charAt(0).toUpperCase() + status.slice(1)}
+        {labels[status as keyof typeof labels]}
       </Badge>
     );
   };
+
+  const getPosterUrl = (posterPath?: string) => {
+    if (!posterPath) return '';
+    return `https://image.tmdb.org/t/p/w300${posterPath}`;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen text-foreground">
+        <div className="border-b border-border bg-card/50">
+          <div className="container mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Skeleton className="h-8 w-20 mr-4" />
+                <Skeleton className="h-8 w-32" />
+              </div>
+              <div className="flex items-center space-x-4">
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-8 w-20" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="container mx-auto px-6 py-8">
+          <Skeleton className="h-12 w-64 mb-8" />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full" />
+            ))}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <Skeleton key={i} className="aspect-[2/3] w-full" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen text-foreground">
@@ -126,7 +145,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                 variant="ghost" 
                 size="sm"
                 className="text-primary hover:text-primary hover:bg-primary/10 mr-4"
-                onClick={() => onNavigate('landing')}
+                onClick={() => router.push('/')}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
@@ -137,7 +156,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
               <Button 
                 variant="ghost" 
                 className="text-primary hover:text-primary hover:bg-primary/10"
-                onClick={() => onNavigate('search')}
+                onClick={() => router.push('/search')}
               >
                 <Search className="w-4 h-4 mr-2" />
                 Search Shows
@@ -145,7 +164,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
               <Button 
                 variant="ghost" 
                 className="text-primary hover:text-primary hover:bg-primary/10"
-                onClick={() => onNavigate('settings')}
+                onClick={() => router.push('/settings')}
               >
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
@@ -158,11 +177,13 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
       <div className="container mx-auto px-6 py-8">
         {/* User Stats */}
         <div className="mb-8">
-          <h2 className="text-3xl mb-4 text-foreground">Welcome back, {userName}! 👋</h2>
+          <h2 className="text-3xl mb-4 text-foreground">
+            Welcome back, {user?.name || 'User'}! 👋
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="bg-card border-border shadow-lg">
               <CardContent className="p-4 text-center">
-                <div className="text-2xl mb-1 text-primary">{userWatchlist.length}</div>
+                <div className="text-2xl mb-1 text-primary">{watchlist.length}</div>
                 <div className="text-muted-foreground">Total Shows</div>
               </CardContent>
             </Card>
@@ -192,43 +213,53 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
           <div className="mb-8">
             <h3 className="text-2xl mb-4 text-foreground">Currently Watching</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {watchingShows.map(show => (
-                <Card key={show.id} className="bg-card border-border hover:border-primary transition-colors shadow-lg">
+              {watchingShows.map(item => (
+                <Card key={item.id} className="bg-card border-border hover:border-primary transition-colors shadow-lg">
                   <CardContent className="p-4">
                     <div className="flex space-x-4">
                       <div className="w-20 h-28 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                         <ImageWithFallback 
-                          src={show.poster}
-                          alt={show.title}
+                          src={getPosterUrl(item.shows.poster_path)}
+                          alt={item.shows.title}
                           className="w-full h-full object-cover"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-card-foreground mb-2 truncate">{show.title}</h4>
+                        <h4 className="text-card-foreground mb-2 truncate">{item.shows.title}</h4>
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Season {show.currentSeason}, Episode {show.currentEpisode}</span>
-                            <StatusBadge status={show.status} />
+                            <span className="text-muted-foreground">
+                              Season {item.current_season}, Episode {item.current_episode}
+                            </span>
+                            <StatusBadge status={item.watch_status} />
                           </div>
-                          <Progress 
-                            value={calculateProgress(show.currentEpisode + (show.currentSeason - 1) * 8, show.totalEpisodes)} 
-                            className="w-full"
-                          />
                           <div className="flex items-center justify-between">
                             <div className="flex items-center">
                               <Star className="w-4 h-4 text-yellow-600 mr-1" />
-                              <span className="text-muted-foreground">{show.rating}</span>
+                              <span className="text-muted-foreground">{item.shows.rating?.toFixed(1) || 'N/A'}</span>
                             </div>
-                            <Badge variant="outline" className="border-primary/50 text-foreground">
-                              {show.platform}
-                            </Badge>
                           </div>
-                          {show.nextEpisode && (
-                            <div className="flex items-center text-sm text-muted-foreground">
-                              <Calendar className="w-4 h-4 mr-1" />
-                              Next: {new Date(show.nextEpisode).toLocaleDateString()}
-                            </div>
-                          )}
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleStatusUpdate(item.show_id, 'completed')}
+                              disabled={updatingStatus === item.show_id}
+                            >
+                              {updatingStatus === item.show_id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                'Mark Complete'
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRemoveFromWatchlist(item.show_id, item.shows.title)}
+                            >
+                              Remove
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -242,37 +273,68 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
         {/* All Shows */}
         <div>
           <h3 className="text-2xl mb-4 text-foreground">All Shows</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-            {userWatchlist.map(show => (
-              <Card key={show.id} className="bg-card border-border hover:border-primary transition-colors group cursor-pointer shadow-lg">
-                <CardContent className="p-3">
-                  <div className="aspect-[2/3] mb-3 rounded-lg overflow-hidden bg-muted relative">
-                    <ImageWithFallback 
-                      src={show.poster}
-                      alt={show.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Play className="w-8 h-8 text-white" />
-                    </div>
-                  </div>
-                  <h4 className="text-card-foreground text-sm mb-2 truncate" title={show.title}>{show.title}</h4>
-                  <div className="space-y-2">
-                    <StatusBadge status={show.status} />
-                    <div className="text-xs text-muted-foreground">
-                      {show.seasons} season{show.seasons !== 1 ? 's' : ''} • {show.platform}
-                    </div>
-                    {show.status !== "plan to watch" && (
-                      <Progress 
-                        value={calculateProgress(show.currentEpisode + (show.currentSeason - 1) * 8, show.totalEpisodes)} 
-                        className="w-full h-1"
+          {watchlist.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+              {watchlist.map(item => (
+                <Card key={item.id} className="bg-card border-border hover:border-primary transition-colors group cursor-pointer shadow-lg">
+                  <CardContent className="p-3">
+                    <div className="aspect-[2/3] mb-3 rounded-lg overflow-hidden bg-muted relative">
+                      <ImageWithFallback 
+                        src={getPosterUrl(item.shows.poster_path)}
+                        alt={item.shows.title}
+                        className="w-full h-full object-cover"
                       />
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Play className="w-8 h-8 text-white" />
+                      </div>
+                    </div>
+                    <h4 className="text-card-foreground text-sm mb-2 truncate" title={item.shows.title}>
+                      {item.shows.title}
+                    </h4>
+                    <div className="space-y-2">
+                      <StatusBadge status={item.watch_status} />
+                      <div className="text-xs text-muted-foreground">
+                        {item.shows.rating?.toFixed(1) || 'N/A'} rating
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs px-2 py-1 h-auto"
+                          onClick={() => handleStatusUpdate(item.show_id, 'watching')}
+                          disabled={updatingStatus === item.show_id}
+                        >
+                          {updatingStatus === item.show_id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            'Watch'
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs px-2 py-1 h-auto"
+                          onClick={() => handleRemoveFromWatchlist(item.show_id, item.shows.title)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground text-lg mb-4">
+                Your watchlist is empty. Start adding shows!
+              </p>
+              <Button onClick={() => router.push('/search')}>
+                <Search className="w-4 h-4 mr-2" />
+                Search Shows
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

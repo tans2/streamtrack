@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -6,7 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Switch } from "./ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Badge } from "./ui/badge";
-import { ArrowLeft, Crown, X } from "lucide-react";
+import { ArrowLeft, Crown, X, Loader2 } from "lucide-react";
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface SettingsPageProps {
   onNavigate: (page: string) => void;
@@ -21,12 +24,12 @@ const countries = ['US', 'UK', 'Canada', 'Australia', 'Germany', 'France', 'Japa
 
 export default function SettingsPage({ onNavigate }: SettingsPageProps) {
   const [settings, setSettings] = useState({
-    name: 'Alex Smith',
-    email: 'alex.smith@example.com',
+    name: '',
+    email: '',
     password: '',
     confirmPassword: '',
     country: 'US',
-    selectedPlatforms: ['Netflix', 'Disney+', 'HBO Max'],
+    selectedPlatforms: [] as string[],
     notifications: {
       newEpisodes: true,
       seasonStart: true,
@@ -39,6 +42,34 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
       shareWatchingStatus: true
     }
   });
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const { user, updatePreferences, upgradeToPremium } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user) {
+      setSettings(prev => ({
+        ...prev,
+        name: user.name || '',
+        email: user.email,
+        country: user.region,
+        selectedPlatforms: user.connected_platforms || [],
+        notifications: {
+          newEpisodes: user.notification_preferences?.new_episodes ?? true,
+          seasonStart: user.notification_preferences?.new_seasons ?? true,
+          friendActivity: user.notification_preferences?.push ?? false,
+          weeklyDigest: user.notification_preferences?.email ?? true
+        },
+        privacy: {
+          publicWatchlist: user.privacy_settings?.data_export_enabled ?? false,
+          allowFriendRequests: true, // Default value
+          shareWatchingStatus: user.privacy_settings?.data_delete_enabled ?? true
+        }
+      }));
+    }
+  }, [user]);
 
   const handleInputChange = (field: string, value: any) => {
     setSettings(prev => ({
@@ -66,9 +97,41 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
     }));
   };
 
-  const handleSave = () => {
-    // Mock save functionality
-    alert('Settings saved successfully!');
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updatePreferences({
+        region: settings.country,
+        connected_platforms: settings.selectedPlatforms,
+        notification_preferences: {
+          email: settings.notifications.weeklyDigest,
+          push: settings.notifications.friendActivity,
+          new_episodes: settings.notifications.newEpisodes,
+          new_seasons: settings.notifications.seasonStart
+        },
+        privacy_settings: {
+          data_export_enabled: settings.privacy.publicWatchlist,
+          data_delete_enabled: settings.privacy.shareWatchingStatus
+        }
+      });
+    } catch (error: any) {
+      console.error('Save error:', error);
+      // Error is already handled by AuthContext with toast
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpgradePremium = async () => {
+    setLoading(true);
+    try {
+      await upgradeToPremium();
+    } catch (error: any) {
+      console.error('Upgrade error:', error);
+      // Error is already handled by AuthContext with toast
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -82,7 +145,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 variant="ghost" 
                 size="sm"
                 className="text-primary hover:text-primary hover:bg-primary/10 mr-4"
-                onClick={() => onNavigate('profile')}
+                onClick={() => router.push('/profile')}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Profile
@@ -117,9 +180,10 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                     id="email"
                     type="email"
                     value={settings.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
+                    disabled
+                    className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary opacity-50"
                   />
+                  <p className="text-xs text-muted-foreground">Email cannot be changed</p>
                 </div>
               </div>
               
@@ -182,10 +246,23 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 </p>
                 <div className="flex items-center space-x-4">
                   <span className="text-2xl text-card-foreground">$4.99/month</span>
-                  <Button className="bg-secondary hover:bg-secondary/90 text-foreground">
-                    Upgrade to Premium
+                  <Button 
+                    className="bg-secondary hover:bg-secondary/90 text-foreground"
+                    onClick={handleUpgradePremium}
+                    disabled={loading || user?.subscription_tier === 'premium'}
+                  >
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : user?.subscription_tier === 'premium' ? (
+                      'Premium Active'
+                    ) : (
+                      'Upgrade to Premium'
+                    )}
                   </Button>
                 </div>
+                {user?.subscription_tier === 'premium' && (
+                  <p className="text-sm text-green-600">✓ You have an active premium subscription</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -276,7 +353,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 <Switch
                   checked={settings.notifications.friendActivity}
                   onCheckedChange={(checked: boolean) => handleNestedChange('notifications', 'friendActivity', checked)}
-                  disabled
+                  disabled={user?.subscription_tier !== 'premium'}
                 />
               </div>
               
@@ -340,8 +417,16 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
               onClick={handleSave}
               className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-2"
               size="lg"
+              disabled={saving}
             >
-              Save Changes
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
             </Button>
           </div>
         </div>
