@@ -294,7 +294,11 @@ router.get('/universal-search', async (req, res) => {
           ...show,
           year: showYear,
           totalSeasons: totalSeasons || undefined,
-          providers: providersData.providers,
+          providers: providersData.providers.map((p: any) => ({
+            ...p,
+            provider_name: p.name,
+            provider_id: p.id
+          })),
           availability: providersData.availability,
           seasonAvailability,
           matchesFilters: hasProviderMatch,
@@ -535,20 +539,25 @@ router.post('/:tmdbId/quick-add', authenticateToken, async (req: any, res) => {
     if (existingFollow) {
       // If the record exists but is_following is false, restore it
       if (!existingFollow.is_following) {
-        const { error: updateError } = await supabase
+        const { data: updatedRecord, error: updateError } = await supabase
           .from('user_shows')
           .update({ 
             is_following: true,
             watch_status: 'plan_to_watch',
+            current_season: 1,
+            current_episode: 1,
             updated_at: new Date().toISOString()
           })
-          .eq('id', existingFollow.id);
+          .eq('id', existingFollow.id)
+          .select()
+          .single();
 
         if (updateError) {
           console.error('Error restoring watchlist item:', updateError);
+          console.error('Supabase error details:', JSON.stringify(updateError, null, 2));
           return res.status(500).json({ 
             success: false, 
-            error: 'Failed to restore show to watchlist' 
+            error: `Failed to restore show: ${updateError.message || 'Unknown error'}` 
           });
         }
 
@@ -556,7 +565,7 @@ router.post('/:tmdbId/quick-add', authenticateToken, async (req: any, res) => {
           success: true,
           data: {
             show: upserted,
-            followed: { id: existingFollow.id, is_following: true },
+            followed: updatedRecord,
             message: `"${upserted.title}" has been restored to your watchlist.`
           }
         });

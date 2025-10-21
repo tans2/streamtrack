@@ -82,7 +82,7 @@ export default function ShowDetailsModal({ show, isOpen, onClose }: ShowDetailsM
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -98,15 +98,11 @@ export default function ShowDetailsModal({ show, isOpen, onClose }: ShowDetailsM
                 {show.totalSeasons && <span>{show.totalSeasons} seasons</span>}
               </div>
             </div>
-            <DialogClose asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <X className="h-4 w-4" />
-              </Button>
-            </DialogClose>
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="flex-1 overflow-y-auto max-h-[calc(90vh-8rem)]">
+          <div className="pr-4">
           <div className="space-y-6">
             {/* Show Overview */}
             <div className="flex gap-6">
@@ -234,6 +230,7 @@ export default function ShowDetailsModal({ show, isOpen, onClose }: ShowDetailsM
                 </CardContent>
               </Card>
             )}
+          </div>
           </div>
         </ScrollArea>
       </DialogContent>

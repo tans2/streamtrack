@@ -33,6 +33,7 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
   const [addingToWatchlist, setAddingToWatchlist] = useState<number | null>(null);
   const [recentlyAddedShows, setRecentlyAddedShows] = useState<Set<number>>(new Set());
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const { user } = useAuth();
   const router = useRouter();
@@ -43,6 +44,7 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
       return;
     }
 
+    setHasSearched(true);
     setLoading(true);
     try {
       const filters = {
@@ -302,13 +304,19 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
                 </Card>
               ))}
             </div>
-          ) : (
+          ) : !loading && hasSearched && shows.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground text-lg">
-                {searchQuery ? 'No shows found. Try a different search term.' : 'Enter a search term to find shows.'}
+                No shows found. Try a different search term.
               </p>
             </div>
-          )}
+          ) : !loading && !hasSearched ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground text-lg">
+                Enter a search term to find shows.
+              </p>
+            </div>
+          ) : null}
         </div>
       </div>
       
