@@ -6,13 +6,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
-import { ArrowLeft, Search, Star, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, Search, Star, Plus, Loader2, Check } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { showService, Show } from '@/services/showService';
 import { watchlistService } from '@/services/watchlistService';
 import { toast } from 'sonner';
+import ShowDetailsModal from './ShowDetailsModal';
 
 interface SearchPageProps {
   onNavigate: (page: string) => void;
@@ -30,6 +31,8 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
   const [shows, setShows] = useState<Show[]>([]);
   const [loading, setLoading] = useState(false);
   const [addingToWatchlist, setAddingToWatchlist] = useState<number | null>(null);
+  const [recentlyAddedShows, setRecentlyAddedShows] = useState<Set<number>>(new Set());
+  const [selectedShow, setSelectedShow] = useState<Show | null>(null);
 
   const { user } = useAuth();
   const router = useRouter();
@@ -76,6 +79,8 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
     setAddingToWatchlist(tmdbId);
     try {
       await watchlistService.addToWatchlist(tmdbId);
+      // Track this show as recently added for optimistic UI update
+      setRecentlyAddedShows(prev => new Set(prev).add(tmdbId));
       toast.success(`"${title}" added to your watchlist!`);
     } catch (error: any) {
       console.error('Add to watchlist error:', error);
@@ -238,7 +243,11 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
           ) : shows && shows.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {shows.map(show => (
-                <Card key={show.tmdb_id} className="bg-card border-border hover:border-primary transition-colors shadow-lg">
+                <Card 
+                  key={show.tmdb_id} 
+                  className="bg-card border-border hover:border-primary transition-colors shadow-lg cursor-pointer hover:shadow-lg"
+                  onClick={() => setSelectedShow(show)}
+                >
                   <CardContent className="p-4">
                     <div className="aspect-[2/3] mb-4 rounded-lg overflow-hidden bg-muted">
                       <ImageWithFallback 
@@ -253,26 +262,41 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
                         <Star className="w-4 h-4 text-yellow-600 mr-1" />
                         <span className="text-muted-foreground">{show.rating?.toFixed(1) || 'N/A'}</span>
                       </div>
-                      <div className="flex flex-wrap gap-1">
-                        {getProviderNames(show).map((platform, index) => (
-                          <Badge key={index} variant="outline" className="border-primary/50 text-foreground text-xs">
-                            {platform}
+                    </div>
+                    
+                    {/* Platform badges */}
+                    {show.providers && show.providers.length > 0 && (
+                      <div className="flex gap-1 flex-wrap justify-end mb-3">
+                        {show.providers.slice(0, 3).map((provider, idx) => (
+                          <Badge key={idx} variant="outline" className="text-xs">
+                            {provider.provider_name}
                           </Badge>
                         ))}
+                        {show.providers.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{show.providers.length - 3}
+                          </Badge>
+                        )}
                       </div>
-                    </div>
+                    )}
+                    
                     <Button 
                       className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                       size="sm"
-                      onClick={() => handleAddToWatchlist(show.tmdb_id, show.title)}
-                      disabled={addingToWatchlist === show.tmdb_id}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click
+                        handleAddToWatchlist(show.tmdb_id, show.title);
+                      }}
+                      disabled={addingToWatchlist === show.tmdb_id || recentlyAddedShows.has(show.tmdb_id)}
                     >
                       {addingToWatchlist === show.tmdb_id ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : recentlyAddedShows.has(show.tmdb_id) ? (
+                        <Check className="w-4 h-4 mr-2" />
                       ) : (
                         <Plus className="w-4 h-4 mr-2" />
                       )}
-                      Add to Watchlist
+                      {recentlyAddedShows.has(show.tmdb_id) ? 'Added!' : 'Add to Watchlist'}
                     </Button>
                   </CardContent>
                 </Card>
@@ -287,6 +311,13 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
           )}
         </div>
       </div>
+      
+      {/* Show Details Modal */}
+      <ShowDetailsModal
+        show={selectedShow}
+        isOpen={!!selectedShow}
+        onClose={() => setSelectedShow(null)}
+      />
     </div>
   );
 }

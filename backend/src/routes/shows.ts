@@ -524,19 +524,49 @@ router.post('/:tmdbId/quick-add', authenticateToken, async (req: any, res) => {
 
     console.log('Show upserted successfully:', { id: upserted.id, title: upserted.title });
 
-    // Check if show is already in user's watchlist
+    // Check if show is already in user's watchlist (including soft-deleted records)
     const { data: existingFollow } = await supabase
       .from('user_shows')
-      .select('id')
+      .select('id, is_following')
       .eq('user_id', userId)
       .eq('show_id', upserted.id)
       .single();
 
     if (existingFollow) {
-      return res.status(400).json({ 
-        success: false, 
-        error: `"${upserted.title}" is already in your watchlist.` 
-      });
+      // If the record exists but is_following is false, restore it
+      if (!existingFollow.is_following) {
+        const { error: updateError } = await supabase
+          .from('user_shows')
+          .update({ 
+            is_following: true,
+            watch_status: 'plan_to_watch',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingFollow.id);
+
+        if (updateError) {
+          console.error('Error restoring watchlist item:', updateError);
+          return res.status(500).json({ 
+            success: false, 
+            error: 'Failed to restore show to watchlist' 
+          });
+        }
+
+        return res.json({
+          success: true,
+          data: {
+            show: upserted,
+            followed: { id: existingFollow.id, is_following: true },
+            message: `"${upserted.title}" has been restored to your watchlist.`
+          }
+        });
+      } else {
+        // Show is already actively being followed
+        return res.status(400).json({ 
+          success: false, 
+          error: `"${upserted.title}" is already in your watchlist.` 
+        });
+      }
     }
 
     // Follow for the user

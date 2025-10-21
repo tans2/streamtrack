@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { Skeleton } from "./ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { ArrowLeft, Settings, Search, Star, Play, Calendar, Loader2 } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
@@ -240,18 +241,21 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleStatusUpdate(item.show_id, 'completed')}
+                            <Select
+                              value={item.watch_status}
+                              onValueChange={(newStatus) => handleStatusUpdate(item.show_id, newStatus)}
                               disabled={updatingStatus === item.show_id}
                             >
-                              {updatingStatus === item.show_id ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                'Mark Complete'
-                              )}
-                            </Button>
+                              <SelectTrigger className="w-36 h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="watching">Watching</SelectItem>
+                                <SelectItem value="completed">Completed</SelectItem>
+                                <SelectItem value="plan_to_watch">Plan to Watch</SelectItem>
+                                <SelectItem value="dropped">Dropped</SelectItem>
+                              </SelectContent>
+                            </Select>
                             <Button
                               size="sm"
                               variant="outline"
@@ -296,24 +300,26 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                       <div className="text-xs text-muted-foreground">
                         {item.shows.rating?.toFixed(1) || 'N/A'} rating
                       </div>
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs px-2 py-1 h-auto"
-                          onClick={() => handleStatusUpdate(item.show_id, 'watching')}
+                      <div className="space-y-1">
+                        <Select
+                          value={item.watch_status}
+                          onValueChange={(newStatus) => handleStatusUpdate(item.show_id, newStatus)}
                           disabled={updatingStatus === item.show_id}
                         >
-                          {updatingStatus === item.show_id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            'Watch'
-                          )}
-                        </Button>
+                          <SelectTrigger className="w-full h-7 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="watching">Watching</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="plan_to_watch">Plan to Watch</SelectItem>
+                            <SelectItem value="dropped">Dropped</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-xs px-2 py-1 h-auto"
+                          className="text-xs px-2 py-1 h-auto w-full"
                           onClick={() => handleRemoveFromWatchlist(item.show_id, item.shows.title)}
                         >
                           Remove

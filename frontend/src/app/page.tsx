@@ -138,29 +138,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Color Palette Preview - showcasing the updated cozy autumn theme */}
-      <div className="fixed top-4 right-4 z-50 bg-card/90 backdrop-blur-sm border border-border rounded-lg p-4 shadow-lg">
-        <div className="space-y-3">
-          <h4 className="text-xs text-muted-foreground font-medium">Cozy Autumn Palette</h4>
-          <div className="flex gap-3 items-center">
-            <div className="flex flex-col items-center gap-1">
-              <div className="w-6 h-6 bg-primary rounded-full border-2 border-border shadow-sm" />
-              <span className="text-xs text-muted-foreground">Primary</span>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <div className="w-6 h-6 bg-secondary rounded-full border-2 border-border shadow-sm" />
-              <span className="text-xs text-muted-foreground">Secondary</span>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <div className="w-6 h-6 bg-accent rounded-full border-2 border-border shadow-sm" />
-              <span className="text-xs text-muted-foreground">Accent</span>
-            </div>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            WallyWatch Design System
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

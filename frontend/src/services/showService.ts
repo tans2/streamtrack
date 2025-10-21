@@ -25,7 +25,22 @@ export interface Show {
     rent: any[];
     buy: any[];
   };
-  seasonAvailability?: any[];
+  seasonAvailability?: {
+    season: number;
+    country: string;
+    providers: {
+      id: number;
+      name: string;
+      logo_path: string;
+    }[];
+    availability: {
+      flatrate: any[];
+      free: any[];
+      ads: any[];
+      rent: any[];
+      buy: any[];
+    };
+  }[];
   matchesFilters?: boolean;
   titleMatchScore?: number;
 }
