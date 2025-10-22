@@ -203,7 +203,8 @@ export class AuthService {
           .upsert({
             user_id: userId,
             show_id: show.id,
-            is_following: true
+            is_following: true,
+            watch_status: 'want_to_watch'
           }, { onConflict: 'user_id,show_id' });
 
         if (followError) {

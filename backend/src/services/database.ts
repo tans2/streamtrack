@@ -139,7 +139,8 @@ export class DatabaseService {
         .upsert({
           user_id: userId,
           show_id: showId,
-          is_following: true
+          is_following: true,
+          watch_status: 'want_to_watch'
         }, { onConflict: 'user_id,show_id' })
         .select()
         .single();
@@ -241,15 +242,28 @@ export class DatabaseService {
     notes?: string;
   }) {
     try {
+      // Build update object dynamically to avoid setting undefined values
+      const updateFields: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      // Only include fields that are actually provided
+      if (updateData.status !== undefined) {
+        updateFields.watch_status = updateData.status;
+      }
+      if (updateData.currentSeason !== undefined) {
+        updateFields.current_season = updateData.currentSeason;
+      }
+      if (updateData.currentEpisode !== undefined) {
+        updateFields.current_episode = updateData.currentEpisode;
+      }
+      if (updateData.notes !== undefined) {
+        updateFields.notes = updateData.notes;
+      }
+
       const { data, error } = await supabase
         .from('user_shows')
-        .update({
-          watch_status: updateData.status,
-          current_season: updateData.currentSeason,
-          current_episode: updateData.currentEpisode,
-          notes: updateData.notes,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateFields)
         .eq('user_id', userId)
         .eq('show_id', showId)
         .select()
@@ -267,12 +281,15 @@ export class DatabaseService {
     }
   }
 
-  // Remove show from watchlist
+  // Remove show from watchlist (soft delete with timestamp)
   static async removeFromWatchlist(userId: string, showId: string) {
     try {
       const { data, error } = await supabase
         .from('user_shows')
-        .update({ is_following: false })
+        .update({ 
+          is_following: false,
+          deleted_at: new Date().toISOString()
+        })
         .eq('user_id', userId)
         .eq('show_id', showId)
         .select()

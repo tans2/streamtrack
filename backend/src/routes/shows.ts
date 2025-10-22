@@ -531,44 +531,86 @@ router.post('/:tmdbId/quick-add', authenticateToken, async (req: any, res) => {
     // Check if show is already in user's watchlist (including soft-deleted records)
     const { data: existingFollow } = await supabase
       .from('user_shows')
-      .select('id, is_following')
+      .select('id, is_following, watch_status, current_season, current_episode, notes, deleted_at')
       .eq('user_id', userId)
       .eq('show_id', upserted.id)
       .single();
 
     if (existingFollow) {
-      // If the record exists but is_following is false, restore it
+      // If the record exists but is_following is false, check if it's within 1 day
       if (!existingFollow.is_following) {
-        const { data: updatedRecord, error: updateError } = await supabase
-          .from('user_shows')
-          .update({ 
-            is_following: true,
-            watch_status: 'plan_to_watch',
-            current_season: 1,
-            current_episode: 1,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingFollow.id)
-          .select()
-          .single();
+        const deletedAt = existingFollow.deleted_at ? new Date(existingFollow.deleted_at) : null;
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        
+        if (deletedAt && deletedAt > oneDayAgo) {
+          // Within 1 day - restore with original status and data
+          const { data: updatedRecord, error: updateError } = await supabase
+            .from('user_shows')
+            .update({ 
+              is_following: true,
+              watch_status: existingFollow.watch_status || 'want_to_watch',
+              current_season: existingFollow.current_season || 1,
+              current_episode: existingFollow.current_episode || 1,
+              notes: existingFollow.notes,
+              deleted_at: null, // Clear the deleted timestamp
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingFollow.id)
+            .select()
+            .single();
 
-        if (updateError) {
-          console.error('Error restoring watchlist item:', updateError);
-          console.error('Supabase error details:', JSON.stringify(updateError, null, 2));
-          return res.status(500).json({ 
-            success: false, 
-            error: `Failed to restore show: ${updateError.message || 'Unknown error'}` 
+          if (updateError) {
+            console.error('Error restoring watchlist item:', updateError);
+            console.error('Supabase error details:', JSON.stringify(updateError, null, 2));
+            return res.status(500).json({ 
+              success: false, 
+              error: `Failed to restore show: ${updateError.message || 'Unknown error'}` 
+            });
+          }
+
+          return res.json({
+            success: true,
+            data: {
+              show: upserted,
+              followed: updatedRecord,
+              message: `"${upserted.title}" has been restored to your watchlist with its previous status.`
+            }
+          });
+        } else {
+          // More than 1 day ago - treat as new show, update the existing record
+          const { data: updatedRecord, error: updateError } = await supabase
+            .from('user_shows')
+            .update({ 
+              is_following: true,
+              watch_status: 'want_to_watch',
+              current_season: 1,
+              current_episode: 1,
+              notes: null,
+              deleted_at: null, // Clear the deleted timestamp
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingFollow.id)
+            .select()
+            .single();
+
+          if (updateError) {
+            console.error('Error updating old watchlist item:', updateError);
+            console.error('Supabase error details:', JSON.stringify(updateError, null, 2));
+            return res.status(500).json({ 
+              success: false, 
+              error: `Failed to add show: ${updateError.message || 'Unknown error'}` 
+            });
+          }
+
+          return res.json({
+            success: true,
+            data: {
+              show: upserted,
+              followed: updatedRecord,
+              message: `"${upserted.title}" added to your watchlist as a new show.`
+            }
           });
         }
-
-        return res.json({
-          success: true,
-          data: {
-            show: upserted,
-            followed: updatedRecord,
-            message: `"${upserted.title}" has been restored to your watchlist.`
-          }
-        });
       } else {
         // Show is already actively being followed
         return res.status(400).json({ 

@@ -252,7 +252,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                               <SelectContent>
                                 <SelectItem value="watching">Watching</SelectItem>
                                 <SelectItem value="completed">Completed</SelectItem>
-                                <SelectItem value="plan_to_watch">Plan to Watch</SelectItem>
+                                <SelectItem value="want_to_watch">Plan to Watch</SelectItem>
                                 <SelectItem value="dropped">Dropped</SelectItem>
                               </SelectContent>
                             </Select>
@@ -312,7 +312,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                           <SelectContent>
                             <SelectItem value="watching">Watching</SelectItem>
                             <SelectItem value="completed">Completed</SelectItem>
-                            <SelectItem value="plan_to_watch">Plan to Watch</SelectItem>
+                            <SelectItem value="want_to_watch">Plan to Watch</SelectItem>
                             <SelectItem value="dropped">Dropped</SelectItem>
                           </SelectContent>
                         </Select>
