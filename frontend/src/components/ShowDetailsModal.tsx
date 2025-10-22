@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { 
   Dialog, 
   DialogContent, 
@@ -30,6 +31,7 @@ interface ShowDetailsModalProps {
 export default function ShowDetailsModal({ show, isOpen, onClose }: ShowDetailsModalProps) {
   const [addingToWatchlist, setAddingToWatchlist] = useState(false);
   const [recentlyAdded, setRecentlyAdded] = useState(false);
+  const [selectedSeason, setSelectedSeason] = useState<number>(1);
   
   const { user } = useAuth();
   const router = useRouter();
@@ -76,6 +78,16 @@ export default function ShowDetailsModal({ show, isOpen, onClose }: ShowDetailsM
     if (availability.rent?.length > 0) types.push('Rent');
     if (availability.buy?.length > 0) types.push('Buy');
     return types;
+  };
+
+  const getSelectedSeasonData = () => {
+    if (!show?.seasonAvailability) return null;
+    return show.seasonAvailability.find((season: any) => season.season === selectedSeason);
+  };
+
+  const getAvailableSeasons = () => {
+    if (!show?.seasonAvailability) return [];
+    return show.seasonAvailability.map((season: any) => season.season).sort((a: number, b: number) => a - b);
   };
 
   if (!show) return null;
@@ -179,42 +191,76 @@ export default function ShowDetailsModal({ show, isOpen, onClose }: ShowDetailsM
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {show.seasonAvailability.map((season: any, idx: number) => (
-                      <div key={idx} className="border border-border rounded-lg p-4">
-                        <h4 className="font-semibold text-foreground mb-3">
-                          Season {season.season}
-                        </h4>
-                        
-                        {season.providers && season.providers.length > 0 ? (
-                          <div className="space-y-3">
-                            <div className="flex flex-wrap gap-2">
-                              {season.providers.map((provider: any, providerIdx: number) => (
-                                <Badge key={providerIdx} variant="outline" className="border-primary/50 text-foreground">
-                                  {provider.name}
-                                </Badge>
-                              ))}
-                            </div>
-                            
-                            {season.availability && (
-                              <div>
-                                <p className="text-sm text-muted-foreground mb-2">Availability Types:</p>
-                                <div className="flex flex-wrap gap-1">
-                                  {getAvailabilityType(season.availability).map((type: string, typeIdx: number) => (
-                                    <Badge key={typeIdx} variant="secondary" className="text-xs">
-                                      {type}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+                    {/* Season Selector */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-card-foreground">Select Season</label>
+                      <Select
+                        value={selectedSeason.toString()}
+                        onValueChange={(value) => setSelectedSeason(parseInt(value))}
+                      >
+                        <SelectTrigger className="bg-input-background border-border text-foreground">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getAvailableSeasons().map((seasonNum) => (
+                            <SelectItem key={seasonNum} value={seasonNum.toString()}>
+                              Season {seasonNum}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Selected Season Details */}
+                    {(() => {
+                      const seasonData = getSelectedSeasonData();
+                      if (!seasonData) {
+                        return (
+                          <div className="border border-border rounded-lg p-4">
+                            <p className="text-muted-foreground text-sm">
+                              No streaming information available for Season {selectedSeason}.
+                            </p>
                           </div>
-                        ) : (
-                          <p className="text-muted-foreground text-sm">
-                            No streaming information available for this season.
-                          </p>
-                        )}
-                      </div>
-                    ))}
+                        );
+                      }
+
+                      return (
+                        <div className="border border-border rounded-lg p-4">
+                          <h4 className="font-semibold text-foreground mb-3">
+                            Season {seasonData.season}
+                          </h4>
+                          
+                          {seasonData.providers && seasonData.providers.length > 0 ? (
+                            <div className="space-y-3">
+                              <div className="flex flex-wrap gap-2">
+                                {seasonData.providers.map((provider: any, providerIdx: number) => (
+                                  <Badge key={providerIdx} variant="outline" className="border-primary/50 text-foreground">
+                                    {provider.name}
+                                  </Badge>
+                                ))}
+                              </div>
+                              
+                              {seasonData.availability && (
+                                <div>
+                                  <p className="text-sm text-muted-foreground mb-2">Availability Types:</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {getAvailabilityType(seasonData.availability).map((type: string, typeIdx: number) => (
+                                      <Badge key={typeIdx} variant="secondary" className="text-xs">
+                                        {type}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground text-sm">
+                              No streaming information available for this season.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </CardContent>
               </Card>

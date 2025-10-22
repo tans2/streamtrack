@@ -2,11 +2,13 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Bell, Users, Star } from "lucide-react";
+import { Play, Bell, Users, Star, LogOut } from "lucide-react";
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function HomePage() {
   const router = useRouter();
+  const { user, logout } = useAuth();
   
   const streamingPlatforms = [
     "Netflix",
@@ -48,9 +50,16 @@ export default function HomePage() {
           </Button>
           <Button 
             className="bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={() => router.push('/auth')}
+            onClick={() => user ? logout() : router.push('/auth')}
           >
-            Sign In
+            {user ? (
+              <>
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </>
+            ) : (
+              'Sign In'
+            )}
           </Button>
         </div>
       </nav>
@@ -67,26 +76,50 @@ export default function HomePage() {
           
           <div className="space-y-6">
             <p className="text-lg text-muted-foreground">
-              Sign up to start tracking your favorite shows
+              {user ? `Welcome back, ${user.name || user.email}!` : 'Sign up to start tracking your favorite shows'}
             </p>
             <div className="flex gap-4 justify-center">
-              <Button 
-                size="lg" 
-                className="bg-primary hover:bg-primary/90"
-                onClick={() => router.push('/signup')}
-              >
-                <Star className="w-5 h-5 mr-2" />
-                Get Started
-              </Button>
-              <Button 
-                size="lg" 
-                variant="secondary" 
-                className="bg-secondary hover:bg-secondary/80"
-                onClick={() => router.push('/search')}
-              >
-                <Users className="w-5 h-5 mr-2" />
-                Explore Shows
-              </Button>
+              {!user ? (
+                <>
+                  <Button 
+                    size="lg" 
+                    className="bg-primary hover:bg-primary/90"
+                    onClick={() => router.push('/signup')}
+                  >
+                    <Star className="w-5 h-5 mr-2" />
+                    Get Started
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="secondary" 
+                    className="bg-secondary hover:bg-secondary/80"
+                    onClick={() => router.push('/search')}
+                  >
+                    <Users className="w-5 h-5 mr-2" />
+                    Explore Shows
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button 
+                    size="lg" 
+                    className="bg-primary hover:bg-primary/90"
+                    onClick={() => router.push('/profile')}
+                  >
+                    <Star className="w-5 h-5 mr-2" />
+                    View My Watchlist
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="secondary" 
+                    className="bg-secondary hover:bg-secondary/80"
+                    onClick={() => router.push('/search')}
+                  >
+                    <Users className="w-5 h-5 mr-2" />
+                    Explore Shows
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
