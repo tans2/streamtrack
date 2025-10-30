@@ -18,7 +18,7 @@ interface SettingsPageProps {
 const availablePlatforms = [
   'Netflix', 'Hulu', 'Disney+', 'Prime Video', 'Paramount+', 
   'Peacock', 'HBO Max', 'Apple TV+', 'YouTube TV', 'Fubo TV'
-];
+].filter((platform, index, self) => self.indexOf(platform) === index); // Remove duplicates
 
 const countries = ['US', 'UK', 'Canada', 'Australia', 'Germany', 'France', 'Japan', 'Brazil'];
 
@@ -50,12 +50,14 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
 
   useEffect(() => {
     if (user) {
+      // Deduplicate platforms from user data
+      const uniquePlatforms = Array.from(new Set(user.connected_platforms || []));
       setSettings(prev => ({
         ...prev,
         name: user.name || '',
         email: user.email,
         country: user.region,
-        selectedPlatforms: user.connected_platforms || [],
+        selectedPlatforms: uniquePlatforms,
         notifications: {
           newEpisodes: user.notification_preferences?.new_episodes ?? true,
           seasonStart: user.notification_preferences?.new_seasons ?? true,
@@ -89,20 +91,27 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
   };
 
   const togglePlatform = (platform: string) => {
-    setSettings(prev => ({
-      ...prev,
-      selectedPlatforms: prev.selectedPlatforms.includes(platform)
-        ? prev.selectedPlatforms.filter(p => p !== platform)
-        : [...prev.selectedPlatforms, platform]
-    }));
+    setSettings(prev => {
+      // Deduplicate and toggle platform
+      const current = Array.from(new Set(prev.selectedPlatforms));
+      const updated = current.includes(platform)
+        ? current.filter(p => p !== platform)
+        : [...current, platform];
+      return {
+        ...prev,
+        selectedPlatforms: updated
+      };
+    });
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Deduplicate platforms before saving
+      const uniquePlatforms = Array.from(new Set(settings.selectedPlatforms));
       await updatePreferences({
         region: settings.country,
-        connected_platforms: settings.selectedPlatforms,
+        connected_platforms: uniquePlatforms,
         notification_preferences: {
           email: settings.notifications.weeklyDigest,
           push: settings.notifications.friendActivity,
@@ -299,7 +308,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
               <div className="mt-4">
                 <p className="text-muted-foreground text-sm">Selected platforms:</p>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {settings.selectedPlatforms.map(platform => (
+                  {Array.from(new Set(settings.selectedPlatforms)).map(platform => (
                     <Badge 
                       key={platform} 
                       variant="outline" 
@@ -318,9 +327,15 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
           </Card>
 
           {/* Notification Settings */}
-          <Card className="bg-card border-border shadow-lg">
+          <Card className="bg-card border-border shadow-lg opacity-75">
             <CardHeader>
-              <CardTitle className="text-card-foreground">Notification Preferences</CardTitle>
+              <CardTitle className="text-card-foreground flex items-center gap-2">
+                Notification Preferences
+                <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
+              </CardTitle>
+              <p className="text-muted-foreground text-sm mt-2">
+                Notification preferences will be available in a future update.
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
@@ -331,6 +346,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 <Switch
                   checked={settings.notifications.newEpisodes}
                   onCheckedChange={(checked: boolean) => handleNestedChange('notifications', 'newEpisodes', checked)}
+                  disabled={true}
                 />
               </div>
               
@@ -342,6 +358,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 <Switch
                   checked={settings.notifications.seasonStart}
                   onCheckedChange={(checked: boolean) => handleNestedChange('notifications', 'seasonStart', checked)}
+                  disabled={true}
                 />
               </div>
               
@@ -353,7 +370,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 <Switch
                   checked={settings.notifications.friendActivity}
                   onCheckedChange={(checked: boolean) => handleNestedChange('notifications', 'friendActivity', checked)}
-                  disabled={user?.subscription_tier !== 'premium'}
+                  disabled={true}
                 />
               </div>
               
@@ -365,15 +382,22 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 <Switch
                   checked={settings.notifications.weeklyDigest}
                   onCheckedChange={(checked: boolean) => handleNestedChange('notifications', 'weeklyDigest', checked)}
+                  disabled={true}
                 />
               </div>
             </CardContent>
           </Card>
 
           {/* Privacy Controls */}
-          <Card className="bg-card border-border shadow-lg">
+          <Card className="bg-card border-border shadow-lg opacity-75">
             <CardHeader>
-              <CardTitle className="text-card-foreground">Privacy & Sharing</CardTitle>
+              <CardTitle className="text-card-foreground flex items-center gap-2">
+                Privacy & Sharing
+                <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
+              </CardTitle>
+              <p className="text-muted-foreground text-sm mt-2">
+                Privacy and sharing settings will be available in a future update.
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
@@ -384,6 +408,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 <Switch
                   checked={settings.privacy.publicWatchlist}
                   onCheckedChange={(checked: boolean) => handleNestedChange('privacy', 'publicWatchlist', checked)}
+                  disabled={true}
                 />
               </div>
               
@@ -395,6 +420,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 <Switch
                   checked={settings.privacy.allowFriendRequests}
                   onCheckedChange={(checked: boolean) => handleNestedChange('privacy', 'allowFriendRequests', checked)}
+                  disabled={true}
                 />
               </div>
               
@@ -406,6 +432,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 <Switch
                   checked={settings.privacy.shareWatchingStatus}
                   onCheckedChange={(checked: boolean) => handleNestedChange('privacy', 'shareWatchingStatus', checked)}
+                  disabled={true}
                 />
               </div>
             </CardContent>
