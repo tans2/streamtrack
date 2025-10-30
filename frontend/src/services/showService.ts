@@ -146,6 +146,20 @@ class ShowService {
       throw new Error(handleApiError(error as AxiosError));
     }
   }
+
+  // Get show season information (total seasons and episode count for a season)
+  async getSeasonInfo(tmdbId: number, seasonNumber?: number): Promise<{ total_seasons: number; season?: { season_number: number; episode_count: number; air_date?: string } }> {
+    try {
+      const params: any = {};
+      if (seasonNumber) {
+        params.season = seasonNumber.toString();
+      }
+      const response = await apiClient.get(`/api/shows/${tmdbId}/seasons`, { params });
+      return handleApiResponse(response);
+    } catch (error) {
+      throw new Error(handleApiError(error as AxiosError));
+    }
+  }
 }
 
 export const showService = new ShowService();

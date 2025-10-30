@@ -10,16 +10,26 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { watchlistService, WatchlistItem } from '@/services/watchlistService';
+import { showService } from '@/services/showService';
 import { toast } from 'sonner';
 
 interface ProfilePageProps {
   onNavigate: (page: string) => void;
 }
 
+interface SeasonData {
+  totalSeasons: number;
+  episodeCounts: Record<number, number>; // season number -> episode count
+  loading: boolean;
+  error: string | null;
+}
+
 export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [seasonDataCache, setSeasonDataCache] = useState<Record<string, SeasonData>>({}); // show_id -> SeasonData
+  const [savingProgress, setSavingProgress] = useState<Record<string, boolean>>({}); // show_id -> isSaving
 
   const { user } = useAuth();
   const router = useRouter();
@@ -32,7 +42,13 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     setLoading(true);
     try {
       const data = await watchlistService.getWatchlist();
-      setWatchlist(data);
+      // Normalize season/episode defaults to 1 if missing, null, undefined, or 0
+      const normalizedData = data.map(item => ({
+        ...item,
+        current_season: (item.current_season && item.current_season > 0) ? item.current_season : 1,
+        current_episode: (item.current_episode && item.current_episode > 0) ? item.current_episode : 1
+      }));
+      setWatchlist(normalizedData);
     } catch (error: any) {
       console.error('Error loading watchlist:', error);
       toast.error(error.message || 'Failed to load watchlist');
@@ -63,6 +79,180 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     } catch (error: any) {
       console.error('Error removing from watchlist:', error);
       toast.error(error.message || 'Failed to remove from watchlist');
+    }
+  };
+
+  // Load season data for a show (lazy loading - only when dropdown opens)
+  const loadSeasonData = async (item: WatchlistItem) => {
+    const showId = item.show_id;
+    const tmdbId = item.shows.tmdb_id;
+
+    // Check if already cached
+    if (seasonDataCache[showId] && !seasonDataCache[showId].loading) {
+      return;
+    }
+
+    // Set loading state
+    setSeasonDataCache(prev => ({
+      ...prev,
+      [showId]: {
+        totalSeasons: 0,
+        episodeCounts: {},
+        loading: true,
+        error: null
+      }
+    }));
+
+    try {
+      // Fetch total seasons
+      const seasonInfo = await showService.getSeasonInfo(tmdbId);
+      
+      const seasonData: SeasonData = {
+        totalSeasons: seasonInfo.total_seasons || 0,
+        episodeCounts: {},
+        loading: false,
+        error: null
+      };
+
+      // Pre-fetch episode count for current season
+      if (item.current_season && seasonInfo.total_seasons) {
+        try {
+          const currentSeasonInfo = await showService.getSeasonInfo(tmdbId, item.current_season);
+          if (currentSeasonInfo.season) {
+            seasonData.episodeCounts[item.current_season] = currentSeasonInfo.season.episode_count;
+          }
+        } catch (err) {
+          console.warn(`Failed to fetch episode count for season ${item.current_season}:`, err);
+        }
+      }
+
+      setSeasonDataCache(prev => ({
+        ...prev,
+        [showId]: seasonData
+      }));
+    } catch (error: any) {
+      console.error('Error loading season data:', error);
+      const errorMessage = error.message || 'Unable to fetch data, please try again';
+      setSeasonDataCache(prev => ({
+        ...prev,
+        [showId]: {
+          totalSeasons: 0,
+          episodeCounts: {},
+          loading: false,
+          error: errorMessage
+        }
+      }));
+      toast.error(errorMessage);
+    }
+  };
+
+  // Get episode count for a season (with caching)
+  const getEpisodeCount = async (item: WatchlistItem, seasonNumber: number): Promise<number> => {
+    const showId = item.show_id;
+    const cached = seasonDataCache[showId];
+
+    // If already cached, return it
+    if (cached?.episodeCounts[seasonNumber]) {
+      return cached.episodeCounts[seasonNumber];
+    }
+
+    // If not cached, fetch it
+    try {
+      const seasonInfo = await showService.getSeasonInfo(item.shows.tmdb_id, seasonNumber);
+      if (seasonInfo.season) {
+        const episodeCount = seasonInfo.season.episode_count;
+        // Update cache
+        setSeasonDataCache(prev => ({
+          ...prev,
+          [showId]: {
+            ...prev[showId],
+            episodeCounts: {
+              ...prev[showId]?.episodeCounts,
+              [seasonNumber]: episodeCount
+            }
+          }
+        }));
+        return episodeCount;
+      }
+    } catch (error: any) {
+      console.error(`Error fetching episode count for season ${seasonNumber}:`, error);
+      // Check if it's a "season not released" error
+      if (error.message?.includes('not yet released')) {
+        toast.error(error.message);
+        throw error;
+      }
+      toast.error('Unable to fetch data, please try again');
+    }
+    return 0;
+  };
+
+  // Handle season change
+  const handleSeasonChange = async (item: WatchlistItem, newSeason: number) => {
+    // Ensure episode count is loaded for the new season before saving
+    const showId = item.show_id;
+    const cached = seasonDataCache[showId];
+    
+    // If episode count not cached, fetch it first
+    if (!cached?.episodeCounts[newSeason]) {
+      try {
+        await getEpisodeCount(item, newSeason);
+      } catch (error) {
+        // Error already handled in getEpisodeCount
+        return;
+      }
+    }
+    
+    // Reset episode to 1 when season changes
+    await handleProgressUpdate(item, newSeason, 1);
+  };
+
+  // Handle episode change
+  const handleEpisodeChange = async (item: WatchlistItem, newEpisode: number) => {
+    await handleProgressUpdate(item, item.current_season, newEpisode);
+  };
+
+  // Update progress (season/episode)
+  const handleProgressUpdate = async (item: WatchlistItem, season: number, episode: number) => {
+    const showId = item.show_id;
+    
+    // Validate season is available
+    const cached = seasonDataCache[showId];
+    if (cached && cached.totalSeasons > 0 && season > cached.totalSeasons) {
+      toast.error('Season not yet released, please sign up for release notifications');
+      return;
+    }
+
+    setSavingProgress(prev => ({ ...prev, [showId]: true }));
+
+    try {
+      await watchlistService.updateShowStatus(showId, {
+        status: 'watching',
+        currentSeason: season,
+        currentEpisode: episode
+      });
+      
+      // Update local state instead of reloading
+      setWatchlist(prev => prev.map(show => 
+        show.show_id === showId 
+          ? { ...show, current_season: season, current_episode: episode }
+          : show
+      ));
+      
+      toast.success(`Progress updated to Season ${season}, Episode ${episode}`);
+    } catch (error: any) {
+      console.error('Error updating progress:', error);
+      const errorMessage = error.message || 'Failed to update progress';
+      
+      // Check for specific error messages from backend
+      if (errorMessage.includes('not yet released')) {
+        toast.error('Season not yet released, please sign up for release notifications');
+      } else if (errorMessage.includes('Unable to fetch')) {
+        toast.error('Unable to fetch data, please try again');
+      } else {
+        toast.error(errorMessage);
+      }
+    } finally {
+      setSavingProgress(prev => ({ ...prev, [showId]: false }));
     }
   };
 
@@ -228,11 +418,118 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                       <div className="flex-1 min-w-0">
                         <h4 className="text-card-foreground mb-2 truncate">{item.shows.title}</h4>
                         <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">
-                              Season {item.current_season}, Episode {item.current_episode}
-                            </span>
+                          <div className="flex items-center justify-between mb-2">
                             <StatusBadge status={item.watch_status} />
+                          </div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-sm text-muted-foreground whitespace-nowrap">Season</span>
+                            <Select
+                              value={(item.current_season || 1).toString()}
+                              onValueChange={(value) => handleSeasonChange(item, parseInt(value))}
+                              onOpenChange={(open) => {
+                                if (open && !seasonDataCache[item.show_id]) {
+                                  loadSeasonData(item);
+                                }
+                              }}
+                              disabled={savingProgress[item.show_id] || (seasonDataCache[item.show_id]?.loading)}
+                            >
+                              <SelectTrigger className="w-20 h-8 text-sm">
+                                {seasonDataCache[item.show_id]?.loading ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <SelectValue />
+                                )}
+                              </SelectTrigger>
+                              <SelectContent className="!max-h-[400px]">
+                                {seasonDataCache[item.show_id]?.error ? (
+                                  <div className="p-2 text-sm text-red-500">{seasonDataCache[item.show_id].error}</div>
+                                ) : (() => {
+                                  const totalSeasons = seasonDataCache[item.show_id]?.totalSeasons || 0;
+                                  const currentSeason = item.current_season || 1;
+                                  
+                                  // If data hasn't loaded yet, at least show the current season and a few surrounding ones
+                                  if (totalSeasons === 0) {
+                                    const minSeason = Math.max(1, currentSeason - 2);
+                                    const maxSeason = currentSeason + 10; // Show some padding
+                                    return Array.from({ length: maxSeason - minSeason + 1 }, (_, i) => minSeason + i).map(seasonNum => (
+                                      <SelectItem key={seasonNum} value={seasonNum.toString()}>
+                                        {seasonNum}
+                                      </SelectItem>
+                                    ));
+                                  }
+                                  
+                                  // Otherwise show all available seasons
+                                  return Array.from({ length: totalSeasons }, (_, i) => i + 1).map(seasonNum => (
+                                    <SelectItem key={seasonNum} value={seasonNum.toString()}>
+                                      {seasonNum}
+                                    </SelectItem>
+                                  ));
+                                })()}
+                              </SelectContent>
+                            </Select>
+                            <span className="text-sm text-muted-foreground whitespace-nowrap">Episode</span>
+                            <Select
+                              value={(item.current_episode || 1).toString()}
+                              onValueChange={(value) => handleEpisodeChange(item, parseInt(value))}
+                              onOpenChange={async (open) => {
+                                if (open) {
+                                  // Ensure season data is loaded
+                                  if (!seasonDataCache[item.show_id]) {
+                                    await loadSeasonData(item);
+                                  }
+                                  // Ensure episode count for current season is loaded
+                                  const cached = seasonDataCache[item.show_id];
+                                  if (cached && !cached.episodeCounts[item.current_season]) {
+                                    await getEpisodeCount(item, item.current_season);
+                                  }
+                                }
+                              }}
+                              disabled={savingProgress[item.show_id] || (seasonDataCache[item.show_id]?.loading)}
+                            >
+                              <SelectTrigger className="w-20 h-8 text-sm">
+                                {savingProgress[item.show_id] ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <SelectValue />
+                                )}
+                              </SelectTrigger>
+                              <SelectContent className="!max-h-[400px]">
+                                {(() => {
+                                  const cached = seasonDataCache[item.show_id];
+                                  const currentSeason = item.current_season || 1;
+                                  const episodeCount = cached?.episodeCounts[currentSeason];
+                                  
+                                  // If loading, show loading message
+                                  if (cached?.loading || (episodeCount === undefined && cached)) {
+                                    return <div className="p-2 text-sm text-muted-foreground">Loading...</div>;
+                                  }
+                                  
+                                  // If error, show error message
+                                  if (cached?.error) {
+                                    return <div className="p-2 text-sm text-red-500">{cached.error}</div>;
+                                  }
+                                  
+                                  // If we have episode count, show episodes
+                                  if (episodeCount && episodeCount > 0) {
+                                    return Array.from({ length: episodeCount }, (_, i) => i + 1).map(epNum => (
+                                      <SelectItem key={epNum} value={epNum.toString()}>
+                                        {epNum}
+                                      </SelectItem>
+                                    ));
+                                  }
+                                  
+                                  // Fallback: show at least current episode and some surrounding ones
+                                  const currentEpisode = item.current_episode || 1;
+                                  const minEpisode = Math.max(1, currentEpisode - 2);
+                                  const maxEpisode = Math.max(currentEpisode + 10, 15); // Show padding, min 15 episodes
+                                  return Array.from({ length: maxEpisode - minEpisode + 1 }, (_, i) => minEpisode + i).map(epNum => (
+                                    <SelectItem key={epNum} value={epNum.toString()}>
+                                      {epNum}
+                                    </SelectItem>
+                                  ));
+                                })()}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center">

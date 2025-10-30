@@ -368,6 +368,71 @@ router.get('/universal-search', async (req, res) => {
   }
 });
 
+// Get show season information (total seasons and episode count for a season)
+// MUST be before /:tmdbId route to avoid route conflicts
+router.get('/:tmdbId/seasons', async (req, res) => {
+  try {
+    const tmdbId = parseInt(req.params.tmdbId);
+    const seasonNumber = req.query.season ? parseInt(req.query.season as string) : null;
+    
+    if (isNaN(tmdbId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid TMDB ID'
+      });
+    }
+
+    // Get show details for total seasons
+    const showDetails = await TMDBService.getShowDetails(tmdbId);
+    if (!showDetails) {
+      return res.status(404).json({
+        success: false,
+        error: 'Show not found'
+      });
+    }
+
+    const result: any = {
+      tmdb_id: tmdbId,
+      total_seasons: showDetails.number_of_seasons || 0
+    };
+
+    // If specific season requested, get episode count
+    if (seasonNumber && !isNaN(seasonNumber)) {
+      if (seasonNumber > result.total_seasons) {
+        return res.status(400).json({
+          success: false,
+          error: 'Season not yet released, please sign up for release notifications'
+        });
+      }
+
+      const seasonDetails = await TMDBService.getShowSeasons(tmdbId, seasonNumber);
+      if (!seasonDetails) {
+        return res.status(500).json({
+          success: false,
+          error: 'Unable to fetch data, please try again'
+        });
+      }
+
+      result.season = {
+        season_number: seasonDetails.season_number,
+        episode_count: seasonDetails.episode_count,
+        air_date: seasonDetails.air_date
+      };
+    }
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Error fetching season information:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Unable to fetch data, please try again'
+    });
+  }
+});
+
 // Get show details by TMDB ID
 router.get('/:tmdbId', async (req, res) => {
   try {
