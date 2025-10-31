@@ -13,7 +13,8 @@
     "resolveJsonModule": true
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "api/**/*"
   ],
   "exclude": [
     "node_modules",

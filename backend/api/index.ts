@@ -1,3 +1,5 @@
+// Vercel serverless function entry point
+// Import the Express app configuration
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -10,27 +12,23 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-// PORT is provided via environment variable (standard across deployment platforms)
-const PORT = process.env.PORT || 5001;
 
 // Security middleware
 app.use(helmet());
 
-// CORS configuration
+// CORS configuration for Vercel
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
   process.env.CORS_ORIGIN,
+  process.env.FRONTEND_URL,
   ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
-  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [])
+  ...(process.env.VERCEL ? [process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ''] : [])
 ].filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, Postman)
     if (!origin) return callback(null, true);
-    
-    // Check if origin is in allowed list or is a Vercel preview URL
     if (allowedOrigins.includes(origin) || origin.includes('.vercel.app')) {
       callback(null, true);
     } else {
@@ -42,8 +40,8 @@ app.use(cors({
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100
 });
 app.use('/api/', limiter);
 
@@ -61,20 +59,19 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
+// Import routes dynamically
+import showRoutes from '../src/routes/shows';
+import authRoutes from '../src/routes/auth';
+import progressSyncRoutes from '../src/routes/progress-sync';
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'production'
   });
 });
-
-// Import routes
-import showRoutes from './routes/shows';
-import authRoutes from './routes/auth';
-import progressSyncRoutes from './routes/progress-sync';
 
 // API routes
 app.use('/api/shows', showRoutes);
@@ -95,15 +92,6 @@ app.use('*', (req, res) => {
   });
 });
 
-// Export handler for Vercel serverless functions
+// Export for Vercel serverless
 export default app;
 
-// Start server only if not running as a serverless function (e.g., on Vercel)
-// Vercel serverless functions don't use app.listen()
-if (process.env.VERCEL !== '1' && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
-  app.listen(PORT, () => {
-    console.log(`🎬 StreamTrack backend running on port ${PORT}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`📱 Health check: http://localhost:${PORT}/health`);
-  });
-}
