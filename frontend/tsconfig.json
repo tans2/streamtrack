@@ -32,6 +32,8 @@
     "src/components/ui/calendar.tsx",
     "src/components/ui/carousel.tsx",
     "src/components/ui/chart.tsx",
+    "src/components/ui/command.tsx",
+    "src/components/ui/drawer.tsx",
     "src/components/ui/resizable.tsx"
   ]
 }
