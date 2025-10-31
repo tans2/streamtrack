@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/.next",
+  "installCommand": "cd frontend && npm install && cd ../backend && npm install",
+  "functions": {
+    "api/index.ts": {
+      "runtime": "@vercel/node",
+      "includeFiles": "backend/**"
+    }
+  }
+}
+
