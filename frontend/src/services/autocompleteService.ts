@@ -1,4 +1,6 @@
 // Auto-complete service for search suggestions
+import apiClient, { handleApiResponse } from './api';
+
 export interface AutocompleteItem {
   id: number;
   title: string;
@@ -75,27 +77,26 @@ class AutocompleteService {
     }
 
     try {
-      // Fetch from our backend API instead of directly calling TMDB
-      const response = await fetch(
-        `http://localhost:5001/api/shows/search?q=${encodeURIComponent(query)}&page=1`
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch suggestions');
-      }
-
-      const data = await response.json();
+      // Fetch from our backend API using apiClient (handles relative URLs in production)
+      const params = new URLSearchParams({
+        q: query,
+        page: '1',
+        limit: this.MAX_SUGGESTIONS.toString()
+      });
+      
+      const response = await apiClient.get(`/api/shows/search?${params}`);
+      const shows = handleApiResponse<any[]>(response);
       
       // Transform and filter results
-      const suggestions: AutocompleteItem[] = data.results
+      const suggestions: AutocompleteItem[] = shows
         .slice(0, this.MAX_SUGGESTIONS)
         .map((item: any) => ({
-          id: item.id,
-          title: item.name,
+          id: item.tmdb_id || item.id,
+          title: item.title || item.name,
           year: item.first_air_date ? new Date(item.first_air_date).getFullYear().toString() : undefined,
           type: 'show' as const,
           poster_path: item.poster_path,
-          popularity: item.popularity
+          popularity: item.popularity || 0
         }))
         .sort((a: AutocompleteItem, b: AutocompleteItem) => b.popularity - a.popularity);
 
@@ -119,25 +120,21 @@ class AutocompleteService {
     }
 
     try {
-      const response = await fetch(
-        `http://localhost:5001/api/shows/popular?page=1`
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch popular shows');
-      }
-
-      const data = await response.json();
+      // Fetch from our backend API using apiClient (handles relative URLs in production)
+      const response = await apiClient.get('/api/shows/popular', {
+        params: { page: 1, limit: this.MAX_SUGGESTIONS }
+      });
+      const shows = handleApiResponse<any[]>(response);
       
-      const suggestions: AutocompleteItem[] = data.results
+      const suggestions: AutocompleteItem[] = shows
         .slice(0, this.MAX_SUGGESTIONS)
         .map((item: any) => ({
-          id: item.id,
-          title: item.name,
+          id: item.tmdb_id || item.id,
+          title: item.title || item.name,
           year: item.first_air_date ? new Date(item.first_air_date).getFullYear().toString() : undefined,
           type: 'show' as const,
           poster_path: item.poster_path,
-          popularity: item.popularity
+          popularity: item.popularity || 0
         }));
 
       // Cache popular shows for longer

@@ -13,31 +13,51 @@ dotenv.config();
 
 const app = express();
 
-// Request logging middleware (for debugging)
+// Enhanced request logging middleware (for debugging)
 app.use((req, res, next) => {
-  console.log(`[${req.method}] ${req.originalUrl || req.url}`, {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] [${req.method}] ${req.originalUrl || req.url}`, {
     originalUrl: req.originalUrl,
     url: req.url,
     path: req.path,
     baseUrl: req.baseUrl,
-    query: req.query
+    query: req.query,
+    headers: {
+      origin: req.headers.origin,
+      'user-agent': req.headers['user-agent']?.substring(0, 50)
+    }
   });
   next();
 });
 
 // Path normalization middleware for Vercel
-// Vercel may strip /api prefix when routing to api/index.ts
-// This ensures routes work whether path has /api or not
+// Vercel routes /api/* requests to api/index.ts
+// The path should be preserved (e.g., /api/auth/login arrives as /api/auth/login)
+// However, we handle edge cases where the prefix might be stripped
 app.use((req, res, next) => {
-  // If path doesn't start with /api, but should (for our routes), add it
-  // This handles cases where Vercel strips the prefix
-  if (!req.path.startsWith('/api/') && !req.path.startsWith('/api') && req.path !== '/api') {
-    // Check if this looks like an API route (has /auth, /shows, /progress-sync, etc.)
-    if (req.path.startsWith('/auth') || req.path.startsWith('/shows') || req.path.startsWith('/progress-sync') || req.path.startsWith('/health') || req.path.startsWith('/users')) {
-      req.url = '/api' + req.url;
-      req.originalUrl = '/api' + req.originalUrl;
-    }
+  const originalPath = req.path;
+  const originalUrl = req.originalUrl;
+  
+  // Check if path needs normalization
+  // Only add /api prefix if it's missing AND it looks like an API route
+  const isApiRoute = originalPath.startsWith('/auth') || 
+                     originalPath.startsWith('/shows') || 
+                     originalPath.startsWith('/progress-sync') || 
+                     originalPath.startsWith('/users');
+  
+  const hasApiPrefix = originalPath.startsWith('/api/') || 
+                       originalPath === '/api' ||
+                       originalPath.startsWith('/api');
+  
+  // If it's an API route but missing /api prefix, add it
+  if (isApiRoute && !hasApiPrefix) {
+    // Preserve query string if present
+    const queryString = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+    req.url = '/api' + originalPath + queryString;
+    req.originalUrl = '/api' + originalUrl;
+    console.log(`[Path Normalization] ${originalPath} → /api${originalPath}`);
   }
+  
   next();
 });
 
@@ -92,20 +112,29 @@ import showRoutes from '../src/routes/shows';
 import authRoutes from '../src/routes/auth';
 import progressSyncRoutes from '../src/routes/progress-sync';
 
-// Health check endpoint
-app.get('/health', (req, res) => {
+// Health check endpoint (moved to /api/health for consistency)
+app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'production'
+    environment: process.env.NODE_ENV || 'production',
+    uptime: process.uptime()
   });
 });
 
-// API routes
+// Also support /health for backward compatibility (redirects to /api/health)
+app.get('/health', (req, res) => {
+  res.redirect(301, '/api/health');
+});
+
+// API routes - mount at /api prefix
+// These routes are defined with paths like '/login', '/register', etc. in the route files
+// When mounted at /api/auth, the full path becomes /api/auth/login
 app.use('/api/shows', showRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/progress-sync', progressSyncRoutes);
 
+// Users endpoint
 app.get('/api/users', (req, res) => {
   res.json({
     message: 'Users endpoint - coming soon!',
@@ -113,13 +142,27 @@ app.get('/api/users', (req, res) => {
   });
 });
 
-// 404 handler
+// 404 handler for unmatched routes
 app.use('*', (req, res) => {
+  console.log(`[404] Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
-    error: `Route ${req.originalUrl} not found`
+    success: false,
+    error: `Route ${req.originalUrl} not found`,
+    method: req.method,
+    path: req.path,
+    availableRoutes: [
+      'GET /api/health',
+      'POST /api/auth/login',
+      'POST /api/auth/register',
+      'GET /api/auth/me',
+      'GET /api/shows/universal-search',
+      'GET /api/shows/popular',
+      'POST /api/shows/:tmdbId/quick-add'
+    ]
   });
 });
 
 // Export for Vercel serverless
 export default app;
+
 
