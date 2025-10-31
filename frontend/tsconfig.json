@@ -30,6 +30,7 @@
     "Landing Page Design",
     "src/components/ui/input-otp.tsx",
     "src/components/ui/calendar.tsx",
+    "src/components/ui/carousel.tsx",
     "src/components/ui/chart.tsx",
     "src/components/ui/resizable.tsx"
   ]
