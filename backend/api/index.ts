@@ -13,6 +13,18 @@ dotenv.config();
 
 const app = express();
 
+// Request logging middleware (for debugging)
+app.use((req, res, next) => {
+  console.log(`[${req.method}] ${req.originalUrl || req.url}`, {
+    originalUrl: req.originalUrl,
+    url: req.url,
+    path: req.path,
+    baseUrl: req.baseUrl,
+    query: req.query
+  });
+  next();
+});
+
 // Security middleware
 app.use(helmet());
 

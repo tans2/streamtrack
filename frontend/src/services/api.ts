@@ -76,9 +76,48 @@ export const handleApiResponse = <T>(response: any): T => {
 
 // Helper function to handle API errors
 export const handleApiError = (error: AxiosError): string => {
+  // Log full error for debugging
+  console.error('API Error:', {
+    status: error.response?.status,
+    statusText: error.response?.statusText,
+    data: error.response?.data,
+    url: error.config?.url,
+    method: error.config?.method
+  });
+
+  // Handle responses with data
   if (error.response?.data) {
     const data = error.response.data as any;
-    return data.error || data.message || 'An error occurred';
+    
+    // Check if it's a string (HTML error page or plain text)
+    if (typeof data === 'string') {
+      if (error.response.status === 405) {
+        return 'Method not allowed. Please check the API endpoint.';
+      }
+      if (error.response.status === 404) {
+        return 'API endpoint not found.';
+      }
+      return `Server error (${error.response.status}): ${data.substring(0, 100)}`;
+    }
+    
+    // Try to extract error message from JSON
+    if (typeof data === 'object' && data !== null) {
+      return data.error || data.message || `Server error (${error.response.status})`;
+    }
+  }
+  
+  // Handle specific status codes
+  if (error.response?.status) {
+    switch (error.response.status) {
+      case 405:
+        return 'Method not allowed. The API endpoint does not accept this request type.';
+      case 404:
+        return 'API endpoint not found. Please check the URL.';
+      case 500:
+        return 'Server error. Please try again later.';
+      case 503:
+        return 'Service unavailable. Please try again later.';
+    }
   }
   
   if (error.code === 'ECONNABORTED') {
@@ -89,7 +128,7 @@ export const handleApiError = (error: AxiosError): string => {
     return 'Network error. Please check your connection.';
   }
   
-  return 'An unexpected error occurred';
+  return `An unexpected error occurred (Status: ${error.response.status || 'unknown'})`;
 };
 
 export default apiClient;
