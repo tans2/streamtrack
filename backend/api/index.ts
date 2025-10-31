@@ -25,6 +25,22 @@ app.use((req, res, next) => {
   next();
 });
 
+// Path normalization middleware for Vercel
+// Vercel may strip /api prefix when routing to api/index.ts
+// This ensures routes work whether path has /api or not
+app.use((req, res, next) => {
+  // If path doesn't start with /api, but should (for our routes), add it
+  // This handles cases where Vercel strips the prefix
+  if (!req.path.startsWith('/api/') && !req.path.startsWith('/api') && req.path !== '/api') {
+    // Check if this looks like an API route (has /auth, /shows, /progress-sync, etc.)
+    if (req.path.startsWith('/auth') || req.path.startsWith('/shows') || req.path.startsWith('/progress-sync') || req.path.startsWith('/health') || req.path.startsWith('/users')) {
+      req.url = '/api' + req.url;
+      req.originalUrl = '/api' + req.originalUrl;
+    }
+  }
+  next();
+});
+
 // Security middleware
 app.use(helmet());
 
