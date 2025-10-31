@@ -25,5 +25,12 @@
     ]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "Landing Page Design", "src/components/ui/input-otp.tsx"]
+  "exclude": [
+    "node_modules",
+    "Landing Page Design",
+    "src/components/ui/input-otp.tsx",
+    "src/components/ui/calendar.tsx",
+    "src/components/ui/chart.tsx",
+    "src/components/ui/resizable.tsx"
+  ]
 }
