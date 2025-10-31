@@ -10,7 +10,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-// Railway and other platforms provide PORT via environment variable
+// PORT is provided via environment variable (standard across deployment platforms)
 const PORT = process.env.PORT || 5001;
 
 // Security middleware
