@@ -10,14 +10,33 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
+// Railway and other platforms provide PORT via environment variable
 const PORT = process.env.PORT || 5001;
 
 // Security middleware
 app.use(helmet());
 
 // CORS configuration
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  process.env.CORS_ORIGIN,
+  ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [])
+].filter(Boolean);
+
 app.use(cors({
-  origin: [process.env.CORS_ORIGIN || 'http://localhost:3000', 'http://localhost:3001'],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in allowed list or is a Vercel preview URL
+    if (allowedOrigins.includes(origin) || origin.includes('.vercel.app')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
@@ -55,15 +74,11 @@ app.get('/health', (req, res) => {
 // Import routes
 import showRoutes from './routes/shows';
 import authRoutes from './routes/auth';
-import netflixRoutes from './routes/netflix';
-import huluRoutes from './routes/hulu';
 import progressSyncRoutes from './routes/progress-sync';
 
 // API routes
 app.use('/api/shows', showRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/netflix', netflixRoutes);
-app.use('/api/hulu', huluRoutes);
 app.use('/api/progress-sync', progressSyncRoutes);
 
 app.get('/api/users', (req, res) => {

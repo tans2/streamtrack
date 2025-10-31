@@ -1,6 +1,8 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API_BASE_URL = process.env.NODE_ENV === 'production'
+  ? ''  // Use relative URLs in production (same domain)
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001');
 
 // Create axios instance with base configuration
 const apiClient: AxiosInstance = axios.create({
