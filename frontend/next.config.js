@@ -7,12 +7,12 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: [],
   },
-
+  
   // TypeScript configuration
   // Unused UI components with missing dependencies are excluded in tsconfig.json
   // These components are Shadcn UI components that require additional packages:
   // - form.tsx → react-hook-form
-  // - calendar.tsx → react-day-picker
+  // - calendar.tsx → react-day-picker  
   // - carousel.tsx → embla-carousel-react
   // - chart.tsx → recharts
   // - command.tsx → cmdk

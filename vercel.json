@@ -4,7 +4,7 @@
   "outputDirectory": "frontend/.next",
   "installCommand": "cd frontend && npm install && cd ../backend && npm install",
   "functions": {
-    "api/backend/index.ts": {
+    "backend-api/index.ts": {
       "runtime": "@vercel/node",
       "includeFiles": "backend/**"
     }

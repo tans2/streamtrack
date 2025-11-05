@@ -101,9 +101,9 @@ export default app;
 // Start server only if not running as a serverless function (e.g., on Vercel)
 // Vercel serverless functions don't use app.listen()
 if (process.env.VERCEL !== '1' && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
-  app.listen(PORT, () => {
-    console.log(`🎬 StreamTrack backend running on port ${PORT}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`📱 Health check: http://localhost:${PORT}/health`);
-  });
+app.listen(PORT, () => {
+  console.log(`🎬 StreamTrack backend running on port ${PORT}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📱 Health check: http://localhost:${PORT}/health`);
+});
 }
