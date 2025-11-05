@@ -16,6 +16,9 @@ const app = express();
 
 // IMMEDIATE DEBUG: Log that serverless function started
 console.log('🎯 SERVERLESS FUNCTION STARTED AT:', new Date().toISOString());
+console.log('🔧 Environment:', process.env.NODE_ENV);
+console.log('📁 Current directory:', process.cwd());
+console.log('📦 Available env vars:', Object.keys(process.env).filter(key => key.includes('VERCEL') || key.includes('NODE')));
 
 // Test route - add BEFORE any middleware to verify function is called
 app.get('/api/test-function', (req, res) => {
@@ -24,7 +27,9 @@ app.get('/api/test-function', (req, res) => {
     message: 'Serverless function is working!',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    nodeVersion: process.version,
+    platform: process.platform
   });
 });
 
