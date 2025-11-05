@@ -4,16 +4,11 @@
   "outputDirectory": "frontend/.next",
   "installCommand": "cd frontend && npm install && cd ../backend && npm install",
   "functions": {
-    "api/index.ts": {
+    "api/backend/index.ts": {
       "runtime": "@vercel/node",
       "includeFiles": "backend/**"
     }
   },
-  "rewrites": [
-    {
-      "source": "/backend-api/:path*",
-      "destination": "/api/index"
-    }
-  ]
+  "regions": ["iad1"]
 }
 
