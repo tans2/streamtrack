@@ -5,7 +5,7 @@ const API_BASE_URL = process.env.NODE_ENV === 'production'
   : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001');
 
 // Use different API path in production to avoid Next.js conflicts
-const API_PREFIX = process.env.NODE_ENV === 'production' ? '/api/backend' : '/api';
+const API_PREFIX = process.env.NODE_ENV === 'production' ? '/backend-api' : '/api';
 
 // Helper function to build API URLs with correct prefix
 export const buildApiUrl = (endpoint: string): string => {
@@ -23,13 +23,30 @@ const apiClient: AxiosInstance = axios.create({
   },
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token and Vercel protection bypass
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('streamtrack_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Add Vercel protection bypass for production
+    if (process.env.NODE_ENV === 'production') {
+      // Check if we have a bypass token in localStorage or environment
+      const bypassToken = localStorage.getItem('vercel_protection_bypass') ||
+                         process.env.NEXT_PUBLIC_VERCEL_PROTECTION_BYPASS;
+
+      if (bypassToken) {
+        config.headers['x-vercel-protection-bypass'] = bypassToken;
+        // Add query params for bypass cookie
+        config.params = {
+          ...config.params,
+          'x-vercel-set-bypass-cookie': 'true'
+        };
+      }
+    }
+
     return config;
   },
   (error) => {
