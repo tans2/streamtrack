@@ -1,4 +1,4 @@
-import apiClient, { handleApiResponse, handleApiError } from './api';
+import apiClient, { handleApiResponse, handleApiError, buildApiUrl } from './api';
 import { AxiosError } from 'axios';
 
 export interface Show {
@@ -92,7 +92,7 @@ class ShowService {
   // Get popular shows
   async getPopularShows(page: number = 1, limit: number = 20): Promise<{ shows: Show[]; pagination: any }> {
     try {
-      const response = await apiClient.get('/api/shows/popular', {
+      const response = await apiClient.get(buildApiUrl('shows/popular'), {
         params: { page, limit },
       });
       return handleApiResponse(response);
@@ -114,7 +114,7 @@ class ShowService {
   // Get trending shows
   async getTrendingShows(limit: number = 20): Promise<Show[]> {
     try {
-      const response = await apiClient.get('/api/shows/trending/daily', {
+      const response = await apiClient.get(buildApiUrl('shows/trending/daily'), {
         params: { limit },
       });
       return handleApiResponse<Show[]>(response);
@@ -138,7 +138,7 @@ class ShowService {
   // Simple search (fallback)
   async simpleSearch(query: string, page: number = 1, limit: number = 20): Promise<{ shows: Show[]; pagination: any }> {
     try {
-      const response = await apiClient.get('/api/shows/search', {
+      const response = await apiClient.get(buildApiUrl('shows/search'), {
         params: { q: query, page, limit },
       });
       return handleApiResponse(response);

@@ -1,4 +1,4 @@
-import apiClient, { handleApiResponse, handleApiError } from './api';
+import apiClient, { handleApiResponse, handleApiError, buildApiUrl } from './api';
 import { AxiosError } from 'axios';
 
 export interface WatchlistItem {
@@ -64,7 +64,7 @@ class WatchlistService {
         params.status = status;
       }
 
-      const response = await apiClient.get('/api/shows/watchlist', { params });
+      const response = await apiClient.get(buildApiUrl('shows/watchlist'), { params });
       return handleApiResponse<WatchlistItem[]>(response);
     } catch (error) {
       throw new Error(handleApiError(error as AxiosError));
@@ -103,7 +103,7 @@ class WatchlistService {
   // Bulk update watchlist
   async bulkUpdate(bulkData: BulkUpdateRequest): Promise<any[]> {
     try {
-      const response = await apiClient.put('/api/shows/watchlist/bulk', bulkData);
+      const response = await apiClient.put(buildApiUrl('shows/watchlist/bulk'), bulkData);
       return handleApiResponse<any[]>(response);
     } catch (error) {
       throw new Error(handleApiError(error as AxiosError));

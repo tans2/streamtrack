@@ -1,4 +1,4 @@
-import apiClient, { handleApiResponse, handleApiError } from './api';
+import apiClient, { handleApiResponse, handleApiError, buildApiUrl } from './api';
 import { AxiosError } from 'axios';
 
 export interface User {
@@ -43,7 +43,7 @@ class AuthService {
   // Login user with email and password
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      const response = await apiClient.post('/api/auth/login', {
+      const response = await apiClient.post(buildApiUrl('auth/login'), {
         email,
         password,
       });
@@ -56,7 +56,7 @@ class AuthService {
   // Register new user
   async register(email: string, password: string, name?: string, initialShows?: number[]): Promise<LoginResponse> {
     try {
-      const response = await apiClient.post('/api/auth/register', {
+      const response = await apiClient.post(buildApiUrl('auth/register'), {
         email,
         password,
         name,
@@ -71,7 +71,7 @@ class AuthService {
   // Get current user profile
   async getCurrentUser(): Promise<User> {
     try {
-      const response = await apiClient.get('/api/auth/me');
+      const response = await apiClient.get(buildApiUrl('auth/me'));
       return handleApiResponse<User>(response);
     } catch (error) {
       throw new Error(handleApiError(error as AxiosError));
@@ -81,7 +81,7 @@ class AuthService {
   // Update user preferences
   async updatePreferences(updates: UpdatePreferencesRequest): Promise<User> {
     try {
-      const response = await apiClient.put('/api/auth/preferences', updates);
+      const response = await apiClient.put(buildApiUrl('auth/preferences'), updates);
       return handleApiResponse<User>(response);
     } catch (error) {
       throw new Error(handleApiError(error as AxiosError));
@@ -91,7 +91,7 @@ class AuthService {
   // Upgrade to premium
   async upgradeToPremium(): Promise<User> {
     try {
-      const response = await apiClient.post('/api/auth/upgrade-premium');
+      const response = await apiClient.post(buildApiUrl('auth/upgrade-premium'));
       return handleApiResponse<User>(response);
     } catch (error) {
       throw new Error(handleApiError(error as AxiosError));
@@ -101,7 +101,7 @@ class AuthService {
   // Get user's followed shows
   async getUserShows(): Promise<any[]> {
     try {
-      const response = await apiClient.get('/api/auth/shows');
+      const response = await apiClient.get(buildApiUrl('auth/shows'));
       return handleApiResponse<any[]>(response);
     } catch (error) {
       throw new Error(handleApiError(error as AxiosError));
@@ -111,7 +111,7 @@ class AuthService {
   // Logout (client-side token removal)
   async logout(): Promise<void> {
     try {
-      await apiClient.post('/api/auth/logout');
+      await apiClient.post(buildApiUrl('auth/logout'));
     } catch (error) {
       // Even if the API call fails, we should still clear the local token
       console.warn('Logout API call failed:', error);

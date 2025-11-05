@@ -4,6 +4,16 @@ const API_BASE_URL = process.env.NODE_ENV === 'production'
   ? ''  // Use relative URLs in production (same domain)
   : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001');
 
+// Use different API path in production to avoid Next.js conflicts
+const API_PREFIX = process.env.NODE_ENV === 'production' ? '/backend-api' : '/api';
+
+// Helper function to build API URLs with correct prefix
+export const buildApiUrl = (endpoint: string): string => {
+  // Remove leading slash if present
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+  return `${API_PREFIX}/${cleanEndpoint}`;
+};
+
 // Create axios instance with base configuration
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
