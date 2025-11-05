@@ -1,5 +1,5 @@
 // Auto-complete service for search suggestions
-import apiClient, { handleApiResponse } from './api';
+import apiClient, { handleApiResponse, buildApiUrl } from './api';
 
 export interface AutocompleteItem {
   id: number;
@@ -84,7 +84,7 @@ class AutocompleteService {
         limit: this.MAX_SUGGESTIONS.toString()
       });
       
-      const response = await apiClient.get(`/api/shows/search?${params}`);
+      const response = await apiClient.get(`${buildApiUrl('shows/search')}?${params}`);
       const shows = handleApiResponse<any[]>(response);
       
       // Transform and filter results
@@ -121,7 +121,7 @@ class AutocompleteService {
 
     try {
       // Fetch from our backend API using apiClient (handles relative URLs in production)
-      const response = await apiClient.get('/api/shows/popular', {
+      const response = await apiClient.get(buildApiUrl('shows/popular'), {
         params: { page: 1, limit: this.MAX_SUGGESTIONS }
       });
       const shows = handleApiResponse<any[]>(response);
