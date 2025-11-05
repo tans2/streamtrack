@@ -46,11 +46,13 @@ app.use((req, res, next) => {
 });
 
 // Path normalization middleware for Vercel
-// Frontend now calls /backend-api/*, Vercel routes to api/index.ts
+// Frontend calls /backend-api/*, Vercel routes to api/index.ts
 // We need to normalize /backend-api/* to /api/* for our route handlers
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
   const originalPath = req.path;
+
+  console.log(`[${timestamp}] 📨 INCOMING REQUEST: ${req.method} ${req.path} (originalUrl: ${req.originalUrl})`);
 
   // Handle /backend-api/* → /api/* conversion
   let normalizedPath = originalPath;
@@ -68,7 +70,7 @@ app.use((req, res, next) => {
     console.log(`[${timestamp}] 🔄 PATH NORMALIZED: ${originalPath} → ${normalizedPath}`);
   }
 
-  console.log(`[${timestamp}] 🚀 REQUEST: ${req.method} ${req.path} (was: ${originalPath})`);
+  console.log(`[${timestamp}] 🎯 FINAL PATH: ${req.method} ${req.path}`);
   next();
 });
 

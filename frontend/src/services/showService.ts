@@ -82,7 +82,7 @@ class ShowService {
         ...(filters.seasonMode && { seasonMode: filters.seasonMode }),
       });
 
-      const response = await apiClient.get(`/api/shows/universal-search?${params}`);
+      const response = await apiClient.get(`${buildApiUrl('shows/universal-search')}?${params}`);
       return handleApiResponse<Show[]>(response);
     } catch (error) {
       throw new Error(handleApiError(error as AxiosError));
@@ -104,7 +104,7 @@ class ShowService {
   // Get show details by TMDB ID
   async getShowDetails(tmdbId: number): Promise<Show> {
     try {
-      const response = await apiClient.get(`/api/shows/${tmdbId}`);
+      const response = await apiClient.get(buildApiUrl(`shows/${tmdbId}`));
       return handleApiResponse<Show>(response);
     } catch (error) {
       throw new Error(handleApiError(error as AxiosError));
@@ -126,7 +126,7 @@ class ShowService {
   // Get shows by genre
   async getShowsByGenre(genreId: number, page: number = 1, limit: number = 20): Promise<{ shows: Show[]; pagination: any }> {
     try {
-      const response = await apiClient.get(`/api/shows/genre/${genreId}`, {
+      const response = await apiClient.get(buildApiUrl(`shows/genre/${genreId}`), {
         params: { page, limit },
       });
       return handleApiResponse(response);
@@ -154,7 +154,7 @@ class ShowService {
       if (seasonNumber) {
         params.season = seasonNumber.toString();
       }
-      const response = await apiClient.get(`/api/shows/${tmdbId}/seasons`, { params });
+      const response = await apiClient.get(buildApiUrl(`shows/${tmdbId}/seasons`), { params });
       return handleApiResponse(response);
     } catch (error) {
       throw new Error(handleApiError(error as AxiosError));
