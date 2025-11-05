@@ -74,7 +74,7 @@ class WatchlistService {
   // Add show to watchlist by TMDB ID
   async addToWatchlist(tmdbId: number): Promise<{ show: any; followed: any }> {
     try {
-      const response = await apiClient.post(`/api/shows/${tmdbId}/quick-add`);
+      const response = await apiClient.post(buildApiUrl(`shows/${tmdbId}/quick-add`));
       return handleApiResponse<{ show: any; followed: any }>(response);
     } catch (error) {
       throw new Error(handleApiError(error as AxiosError));
@@ -84,7 +84,7 @@ class WatchlistService {
   // Update show status in watchlist
   async updateShowStatus(showId: string, updateData: UpdateStatusRequest): Promise<WatchlistItem> {
     try {
-      const response = await apiClient.put(`/api/shows/watchlist/${showId}/status`, updateData);
+      const response = await apiClient.put(buildApiUrl(`shows/watchlist/${showId}/status`), updateData);
       return handleApiResponse<WatchlistItem>(response);
     } catch (error) {
       throw new Error(handleApiError(error as AxiosError));
@@ -94,7 +94,7 @@ class WatchlistService {
   // Remove show from watchlist
   async removeFromWatchlist(showId: string): Promise<void> {
     try {
-      await apiClient.delete(`/api/shows/watchlist/${showId}`);
+      await apiClient.delete(buildApiUrl(`shows/watchlist/${showId}`));
     } catch (error) {
       throw new Error(handleApiError(error as AxiosError));
     }
