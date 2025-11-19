@@ -29,10 +29,10 @@ app.get('/test', (req, res) => {
   });
 });
 
-// Import routes dynamically
-import showRoutes from '../../backend/src/routes/shows';
-import authRoutes from '../../backend/src/routes/auth';
-import progressSyncRoutes from '../../backend/src/routes/progress-sync';
+// Import routes dynamically (from compiled dist directory)
+import showRoutes from '../backend/dist/routes/shows';
+import authRoutes from '../backend/dist/routes/auth';
+import progressSyncRoutes from '../backend/dist/routes/progress-sync';
 
 // Security middleware
 app.use(helmet());
