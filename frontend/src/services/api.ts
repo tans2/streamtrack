@@ -4,8 +4,8 @@ const API_BASE_URL = process.env.NODE_ENV === 'production'
   ? ''  // Use relative URLs in production (same domain)
   : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001');
 
-// Use different API path in production to avoid Next.js conflicts
-const API_PREFIX = process.env.NODE_ENV === 'production' ? '/backend-api' : '/api';
+// Use correct API path to match Vercel serverless function path
+const API_PREFIX = process.env.NODE_ENV === 'production' ? '/api/backend' : '/api';
 
 // Helper function to build API URLs with correct prefix
 export const buildApiUrl = (endpoint: string): string => {
