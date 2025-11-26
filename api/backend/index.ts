@@ -87,6 +87,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Strip /api/backend prefix for Vercel rewrites
+// When Vercel rewrites /api/backend/* to /api/backend, the original URL is preserved
+// So we need to strip the prefix for Express routing to work
+app.use((req, res, next) => {
+  if (req.url.startsWith('/api/backend')) {
+    req.url = req.url.replace('/api/backend', '') || '/';
+  }
+  next();
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.status(200).json({
