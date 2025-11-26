@@ -1,10 +1,11 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
-// Backend API URL - use environment variable in production, localhost in development
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API_BASE_URL = process.env.NODE_ENV === 'production'
+  ? ''  // Use relative URLs in production (same domain)
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001');
 
-// API routes are at /api/* on the backend
-const API_PREFIX = '/api';
+// Use correct API path to match Vercel serverless function path
+const API_PREFIX = process.env.NODE_ENV === 'production' ? '/api/backend' : '/api';
 
 // Helper function to build API URLs with correct prefix
 export const buildApiUrl = (endpoint: string): string => {
