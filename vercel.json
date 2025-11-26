@@ -5,7 +5,6 @@
   "installCommand": "cd frontend && npm install && cd ../backend && npm install",
   "functions": {
     "api/backend/[[...path]].ts": {
-      "runtime": "@vercel/node",
       "includeFiles": "backend/**"
     }
   },
