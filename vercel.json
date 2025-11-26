@@ -1,14 +1,5 @@
 {
   "version": 2,
-  "framework": "nextjs",
-  "buildCommand": "npm run build --prefix frontend && npm run build --prefix backend",
-  "outputDirectory": "frontend/.next",
-  "installCommand": "npm install && npm install --prefix frontend && npm install --prefix backend",
-  "functions": {
-    "api/backend/[[...path]].ts": {
-      "includeFiles": "backend/**"
-    }
-  },
   "regions": ["iad1"]
 }
 
