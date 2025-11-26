@@ -3,7 +3,7 @@
   "framework": "nextjs",
   "buildCommand": "cd frontend && npm run build && cd ../backend && npm run build",
   "outputDirectory": "frontend/.next",
-  "installCommand": "cd frontend && npm install && cd ../backend && npm install",
+  "installCommand": "npm install && cd frontend && npm install && cd ../backend && npm install",
   "functions": {
     "api/backend/[[...path]].ts": {
       "includeFiles": "backend/**"
