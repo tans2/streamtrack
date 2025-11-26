@@ -28,8 +28,7 @@
   "exclude": [
     "node_modules",
     "Landing Page Design",
-    // Unused UI components with missing external dependencies
-    // These are Shadcn UI components that require additional packages not installed
+    "api",
     "src/components/ui/input-otp.tsx",
     "src/components/ui/calendar.tsx",
     "src/components/ui/carousel.tsx",
