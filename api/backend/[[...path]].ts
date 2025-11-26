@@ -1,5 +1,5 @@
-// Vercel serverless function for backend API
-// This will be accessible at /api/backend/*
+// Vercel serverless function for backend API - Catch-all route handler
+// This handles /api/backend and all sub-paths like /api/backend/auth/login
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -18,17 +18,6 @@ console.log('🎯 BACKEND API FUNCTION STARTED AT:', new Date().toISOString());
 console.log('🔧 Environment:', process.env.NODE_ENV);
 console.log('📁 Current directory:', process.cwd());
 
-// Test route - verify function is working
-app.get('/test', (req, res) => {
-  console.log('✅ BACKEND TEST ROUTE CALLED');
-  res.json({
-    message: 'Backend API function is working!',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-    uptime: process.uptime()
-  });
-});
-
 // Import routes dynamically (from compiled dist directory)
 import showRoutes from '../../backend/dist/routes/shows';
 import authRoutes from '../../backend/dist/routes/auth';
@@ -44,7 +33,6 @@ const allowedOrigins = [
   process.env.CORS_ORIGIN,
   process.env.FRONTEND_URL,
   ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
-  ...(process.env.VERCEL ? [process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}`] : ''] : [])
 ].filter(Boolean);
 
 app.use(cors({
@@ -53,7 +41,8 @@ app.use(cors({
     if (allowedOrigins.includes(origin) || origin.includes('.vercel.app')) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      console.log('CORS blocked origin:', origin);
+      callback(null, true); // Allow anyway for debugging
     }
   },
   credentials: true
@@ -80,24 +69,21 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// Enhanced request logging
+// Enhanced request logging and path normalization
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] 🚀 BACKEND REQUEST: ${req.method} ${req.path} (originalUrl: ${req.originalUrl})`);
-  next();
-});
-
-// Strip /api/backend prefix for Vercel rewrites
-// When Vercel rewrites /api/backend/* to /api/backend, the original URL is preserved
-// So we need to strip the prefix for Express routing to work
-app.use((req, res, next) => {
+  console.log(`[${timestamp}] 🚀 INCOMING: ${req.method} ${req.url} (original: ${req.originalUrl})`);
+  
+  // Strip /api/backend prefix for Express routing
   if (req.url.startsWith('/api/backend')) {
     req.url = req.url.replace('/api/backend', '') || '/';
+    console.log(`[${timestamp}] 🔄 NORMALIZED: ${req.url}`);
   }
+  
   next();
 });
 
-// Health check
+// Health check / test endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
@@ -107,29 +93,39 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API routes - mount without /api prefix since Vercel handles /api/backend/*
+app.get('/test', (req, res) => {
+  res.json({
+    message: 'Backend API function is working!',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+  });
+});
+
+// API routes
 app.use('/shows', showRoutes);
 app.use('/auth', authRoutes);
 app.use('/progress-sync', progressSyncRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
-  console.log(`[404] Backend route not found: ${req.method} ${req.originalUrl} (path: ${req.path})`);
+  console.log(`[404] Route not found: ${req.method} ${req.originalUrl} (normalized: ${req.url})`);
   res.status(404).json({
     success: false,
     error: `Backend route not found`,
     method: req.method,
-    path: req.path,
+    path: req.url,
+    originalUrl: req.originalUrl,
     availableRoutes: [
-      'GET /health',
-      'POST /auth/login',
-      'POST /auth/register',
-      'GET /auth/me',
-      'GET /shows/universal-search',
-      'GET /shows/popular'
+      'GET /api/backend/health',
+      'GET /api/backend/test',
+      'POST /api/backend/auth/login',
+      'POST /api/backend/auth/register',
+      'GET /api/backend/auth/me',
+      'GET /api/backend/shows/universal-search',
     ]
   });
 });
 
 // Export for Vercel serverless
 export default app;
+
