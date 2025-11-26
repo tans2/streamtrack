@@ -19,10 +19,10 @@ console.log('🔧 Environment:', process.env.NODE_ENV);
 console.log('📁 Current directory:', process.cwd());
 
 // Import routes dynamically (from compiled dist directory)
-// Path is relative to frontend/api/backend/ -> ../../../backend/dist/
-import showRoutes from '../../../backend/dist/routes/shows';
-import authRoutes from '../../../backend/dist/routes/auth';
-import progressSyncRoutes from '../../../backend/dist/routes/progress-sync';
+// Path is relative to api/backend/ -> ../../backend/dist/
+import showRoutes from '../../backend/dist/routes/shows';
+import authRoutes from '../../backend/dist/routes/auth';
+import progressSyncRoutes from '../../backend/dist/routes/progress-sync';
 
 // Security middleware
 app.use(helmet());
