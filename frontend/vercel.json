@@ -1,3 +1,9 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "functions": {
+    "api/backend/[[...path]].ts": {
+      "runtime": "@vercel/node",
+      "includeFiles": "../backend/**"
+    }
+  }
 }
