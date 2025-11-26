@@ -30,9 +30,9 @@ app.get('/test', (req, res) => {
 });
 
 // Import routes dynamically (from compiled dist directory)
-import showRoutes from '../backend/dist/routes/shows';
-import authRoutes from '../backend/dist/routes/auth';
-import progressSyncRoutes from '../backend/dist/routes/progress-sync';
+import showRoutes from '../../backend/dist/routes/shows';
+import authRoutes from '../../backend/dist/routes/auth';
+import progressSyncRoutes from '../../backend/dist/routes/progress-sync';
 
 // Security middleware
 app.use(helmet());
