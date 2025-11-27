@@ -10,8 +10,9 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { watchlistService, WatchlistItem } from '@/services/watchlistService';
-import { showService } from '@/services/showService';
+import { showService, Show } from '@/services/showService';
 import { toast } from 'sonner';
+import ShowDetailsModal from './ShowDetailsModal';
 
 interface ProfilePageProps {
   onNavigate: (page: string) => void;
@@ -30,6 +31,10 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [seasonDataCache, setSeasonDataCache] = useState<Record<string, SeasonData>>({}); // show_id -> SeasonData
   const [savingProgress, setSavingProgress] = useState<Record<string, boolean>>({}); // show_id -> isSaving
+  
+  // Modal state for show details
+  const [selectedShow, setSelectedShow] = useState<Show | null>(null);
+  const [selectedShowSeason, setSelectedShowSeason] = useState<number>(1);
 
   const { user } = useAuth();
   const router = useRouter();
@@ -79,6 +84,36 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     } catch (error: any) {
       console.error('Error removing from watchlist:', error);
       toast.error(error.message || 'Failed to remove from watchlist');
+    }
+  };
+
+  // Handle clicking on a show to view details
+  const handleShowClick = async (item: WatchlistItem) => {
+    try {
+      // Fetch full show details from API
+      const showDetails = await showService.getShowDetails(item.shows.tmdb_id);
+      setSelectedShow(showDetails);
+      setSelectedShowSeason(item.current_season || 1);
+    } catch (error: any) {
+      console.error('Error fetching show details:', error);
+      // Fallback: create a basic Show object from the watchlist item
+      const basicShow: Show = {
+        id: item.shows.id,
+        tmdb_id: item.shows.tmdb_id,
+        title: item.shows.title,
+        overview: item.shows.overview || '',
+        poster_path: item.shows.poster_path,
+        backdrop_path: item.shows.backdrop_path,
+        first_air_date: item.shows.first_air_date,
+        status: item.shows.status || 'Unknown',
+        type: item.shows.type || 'tv',
+        genres: item.shows.genres || [],
+        rating: item.shows.rating || 0,
+        popularity: item.shows.popularity || 0,
+        totalSeasons: item.shows.total_seasons,
+      };
+      setSelectedShow(basicShow);
+      setSelectedShowSeason(item.current_season || 1);
     }
   };
 
@@ -408,17 +443,28 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                 <Card key={item.id} className="bg-card border-border hover:border-primary transition-colors shadow-lg h-auto">
                   <CardContent className="p-4">
                     <div className="flex gap-4">
-                      <div className="w-24 flex-shrink-0">
-                        <div className="aspect-[2/3] rounded-lg overflow-hidden bg-muted">
+                      <div 
+                        className="w-24 flex-shrink-0 cursor-pointer group"
+                        onClick={() => handleShowClick(item)}
+                      >
+                        <div className="aspect-[2/3] rounded-lg overflow-hidden bg-muted relative">
                           <ImageWithFallback 
                             src={getPosterUrl(item.shows.poster_path)}
                             alt={item.shows.title}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
                           />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <Search className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
                         </div>
                       </div>
                       <div className="flex-1 min-w-0 flex flex-col">
-                        <h4 className="text-card-foreground font-medium mb-2 truncate">{item.shows.title}</h4>
+                        <h4 
+                          className="text-card-foreground font-medium mb-2 truncate cursor-pointer hover:text-primary transition-colors"
+                          onClick={() => handleShowClick(item)}
+                        >
+                          {item.shows.title}
+                        </h4>
                         <div className="space-y-3 flex-1">
                           <StatusBadge status={item.watch_status} />
                           <div className="flex items-center gap-2 flex-wrap">
@@ -639,6 +685,16 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
           )}
         </div>
       </div>
+      
+      {/* Show Details Modal */}
+      <ShowDetailsModal
+        show={selectedShow}
+        isOpen={!!selectedShow}
+        onClose={() => setSelectedShow(null)}
+        isInWatchlist={true}  // Always true since we're viewing from watchlist
+        defaultSeason={selectedShowSeason}
+        hideOverview={true}   // Hide overview for profile context
+      />
     </div>
   );
 }

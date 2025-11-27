@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -26,15 +26,35 @@ interface ShowDetailsModalProps {
   show: Show | null;
   isOpen: boolean;
   onClose: () => void;
+  isInWatchlist?: boolean;  // If true, show "In Watchlist" instead of "Add to Watchlist"
+  defaultSeason?: number;   // Default season to show (e.g., user's current watching season)
+  hideOverview?: boolean;   // Hide the overview section (for Profile page context)
+  onWatchlistChange?: () => void; // Callback when watchlist changes
 }
 
-export default function ShowDetailsModal({ show, isOpen, onClose }: ShowDetailsModalProps) {
+export default function ShowDetailsModal({ 
+  show, 
+  isOpen, 
+  onClose, 
+  isInWatchlist = false,
+  defaultSeason,
+  hideOverview = false,
+  onWatchlistChange
+}: ShowDetailsModalProps) {
   const [addingToWatchlist, setAddingToWatchlist] = useState(false);
   const [recentlyAdded, setRecentlyAdded] = useState(false);
-  const [selectedSeason, setSelectedSeason] = useState<number>(1);
+  const [selectedSeason, setSelectedSeason] = useState<number>(defaultSeason || 1);
   
   const { user } = useAuth();
   const router = useRouter();
+
+  // Reset state when modal opens with new show or defaultSeason changes
+  useEffect(() => {
+    if (isOpen && show) {
+      setSelectedSeason(defaultSeason || 1);
+      setRecentlyAdded(false);
+    }
+  }, [isOpen, show?.tmdb_id, defaultSeason]);
 
   const handleAddToWatchlist = async () => {
     if (!user) {
@@ -50,6 +70,8 @@ export default function ShowDetailsModal({ show, isOpen, onClose }: ShowDetailsM
       await watchlistService.addToWatchlist(show.tmdb_id);
       setRecentlyAdded(true);
       toast.success(`"${show.title}" added to your watchlist!`);
+      // Notify parent component of watchlist change
+      onWatchlistChange?.();
     } catch (error: any) {
       console.error('Add to watchlist error:', error);
       toast.error(error.message || 'Failed to add to watchlist');
@@ -57,6 +79,9 @@ export default function ShowDetailsModal({ show, isOpen, onClose }: ShowDetailsM
       setAddingToWatchlist(false);
     }
   };
+
+  // Determine if we should show "In Watchlist" state
+  const showInWatchlistState = isInWatchlist || recentlyAdded;
 
   const getPosterUrl = (posterPath?: string) => {
     if (!posterPath) return '';
@@ -128,27 +153,40 @@ export default function ShowDetailsModal({ show, isOpen, onClose }: ShowDetailsM
                 </div>
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-foreground mb-3">Overview</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  {show.overview || 'No overview available.'}
-                </p>
+                {/* Overview - hidden when viewing from profile */}
+                {!hideOverview && (
+                  <>
+                    <h3 className="text-lg font-semibold text-foreground mb-3">Overview</h3>
+                    <p className="text-muted-foreground leading-relaxed mb-4">
+                      {show.overview || 'No overview available.'}
+                    </p>
+                  </>
+                )}
                 
-                {/* Add to Watchlist Button */}
-                <div className="mt-4">
-                  <Button
-                    onClick={handleAddToWatchlist}
-                    disabled={addingToWatchlist || recentlyAdded}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                  >
-                    {addingToWatchlist ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : recentlyAdded ? (
+                {/* Watchlist Button */}
+                <div className={hideOverview ? "" : "mt-4"}>
+                  {showInWatchlistState ? (
+                    <Button
+                      disabled
+                      className="bg-muted text-muted-foreground cursor-default"
+                    >
                       <Check className="w-4 h-4 mr-2" />
-                    ) : (
-                      <Plus className="w-4 h-4 mr-2" />
-                    )}
-                    {recentlyAdded ? 'Added to Watchlist!' : 'Add to Watchlist'}
-                  </Button>
+                      In Watchlist
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleAddToWatchlist}
+                      disabled={addingToWatchlist}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    >
+                      {addingToWatchlist ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Plus className="w-4 h-4 mr-2" />
+                      )}
+                      Add to Watchlist
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
