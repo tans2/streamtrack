@@ -29,6 +29,7 @@ interface ShowDetailsModalProps {
   isInWatchlist?: boolean;  // If true, show "In Watchlist" instead of "Add to Watchlist"
   defaultSeason?: number;   // Default season to show (e.g., user's current watching season)
   hideOverview?: boolean;   // Hide the overview section (for Profile page context)
+  hideWatchlistButton?: boolean; // Hide the watchlist button entirely
   onWatchlistChange?: () => void; // Callback when watchlist changes
 }
 
@@ -39,6 +40,7 @@ export default function ShowDetailsModal({
   isInWatchlist = false,
   defaultSeason,
   hideOverview = false,
+  hideWatchlistButton = false,
   onWatchlistChange
 }: ShowDetailsModalProps) {
   const [addingToWatchlist, setAddingToWatchlist] = useState(false);
@@ -163,31 +165,33 @@ export default function ShowDetailsModal({
                   </>
                 )}
                 
-                {/* Watchlist Button */}
-                <div className={hideOverview ? "" : "mt-4"}>
-                  {showInWatchlistState ? (
-                    <Button
-                      disabled
-                      className="bg-muted text-muted-foreground cursor-default"
-                    >
-                      <Check className="w-4 h-4 mr-2" />
-                      In Watchlist
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={handleAddToWatchlist}
-                      disabled={addingToWatchlist}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                    >
-                      {addingToWatchlist ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Plus className="w-4 h-4 mr-2" />
-                      )}
-                      Add to Watchlist
-                    </Button>
-                  )}
-                </div>
+                {/* Watchlist Button - hidden when hideWatchlistButton is true */}
+                {!hideWatchlistButton && (
+                  <div className={hideOverview ? "" : "mt-4"}>
+                    {showInWatchlistState ? (
+                      <Button
+                        disabled
+                        className="bg-muted text-muted-foreground cursor-default"
+                      >
+                        <Check className="w-4 h-4 mr-2" />
+                        In Watchlist
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handleAddToWatchlist}
+                        disabled={addingToWatchlist}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                      >
+                        {addingToWatchlist ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Plus className="w-4 h-4 mr-2" />
+                        )}
+                        Add to Watchlist
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
