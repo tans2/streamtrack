@@ -30,7 +30,7 @@ export default function HomePage() {
         <div className="flex items-center space-x-2">
           <Play className="w-8 h-8 text-primary" />
           <span className="text-2xl font-bold text-primary">
-            WallyWatch
+            Scout
           </span>
         </div>
         <div className="flex items-center space-x-4">
@@ -68,7 +68,7 @@ export default function HomePage() {
       <div className="max-w-6xl mx-auto px-6 py-16">
         <div className="text-center mb-16">
           <h1 className="text-6xl font-bold text-foreground mb-6">
-            🎬 WallyWatch
+            🎬 Scout
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Track your favorite shows across all streaming platforms. Never miss a new episode or season again.

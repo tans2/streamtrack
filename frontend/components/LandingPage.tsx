@@ -29,7 +29,7 @@ export default function LandingPage({
         <div className="flex items-center space-x-2">
           <Play className="w-8 h-8 text-primary" />
           <span className="text-2xl font-bold text-primary">
-            WallyWatch
+            Scout
           </span>
         </div>
         <div className="flex items-center space-x-4">
@@ -60,7 +60,7 @@ export default function LandingPage({
       {/* Hero Section */}
       <div className="container mx-auto px-6 py-20 text-center">
         <h1 className="text-6xl mb-6 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-          WallyWatch
+          Scout
         </h1>
         <p className="text-2xl mb-8 text-muted-foreground">
           Your streaming sidekick keeping you up to date
@@ -163,7 +163,7 @@ export default function LandingPage({
       <footer className="border-t border-border py-8 text-center text-muted-foreground">
         <div className="container mx-auto px-6">
           <p>
-            &copy; 2025 WallyWatch. Your streaming sidekick.
+            &copy; 2025 Scout. Your streaming sidekick.
           </p>
         </div>
       </footer>

@@ -405,23 +405,23 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
             <h3 className="text-2xl mb-4 text-foreground">Currently Watching</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {watchingShows.map(item => (
-                <Card key={item.id} className="bg-card border-border hover:border-primary transition-colors shadow-lg">
+                <Card key={item.id} className="bg-card border-border hover:border-primary transition-colors shadow-lg h-auto">
                   <CardContent className="p-4">
-                    <div className="flex space-x-4">
-                      <div className="w-20 h-28 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                        <ImageWithFallback 
-                          src={getPosterUrl(item.shows.poster_path)}
-                          alt={item.shows.title}
-                          className="w-full h-full object-cover"
-                        />
+                    <div className="flex gap-4">
+                      <div className="w-24 flex-shrink-0">
+                        <div className="aspect-[2/3] rounded-lg overflow-hidden bg-muted">
+                          <ImageWithFallback 
+                            src={getPosterUrl(item.shows.poster_path)}
+                            alt={item.shows.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-card-foreground mb-2 truncate">{item.shows.title}</h4>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between mb-2">
-                            <StatusBadge status={item.watch_status} />
-                          </div>
-                          <div className="flex items-center gap-2 mb-2">
+                      <div className="flex-1 min-w-0 flex flex-col">
+                        <h4 className="text-card-foreground font-medium mb-2 truncate">{item.shows.title}</h4>
+                        <div className="space-y-3 flex-1">
+                          <StatusBadge status={item.watch_status} />
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm text-muted-foreground whitespace-nowrap">Season</span>
                             <Select
                               value={(item.current_season || 1).toString()}
@@ -531,19 +531,17 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <Star className="w-4 h-4 text-yellow-600 mr-1" />
-                              <span className="text-muted-foreground">{item.shows.rating?.toFixed(1) || 'N/A'}</span>
-                            </div>
+                          <div className="flex items-center">
+                            <Star className="w-4 h-4 text-yellow-600 mr-1" />
+                            <span className="text-sm text-muted-foreground">{item.shows.rating?.toFixed(1) || 'N/A'}</span>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 flex-wrap mt-auto pt-2">
                             <Select
                               value={item.watch_status}
                               onValueChange={(newStatus) => handleStatusUpdate(item.show_id, newStatus)}
                               disabled={updatingStatus === item.show_id}
                             >
-                              <SelectTrigger className="w-36 h-8">
+                              <SelectTrigger className="w-28 h-8 text-sm">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -556,6 +554,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                             <Button
                               size="sm"
                               variant="outline"
+                              className="h-8 text-sm"
                               onClick={() => handleRemoveFromWatchlist(item.show_id, item.shows.title)}
                             >
                               Remove
