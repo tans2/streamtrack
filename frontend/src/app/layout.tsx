@@ -4,7 +4,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ToastProvider } from '@/components/ui/toast-provider';
 
 export const metadata: Metadata = {
-  title: 'WallyWatch - Track Your Favorite Shows',
+  title: 'Scout - Track Your Favorite Shows',
   description: 'Discover and track your favorite shows across all streaming platforms',
 };
 

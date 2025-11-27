@@ -55,14 +55,14 @@ export default function AuthPage() {
           </Button>
           <div className="flex items-center space-x-2">
             <Play className="w-6 h-6 text-primary" />
-            <span className="text-xl text-primary">WallyWatch</span>
+            <span className="text-xl text-primary">Scout</span>
           </div>
         </div>
 
         <Card className="bg-card border-border shadow-lg">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-card-foreground">
-              {isLogin ? 'Welcome Back' : 'Join WallyWatch'}
+              {isLogin ? 'Welcome Back' : 'Join Scout'}
             </CardTitle>
             <CardDescription className="text-muted-foreground">
               {isLogin ? 'Sign in to your account to continue tracking shows' : 'Create your account to start tracking shows across all streaming platforms'}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -34,11 +34,45 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
   const [recentlyAddedShows, setRecentlyAddedShows] = useState<Set<number>>(new Set());
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  
+  // Track watchlist tmdb_ids for O(1) lookup
+  const [watchlistTmdbIds, setWatchlistTmdbIds] = useState<Set<number>>(new Set());
+  const [watchlistLoading, setWatchlistLoading] = useState(false);
 
   const { user } = useAuth();
   const router = useRouter();
 
-  const handleSearch = async () => {
+  // Load user's watchlist on mount (for "In Watchlist" checking)
+  useEffect(() => {
+    const loadWatchlist = async () => {
+      if (!user) {
+        setWatchlistTmdbIds(new Set());
+        return;
+      }
+      
+      setWatchlistLoading(true);
+      try {
+        const watchlist = await watchlistService.getWatchlist();
+        // Extract tmdb_ids into a Set for O(1) lookup
+        const tmdbIds = new Set(watchlist.map(item => item.shows.tmdb_id));
+        setWatchlistTmdbIds(tmdbIds);
+      } catch (error) {
+        console.error('Failed to load watchlist for comparison:', error);
+        // Non-critical error - search still works
+      } finally {
+        setWatchlistLoading(false);
+      }
+    };
+
+    loadWatchlist();
+  }, [user]);
+
+  // Memoized check if show is in watchlist (includes recently added)
+  const isInWatchlist = useCallback((tmdbId: number): boolean => {
+    return watchlistTmdbIds.has(tmdbId) || recentlyAddedShows.has(tmdbId);
+  }, [watchlistTmdbIds, recentlyAddedShows]);
+
+  const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) {
       toast.error('Please enter a search query');
       return;
@@ -69,9 +103,9 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, selectedCountry, selectedTier]);
 
-  const handleAddToWatchlist = async (tmdbId: number, title: string) => {
+  const handleAddToWatchlist = useCallback(async (tmdbId: number, title: string) => {
     if (!user) {
       toast.error('Please sign in to add shows to your watchlist');
       router.push('/auth');
@@ -81,8 +115,9 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
     setAddingToWatchlist(tmdbId);
     try {
       await watchlistService.addToWatchlist(tmdbId);
-      // Track this show as recently added for optimistic UI update
+      // Update both tracking sets for immediate UI feedback
       setRecentlyAddedShows(prev => new Set(prev).add(tmdbId));
+      setWatchlistTmdbIds(prev => new Set(prev).add(tmdbId));
       toast.success(`"${title}" added to your watchlist!`);
     } catch (error: any) {
       console.error('Add to watchlist error:', error);
@@ -90,7 +125,7 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
     } finally {
       setAddingToWatchlist(null);
     }
-  };
+  }, [user, router]);
 
   const getProviderNames = (show: Show) => {
     if (!show.providers || show.providers.length === 0) {
@@ -282,24 +317,34 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
                       </div>
                     )}
                     
-                    <Button 
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent card click
-                        handleAddToWatchlist(show.tmdb_id, show.title);
-                      }}
-                      disabled={addingToWatchlist === show.tmdb_id || recentlyAddedShows.has(show.tmdb_id)}
-                    >
-                      {addingToWatchlist === show.tmdb_id ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : recentlyAddedShows.has(show.tmdb_id) ? (
+                    {isInWatchlist(show.tmdb_id) ? (
+                      <Button 
+                        className="w-full bg-muted text-muted-foreground cursor-default"
+                        size="sm"
+                        disabled
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Check className="w-4 h-4 mr-2" />
-                      ) : (
-                        <Plus className="w-4 h-4 mr-2" />
-                      )}
-                      {recentlyAddedShows.has(show.tmdb_id) ? 'Added!' : 'Add to Watchlist'}
-                    </Button>
+                        In Watchlist
+                      </Button>
+                    ) : (
+                      <Button 
+                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent card click
+                          handleAddToWatchlist(show.tmdb_id, show.title);
+                        }}
+                        disabled={addingToWatchlist === show.tmdb_id}
+                      >
+                        {addingToWatchlist === show.tmdb_id ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Plus className="w-4 h-4 mr-2" />
+                        )}
+                        Add to Watchlist
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               ))}
