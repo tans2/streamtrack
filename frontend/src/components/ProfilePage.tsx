@@ -620,7 +620,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-8 text-sm"
+                              className="h-8 text-sm hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                               onClick={() => handleRemoveFromWatchlist(item.show_id, item.shows.title)}
                             >
                               Remove
@@ -688,7 +688,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-xs px-2 py-1 h-auto w-full"
+                          className="text-xs px-2 py-1 h-auto w-full hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                           onClick={() => handleRemoveFromWatchlist(item.show_id, item.shows.title)}
                         >
                           Remove
