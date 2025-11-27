@@ -370,6 +370,14 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
         show={selectedShow}
         isOpen={!!selectedShow}
         onClose={() => setSelectedShow(null)}
+        isInWatchlist={selectedShow ? isInWatchlist(selectedShow.tmdb_id) : false}
+        onWatchlistChange={() => {
+          // Update local state when show is added from modal
+          if (selectedShow) {
+            setRecentlyAddedShows(prev => new Set(prev).add(selectedShow.tmdb_id));
+            setWatchlistTmdbIds(prev => new Set(prev).add(selectedShow.tmdb_id));
+          }
+        }}
       />
     </div>
   );
