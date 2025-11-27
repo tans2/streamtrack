@@ -35,6 +35,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   // Modal state for show details
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [selectedShowSeason, setSelectedShowSeason] = useState<number>(1);
+  const [showModalOverview, setShowModalOverview] = useState<boolean>(false);
 
   const { user } = useAuth();
   const router = useRouter();
@@ -87,13 +88,33 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     }
   };
 
-  // Handle clicking on a show to view details
-  const handleShowClick = async (item: WatchlistItem) => {
+  // Handle clicking on a show to view details (for Currently Watching - hide overview)
+  const handleShowClick = async (item: WatchlistItem, showFullDetails: boolean = false) => {
+    // Set the season immediately for responsive UI
+    setSelectedShowSeason(item.current_season || 1);
+    setShowModalOverview(showFullDetails);
+    
     try {
-      // Fetch full show details from API
-      const showDetails = await showService.getShowDetails(item.shows.tmdb_id);
-      setSelectedShow(showDetails);
-      setSelectedShowSeason(item.current_season || 1);
+      // Use search API to get full show details including season availability
+      const searchResults = await showService.searchShows(item.shows.title, {
+        country: 'US',
+        limit: 5,
+        seasonMode: 'compact',
+      });
+      
+      // Find the matching show by tmdb_id
+      const matchingShow = searchResults.find(show => show.tmdb_id === item.shows.tmdb_id);
+      
+      if (matchingShow) {
+        setSelectedShow(matchingShow);
+      } else if (searchResults.length > 0) {
+        // If exact match not found, use first result (likely the same show)
+        setSelectedShow(searchResults[0]);
+      } else {
+        // Fallback to basic show details
+        const showDetails = await showService.getShowDetails(item.shows.tmdb_id);
+        setSelectedShow(showDetails);
+      }
     } catch (error: any) {
       console.error('Error fetching show details:', error);
       // Fallback: create a basic Show object from the watchlist item
@@ -113,7 +134,6 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
         totalSeasons: (item.shows as any).total_seasons,
       };
       setSelectedShow(basicShow);
-      setSelectedShowSeason(item.current_season || 1);
     }
   };
 
@@ -406,7 +426,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
           <h2 className="text-3xl mb-4 text-foreground">
             Welcome back, {user?.name || 'User'}! 👋
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card className="bg-card border-border shadow-lg">
               <CardContent className="p-4 text-center">
                 <div className="text-2xl mb-1 text-primary">{watchlist.length}</div>
@@ -445,7 +465,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                     <div className="flex gap-4">
                       <div 
                         className="w-24 flex-shrink-0 cursor-pointer group"
-                        onClick={() => handleShowClick(item)}
+                        onClick={() => handleShowClick(item, false)}
                       >
                         <div className="aspect-[2/3] rounded-lg overflow-hidden bg-muted relative">
                           <ImageWithFallback 
@@ -461,7 +481,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                       <div className="flex-1 min-w-0 flex flex-col">
                         <h4 
                           className="text-card-foreground font-medium mb-2 truncate cursor-pointer hover:text-primary transition-colors"
-                          onClick={() => handleShowClick(item)}
+                          onClick={() => handleShowClick(item, false)}
                         >
                           {item.shows.title}
                         </h4>
@@ -624,17 +644,24 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
               {watchlist.map(item => (
                 <Card key={item.id} className="bg-card border-border hover:border-primary transition-colors group cursor-pointer shadow-lg">
                   <CardContent className="p-3">
-                    <div className="aspect-[2/3] mb-3 rounded-lg overflow-hidden bg-muted relative">
+                    <div 
+                      className="aspect-[2/3] mb-3 rounded-lg overflow-hidden bg-muted relative cursor-pointer"
+                      onClick={() => handleShowClick(item, true)}
+                    >
                       <ImageWithFallback 
                         src={getPosterUrl(item.shows.poster_path)}
                         alt={item.shows.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
                       />
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Play className="w-8 h-8 text-white" />
+                        <Search className="w-8 h-8 text-white" />
                       </div>
                     </div>
-                    <h4 className="text-card-foreground text-sm mb-2 truncate" title={item.shows.title}>
+                    <h4 
+                      className="text-card-foreground text-sm mb-2 truncate cursor-pointer hover:text-primary transition-colors" 
+                      title={item.shows.title}
+                      onClick={() => handleShowClick(item, true)}
+                    >
                       {item.shows.title}
                     </h4>
                     <div className="space-y-2">
@@ -693,7 +720,8 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
         onClose={() => setSelectedShow(null)}
         isInWatchlist={true}  // Always true since we're viewing from watchlist
         defaultSeason={selectedShowSeason}
-        hideOverview={true}   // Hide overview for profile context
+        hideOverview={!showModalOverview}  // Show overview for "All Shows", hide for "Currently Watching"
+        hideWatchlistButton={true}  // Hide watchlist button since already in watchlist
       />
     </div>
   );
