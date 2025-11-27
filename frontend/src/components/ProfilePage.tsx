@@ -110,7 +110,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
         genres: item.shows.genres || [],
         rating: item.shows.rating || 0,
         popularity: item.shows.popularity || 0,
-        totalSeasons: item.shows.total_seasons,
+        totalSeasons: (item.shows as any).total_seasons,
       };
       setSelectedShow(basicShow);
       setSelectedShowSeason(item.current_season || 1);
