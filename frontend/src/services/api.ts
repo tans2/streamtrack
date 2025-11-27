@@ -1,11 +1,11 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
-const API_BASE_URL = process.env.NODE_ENV === 'production'
-  ? ''  // Use relative URLs in production (same domain)
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001');
+// In production, use the backend URL from environment variable
+// In development, default to localhost
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 
-// Use correct API path to match Vercel serverless function path
-const API_PREFIX = process.env.NODE_ENV === 'production' ? '/api/backend' : '/api';
+// API prefix - backend routes are under /api
+const API_PREFIX = '/api';
 
 // Helper function to build API URLs with correct prefix
 export const buildApiUrl = (endpoint: string): string => {
@@ -23,30 +23,13 @@ const apiClient: AxiosInstance = axios.create({
   },
 });
 
-// Request interceptor to add auth token and Vercel protection bypass
+// Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('streamtrack_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
-    // Add Vercel protection bypass for production
-    if (process.env.NODE_ENV === 'production') {
-      // Check if we have a bypass token in localStorage or environment
-      const bypassToken = localStorage.getItem('vercel_protection_bypass') ||
-                         process.env.NEXT_PUBLIC_VERCEL_PROTECTION_BYPASS;
-
-      if (bypassToken) {
-        config.headers['x-vercel-protection-bypass'] = bypassToken;
-        // Add query params for bypass cookie
-        config.params = {
-          ...config.params,
-          'x-vercel-set-bypass-cookie': 'true'
-        };
-      }
-    }
-
     return config;
   },
   (error) => {
