@@ -43,3 +43,7 @@ COMMENT ON TABLE beta_signups IS 'Stores email signups for Scout private beta';
 COMMENT ON COLUMN beta_signups.invited IS 'Whether this user has been invited to the beta';
 COMMENT ON COLUMN beta_signups.invited_at IS 'When the user was invited to the beta';
 
+
+
+
+

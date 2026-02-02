@@ -77,3 +77,7 @@ SELECT * FROM beta_signups ORDER BY signed_up_at DESC;
 
 Or use the Supabase Dashboard > Table Editor > beta_signups
 
+
+
+
+
