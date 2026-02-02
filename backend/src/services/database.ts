@@ -767,6 +767,114 @@ export class DatabaseService {
       return [];
     }
   }
+
+  // ----- Password Reset Methods -----
+
+  // Set password reset token for a user by email
+  static async setPasswordResetToken(email: string, token: string, expiresAt: Date) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({
+          password_reset_token: token,
+          password_reset_expires_at: expiresAt.toISOString()
+        })
+        .eq('email', email)
+        .select('id, email, name')
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error setting password reset token:', error);
+      return null;
+    }
+  }
+
+  // Get user by valid (non-expired) password reset token
+  static async getUserByResetToken(token: string) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, name, password_reset_expires_at')
+        .eq('password_reset_token', token)
+        .single();
+
+      if (error || !data) {
+        return null;
+      }
+
+      // Check if token is expired
+      if (data.password_reset_expires_at) {
+        const expiresAt = new Date(data.password_reset_expires_at);
+        if (expiresAt < new Date()) {
+          return null; // Token expired
+        }
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error getting user by reset token:', error);
+      return null;
+    }
+  }
+
+  // Clear password reset token after use
+  static async clearPasswordResetToken(userId: string) {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          password_reset_token: null,
+          password_reset_expires_at: null
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error clearing password reset token:', error);
+      return false;
+    }
+  }
+
+  // Update user password
+  static async updatePassword(userId: string, passwordHash: string) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({
+          password_hash: passwordHash,
+          password_reset_token: null,
+          password_reset_expires_at: null
+        })
+        .eq('id', userId)
+        .select('id, email')
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating password:', error);
+      return null;
+    }
+  }
+
+  // Check if user exists by email (for forgot password - don't reveal if exists)
+  static async getUserByEmail(email: string) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, name')
+        .eq('email', email)
+        .single();
+
+      if (error) return null;
+      return data;
+    } catch (error) {
+      return null;
+    }
+  }
 }
 
 

@@ -298,4 +298,85 @@ Manage your preferences: ${FRONTEND_URL}/settings
       return { success: false, error: error.message || 'Failed to send email' };
     }
   }
+
+  // Send password reset email
+  static async sendPasswordResetEmail(
+    to: string,
+    name: string,
+    token: string
+  ): Promise<EmailResult> {
+    if (!resend) {
+      console.warn('Email service not configured - RESEND_API_KEY missing');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const resetUrl = `${FRONTEND_URL}/reset-password?token=${token}`;
+
+    try {
+      const { data, error } = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: [to],
+        subject: 'Reset your Scout password',
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #7C3AED; margin: 0;">Scout</h1>
+              <p style="color: #666; margin: 5px 0;">Password Reset</p>
+            </div>
+
+            <div style="background: #f9fafb; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+              <h2 style="margin-top: 0;">Hey ${name || 'there'}!</h2>
+              <p>We received a request to reset your password. Click the button below to create a new password.</p>
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${resetUrl}" style="background: #7C3AED; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 500; display: inline-block;">
+                  Reset Password
+                </a>
+              </div>
+
+              <p style="color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
+              <p style="color: #7C3AED; font-size: 14px; word-break: break-all;">${resetUrl}</p>
+
+              <p style="color: #dc2626; font-size: 14px; margin-top: 20px;">
+                <strong>This link expires in 1 hour.</strong>
+              </p>
+            </div>
+
+            <p style="color: #999; font-size: 12px; text-align: center;">
+              If you didn't request a password reset, you can safely ignore this email.<br>
+              Your password will remain unchanged.
+            </p>
+          </body>
+          </html>
+        `,
+        text: `
+Hey ${name || 'there'}!
+
+We received a request to reset your password. Click the link below to create a new password:
+
+${resetUrl}
+
+This link expires in 1 hour.
+
+If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
+        `.trim()
+      });
+
+      if (error) {
+        console.error('Resend error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, messageId: data?.id };
+    } catch (error: any) {
+      console.error('Error sending password reset email:', error);
+      return { success: false, error: error.message || 'Failed to send email' };
+    }
+  }
 }
