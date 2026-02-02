@@ -5,14 +5,16 @@ import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { Skeleton } from "./ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { ArrowLeft, Settings, Search, Star, Play, Calendar, Loader2 } from "lucide-react";
+import { ArrowLeft, Settings, Search, Star, Play, Calendar, Loader2, Bell, BellOff } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { watchlistService, WatchlistItem } from '@/services/watchlistService';
 import { showService, Show } from '@/services/showService';
+import { notificationService } from '@/services/notificationService';
 import { toast } from 'sonner';
 import ShowDetailsModal from './ShowDetailsModal';
+import { Switch } from "./ui/switch";
 
 interface ProfilePageProps {
   onNavigate: (page: string) => void;
@@ -36,6 +38,8 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [selectedShowSeason, setSelectedShowSeason] = useState<number>(1);
   const [showModalOverview, setShowModalOverview] = useState<boolean>(false);
+  const [notificationToggles, setNotificationToggles] = useState<Record<string, boolean>>({});
+  const [togglingNotification, setTogglingNotification] = useState<string | null>(null);
 
   const { user } = useAuth();
   const router = useRouter();
@@ -55,11 +59,36 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
         current_episode: (item.current_episode && item.current_episode > 0) ? item.current_episode : 1
       }));
       setWatchlist(normalizedData);
+
+      // Initialize notification toggles from watchlist data
+      const toggles: Record<string, boolean> = {};
+      normalizedData.forEach(item => {
+        // Default to true if not set (notifications_enabled field from backend)
+        toggles[item.show_id] = (item as any).notifications_enabled !== false;
+      });
+      setNotificationToggles(toggles);
     } catch (error: any) {
       console.error('Error loading watchlist:', error);
       toast.error(error.message || 'Failed to load watchlist');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleNotificationToggle = async (showId: string, enabled: boolean) => {
+    setTogglingNotification(showId);
+    // Optimistic update
+    setNotificationToggles(prev => ({ ...prev, [showId]: enabled }));
+
+    try {
+      await notificationService.toggleShowNotifications(showId, enabled);
+      toast.success(enabled ? 'Notifications enabled for this show' : 'Notifications disabled for this show');
+    } catch (error: any) {
+      // Revert on error
+      setNotificationToggles(prev => ({ ...prev, [showId]: !enabled }));
+      toast.error('Failed to update notification preference');
+    } finally {
+      setTogglingNotification(null);
     }
   };
 
@@ -625,6 +654,23 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                             >
                               Remove
                             </Button>
+                          </div>
+                          {/* Notification Toggle */}
+                          <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
+                            <div className="flex items-center gap-2">
+                              {notificationToggles[item.show_id] ? (
+                                <Bell className="w-4 h-4 text-primary" />
+                              ) : (
+                                <BellOff className="w-4 h-4 text-muted-foreground" />
+                              )}
+                              <span className="text-xs text-muted-foreground">Notifications</span>
+                            </div>
+                            <Switch
+                              checked={notificationToggles[item.show_id] ?? true}
+                              onCheckedChange={(checked) => handleNotificationToggle(item.show_id, checked)}
+                              disabled={togglingNotification === item.show_id}
+                              className="scale-75"
+                            />
                           </div>
                         </div>
                       </div>

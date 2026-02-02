@@ -70,7 +70,8 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/health',
       auth: '/api/auth',
-      shows: '/api/shows'
+      shows: '/api/shows',
+      notifications: '/api/notifications'
     }
   });
 });
@@ -89,11 +90,13 @@ app.get('/health', (req, res) => {
 import showRoutes from './routes/shows';
 import authRoutes from './routes/auth';
 import progressSyncRoutes from './routes/progress-sync';
+import notificationRoutes from './routes/notifications';
 
 // API routes
 app.use('/api/shows', showRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/progress-sync', progressSyncRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.get('/api/users', (req, res) => {
   res.json({
