@@ -353,6 +353,420 @@ export class DatabaseService {
       return [];
     }
   }
+
+  // ===== NOTIFICATION SYSTEM METHODS =====
+
+  // ----- Episode Cache Methods -----
+
+  // Get cached episodes for a show
+  static async getEpisodeCache(showId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('episode_cache')
+        .select('*')
+        .eq('show_id', showId)
+        .order('season_number', { ascending: true })
+        .order('episode_number', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching episode cache:', error);
+      return [];
+    }
+  }
+
+  // Upsert episodes to cache (returns newly inserted episodes)
+  static async upsertEpisodeCache(episodes: {
+    show_id: string;
+    tmdb_id: number;
+    season_number: number;
+    episode_number: number;
+    title?: string;
+    air_date?: string;
+  }[]) {
+    try {
+      if (episodes.length === 0) return { inserted: [], existing: [] };
+
+      // First, get existing episodes for comparison
+      const showId = episodes[0].show_id;
+      const existing = await this.getEpisodeCache(showId);
+      const existingKeys = new Set(
+        existing.map(e => `${e.season_number}-${e.episode_number}`)
+      );
+
+      // Split into new and existing
+      const newEpisodes = episodes.filter(
+        e => !existingKeys.has(`${e.season_number}-${e.episode_number}`)
+      );
+
+      if (newEpisodes.length === 0) {
+        return { inserted: [], existing };
+      }
+
+      // Insert new episodes
+      const { data, error } = await supabase
+        .from('episode_cache')
+        .insert(newEpisodes)
+        .select();
+
+      if (error) throw error;
+
+      return { inserted: data || [], existing };
+    } catch (error) {
+      console.error('Error upserting episode cache:', error);
+      return { inserted: [], existing: [] };
+    }
+  }
+
+  // ----- Notification Log Methods -----
+
+  // Check if notification already sent
+  static async hasNotificationBeenSent(
+    userId: string,
+    showId: string,
+    notificationType: 'new_episode' | 'season_premiere',
+    seasonNumber?: number,
+    episodeNumber?: number
+  ) {
+    try {
+      let query = supabase
+        .from('notification_log')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('show_id', showId)
+        .eq('notification_type', notificationType);
+
+      if (seasonNumber !== undefined) {
+        query = query.eq('season_number', seasonNumber);
+      }
+      if (episodeNumber !== undefined) {
+        query = query.eq('episode_number', episodeNumber);
+      }
+
+      const { data, error } = await query.limit(1);
+
+      if (error) throw error;
+      return (data && data.length > 0);
+    } catch (error) {
+      console.error('Error checking notification log:', error);
+      return false;
+    }
+  }
+
+  // Log a sent notification
+  static async logNotification(
+    userId: string,
+    showId: string,
+    notificationType: 'new_episode' | 'season_premiere',
+    seasonNumber?: number,
+    episodeNumber?: number,
+    resendMessageId?: string
+  ) {
+    try {
+      const { data, error } = await supabase
+        .from('notification_log')
+        .insert({
+          user_id: userId,
+          show_id: showId,
+          notification_type: notificationType,
+          season_number: seasonNumber,
+          episode_number: episodeNumber,
+          resend_message_id: resendMessageId
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error logging notification:', error);
+      return null;
+    }
+  }
+
+  // Get user's notification history
+  static async getUserNotificationHistory(userId: string, limit: number = 50) {
+    try {
+      const { data, error } = await supabase
+        .from('notification_log')
+        .select(`
+          *,
+          shows (title, poster_path)
+        `)
+        .eq('user_id', userId)
+        .order('email_sent_at', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching notification history:', error);
+      return [];
+    }
+  }
+
+  // ----- Episode Poll Status Methods -----
+
+  // Get shows due for polling
+  static async getShowsDueForPolling(limit: number = 30) {
+    try {
+      const { data, error } = await supabase
+        .from('episode_poll_status')
+        .select(`
+          *,
+          shows (id, tmdb_id, title, status)
+        `)
+        .lte('next_poll_at', new Date().toISOString())
+        .order('next_poll_at', { ascending: true })
+        .limit(limit);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching shows due for polling:', error);
+      return [];
+    }
+  }
+
+  // Update poll status after polling
+  static async updatePollStatus(
+    showId: string,
+    lastKnownSeason: number,
+    lastKnownEpisode: number,
+    errorMessage?: string
+  ) {
+    try {
+      const now = new Date();
+      // Schedule next poll: 6 hours if no error, 1 hour if error (retry sooner)
+      const nextPollHours = errorMessage ? 1 : 6;
+      const nextPoll = new Date(now.getTime() + nextPollHours * 60 * 60 * 1000);
+
+      const updateData: any = {
+        last_polled_at: now.toISOString(),
+        next_poll_at: nextPoll.toISOString(),
+        last_known_season: lastKnownSeason,
+        last_known_episode: lastKnownEpisode
+      };
+
+      if (errorMessage) {
+        updateData.last_error = errorMessage;
+        // Increment error count (for backoff logic if needed)
+        const { data: current } = await supabase
+          .from('episode_poll_status')
+          .select('error_count')
+          .eq('show_id', showId)
+          .single();
+        updateData.error_count = (current?.error_count || 0) + 1;
+      } else {
+        updateData.error_count = 0;
+        updateData.last_error = null;
+      }
+
+      const { data, error } = await supabase
+        .from('episode_poll_status')
+        .update(updateData)
+        .eq('show_id', showId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating poll status:', error);
+      return null;
+    }
+  }
+
+  // Initialize poll status for a show (when user starts tracking)
+  static async initializePollStatus(showId: string, tmdbId: number) {
+    try {
+      const { data, error } = await supabase
+        .from('episode_poll_status')
+        .upsert({
+          show_id: showId,
+          tmdb_id: tmdbId,
+          next_poll_at: new Date().toISOString()
+        }, { onConflict: 'show_id' })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error initializing poll status:', error);
+      return null;
+    }
+  }
+
+  // ----- User Email Verification Methods -----
+
+  // Set email verification token
+  static async setEmailVerificationToken(userId: string, token: string) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({
+          email_verification_token: token,
+          email_verification_sent_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error setting verification token:', error);
+      return null;
+    }
+  }
+
+  // Verify email with token
+  static async verifyEmail(token: string) {
+    try {
+      // Find user with this token
+      const { data: user, error: findError } = await supabase
+        .from('users')
+        .select('id, email, email_verified')
+        .eq('email_verification_token', token)
+        .single();
+
+      if (findError || !user) {
+        return { success: false, error: 'Invalid or expired verification token' };
+      }
+
+      if (user.email_verified) {
+        return { success: true, message: 'Email already verified', user };
+      }
+
+      // Update user as verified
+      const { data, error } = await supabase
+        .from('users')
+        .update({
+          email_verified: true,
+          email_verification_token: null
+        })
+        .eq('id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return { success: true, message: 'Email verified successfully', user: data };
+    } catch (error) {
+      console.error('Error verifying email:', error);
+      return { success: false, error: 'Failed to verify email' };
+    }
+  }
+
+  // Get user email verification status
+  static async getUserEmailStatus(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('email, email_verified, email_verification_sent_at')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error fetching user email status:', error);
+      return null;
+    }
+  }
+
+  // ----- User Show Notification Toggle Methods -----
+
+  // Toggle notifications for a specific show
+  static async toggleShowNotifications(userId: string, showId: string, enabled: boolean) {
+    try {
+      const { data, error } = await supabase
+        .from('user_shows')
+        .update({ notifications_enabled: enabled })
+        .eq('user_id', userId)
+        .eq('show_id', showId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error toggling show notifications:', error);
+      return null;
+    }
+  }
+
+  // Get users to notify for a show (verified email, notifications enabled)
+  static async getUsersToNotifyForShow(showId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('user_shows')
+        .select(`
+          user_id,
+          notifications_enabled,
+          users (
+            id,
+            email,
+            name,
+            email_verified,
+            notification_preferences
+          )
+        `)
+        .eq('show_id', showId)
+        .eq('is_following', true)
+        .eq('notifications_enabled', true);
+
+      if (error) throw error;
+
+      // Filter for verified users with new episodes enabled
+      const usersToNotify = (data || [])
+        .filter(item => {
+          const user = item.users as any;
+          return (
+            user &&
+            user.email_verified &&
+            user.notification_preferences?.newEpisodes !== false
+          );
+        })
+        .map(item => item.users);
+
+      return usersToNotify;
+    } catch (error) {
+      console.error('Error fetching users to notify:', error);
+      return [];
+    }
+  }
+
+  // Get all shows being tracked by any user (for polling)
+  static async getTrackedShows() {
+    try {
+      const { data, error } = await supabase
+        .from('user_shows')
+        .select(`
+          show_id,
+          shows (id, tmdb_id, title, status)
+        `)
+        .eq('is_following', true)
+        .not('shows', 'is', null);
+
+      if (error) throw error;
+
+      // Get unique shows
+      const showsMap = new Map();
+      (data || []).forEach(item => {
+        if (item.shows && !showsMap.has(item.show_id)) {
+          showsMap.set(item.show_id, item.shows);
+        }
+      });
+
+      return Array.from(showsMap.values());
+    } catch (error) {
+      console.error('Error fetching tracked shows:', error);
+      return [];
+    }
+  }
 }
 
 

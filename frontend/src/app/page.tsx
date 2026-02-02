@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Play, Bell, Users, Star, LogOut } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,7 +49,8 @@ export default function HomePage() {
           >
             My Watchlist
           </Button>
-          <Button 
+          <ThemeToggle />
+          <Button
             className="bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={() => user ? logout() : router.push('/auth')}
           >

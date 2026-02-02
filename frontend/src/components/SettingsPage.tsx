@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Switch } from "./ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Badge } from "./ui/badge";
-import { ArrowLeft, Crown, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Crown, X, Loader2, Mail, CheckCircle2, AlertCircle } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { notificationService } from '@/services/notificationService';
 
 interface SettingsPageProps {
   onNavigate: (page: string) => void;
@@ -44,6 +45,9 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const [savingNotifications, setSavingNotifications] = useState(false);
 
   const { user, updatePreferences, upgradeToPremium } = useAuth();
   const router = useRouter();
@@ -70,8 +74,70 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
           shareWatchingStatus: user.privacy_settings?.data_delete_enabled ?? true
         }
       }));
+
+      // Fetch email verification status
+      loadNotificationPreferences();
     }
   }, [user]);
+
+  const loadNotificationPreferences = async () => {
+    try {
+      const prefs = await notificationService.getPreferences();
+      setEmailVerified(prefs.emailVerified);
+      // Update notification settings from backend
+      setSettings(prev => ({
+        ...prev,
+        notifications: {
+          newEpisodes: prefs.preferences.newEpisodes ?? prev.notifications.newEpisodes,
+          seasonStart: prefs.preferences.seasonPremieres ?? prev.notifications.seasonStart,
+          friendActivity: prefs.preferences.friendActivity ?? prev.notifications.friendActivity,
+          weeklyDigest: prefs.preferences.weeklyDigest ?? prev.notifications.weeklyDigest
+        }
+      }));
+    } catch (error) {
+      // Silently fail - user might not have notifications enabled yet
+      console.log('Could not load notification preferences');
+    }
+  };
+
+  const handleSendVerificationEmail = async () => {
+    setSendingVerification(true);
+    try {
+      await notificationService.sendVerificationEmail();
+      toast.success('Verification email sent! Check your inbox.');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send verification email');
+    } finally {
+      setSendingVerification(false);
+    }
+  };
+
+  const handleNotificationChange = async (field: string, value: boolean) => {
+    // Update local state immediately for responsiveness
+    handleNestedChange('notifications', field, value);
+
+    // Map local field names to API field names
+    const fieldMap: Record<string, string> = {
+      newEpisodes: 'newEpisodes',
+      seasonStart: 'seasonPremieres',
+      friendActivity: 'friendActivity',
+      weeklyDigest: 'weeklyDigest'
+    };
+
+    const apiField = fieldMap[field];
+    if (!apiField) return;
+
+    setSavingNotifications(true);
+    try {
+      await notificationService.updatePreferences({ [apiField]: value });
+    } catch (error: any) {
+      // Revert on error
+      handleNestedChange('notifications', field, !value);
+      toast.error('Failed to update notification preference');
+    } finally {
+      setSavingNotifications(false);
+    }
+  };
 
   const handleInputChange = (field: string, value: any) => {
     setSettings(prev => ({
@@ -327,17 +393,50 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
           </Card>
 
           {/* Notification Settings */}
-          <Card className="bg-card border-border shadow-lg opacity-75">
+          <Card className="bg-card border-border shadow-lg">
             <CardHeader>
-              <CardTitle className="text-card-foreground flex items-center gap-2">
-                Notification Preferences
-                <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
-              </CardTitle>
+              <CardTitle className="text-card-foreground">Notification Preferences</CardTitle>
               <p className="text-muted-foreground text-sm mt-2">
-                Notification preferences will be available in a future update.
+                Get notified about new episodes and season premieres via email.
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Email Verification Banner */}
+              {!emailVerified && (
+                <div className="flex items-center justify-between p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-amber-500" />
+                    <div>
+                      <p className="text-sm font-medium text-card-foreground">Verify your email</p>
+                      <p className="text-xs text-muted-foreground">Verify your email to receive notifications</p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleSendVerificationEmail}
+                    disabled={sendingVerification}
+                    className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+                  >
+                    {sendingVerification ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4 mr-2" />
+                        Send Verification
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {emailVerified && (
+                <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  <p className="text-sm text-green-600">Email verified - notifications enabled</p>
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-card-foreground">New Episode Releases</Label>
@@ -345,11 +444,11 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 </div>
                 <Switch
                   checked={settings.notifications.newEpisodes}
-                  onCheckedChange={(checked: boolean) => handleNestedChange('notifications', 'newEpisodes', checked)}
-                  disabled={true}
+                  onCheckedChange={(checked: boolean) => handleNotificationChange('newEpisodes', checked)}
+                  disabled={!emailVerified || savingNotifications}
                 />
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-card-foreground">Season Premieres</Label>
@@ -357,31 +456,31 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 </div>
                 <Switch
                   checked={settings.notifications.seasonStart}
-                  onCheckedChange={(checked: boolean) => handleNestedChange('notifications', 'seasonStart', checked)}
-                  disabled={true}
+                  onCheckedChange={(checked: boolean) => handleNotificationChange('seasonStart', checked)}
+                  disabled={!emailVerified || savingNotifications}
                 />
               </div>
-              
-              <div className="flex items-center justify-between">
+
+              <div className="flex items-center justify-between opacity-50">
                 <div>
                   <Label className="text-card-foreground">Friend Activity</Label>
-                  <p className="text-muted-foreground text-sm">See what your friends are watching (Premium)</p>
+                  <p className="text-muted-foreground text-sm">See what your friends are watching (Premium - Coming Soon)</p>
                 </div>
                 <Switch
                   checked={settings.notifications.friendActivity}
-                  onCheckedChange={(checked: boolean) => handleNestedChange('notifications', 'friendActivity', checked)}
+                  onCheckedChange={(checked: boolean) => handleNotificationChange('friendActivity', checked)}
                   disabled={true}
                 />
               </div>
-              
-              <div className="flex items-center justify-between">
+
+              <div className="flex items-center justify-between opacity-50">
                 <div>
                   <Label className="text-card-foreground">Weekly Digest</Label>
-                  <p className="text-muted-foreground text-sm">Weekly summary of your watching activity</p>
+                  <p className="text-muted-foreground text-sm">Weekly summary of your watching activity (Coming Soon)</p>
                 </div>
                 <Switch
                   checked={settings.notifications.weeklyDigest}
-                  onCheckedChange={(checked: boolean) => handleNestedChange('notifications', 'weeklyDigest', checked)}
+                  onCheckedChange={(checked: boolean) => handleNotificationChange('weeklyDigest', checked)}
                   disabled={true}
                 />
               </div>
