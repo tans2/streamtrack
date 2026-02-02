@@ -119,6 +119,29 @@ class AuthService {
       localStorage.removeItem('streamtrack_token');
     }
   }
+
+  // Request password reset email
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    try {
+      const response = await apiClient.post(buildApiUrl('auth/forgot-password'), { email });
+      return handleApiResponse<{ message: string }>(response);
+    } catch (error) {
+      throw new Error(handleApiError(error as AxiosError));
+    }
+  }
+
+  // Reset password with token
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    try {
+      const response = await apiClient.post(buildApiUrl('auth/reset-password'), {
+        token,
+        newPassword,
+      });
+      return handleApiResponse<{ message: string }>(response);
+    } catch (error) {
+      throw new Error(handleApiError(error as AxiosError));
+    }
+  }
 }
 
 export const authService = new AuthService();

@@ -1,5 +1,9 @@
 import express from 'express';
+import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import { AuthService } from '../services/auth';
+import { DatabaseService } from '../services/database';
+import { EmailService } from '../services/email';
 
 const router = express.Router();
 
@@ -175,6 +179,112 @@ router.post('/logout', authenticateToken, async (req: any, res) => {
     res.status(500).json({
       success: false,
       error: 'Logout failed'
+    });
+  }
+});
+
+// Request password reset (forgot password)
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please enter your email address.'
+      });
+    }
+
+    // Check if user exists (but don't reveal this to the client for security)
+    const user = await DatabaseService.getUserByEmail(email);
+
+    if (user) {
+      // Generate reset token
+      const token = crypto.randomBytes(32).toString('hex');
+
+      // Set expiration to 1 hour from now
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+      // Save token to database
+      await DatabaseService.setPasswordResetToken(email, token, expiresAt);
+
+      // Send reset email
+      await EmailService.sendPasswordResetEmail(email, user.name || '', token);
+    }
+
+    // Always return success message (don't reveal if email exists)
+    res.json({
+      success: true,
+      message: 'If an account exists with this email, you will receive a password reset link shortly.'
+    });
+  } catch (error: any) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process password reset request. Please try again.'
+    });
+  }
+});
+
+// Reset password with token
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        error: 'Reset token is required.'
+      });
+    }
+
+    if (!newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please enter a new password.'
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password must be at least 8 characters long.'
+      });
+    }
+
+    // Find user by reset token (also checks expiration)
+    const user = await DatabaseService.getUserByResetToken(token);
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or expired reset link. Please request a new password reset.'
+      });
+    }
+
+    // Hash the new password
+    const saltRounds = 12;
+    const passwordHash = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password and clear reset token
+    const updated = await DatabaseService.updatePassword(user.id, passwordHash);
+
+    if (!updated) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update password. Please try again.'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Your password has been reset successfully. You can now log in with your new password.'
+    });
+  } catch (error: any) {
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reset password. Please try again.'
     });
   }
 });

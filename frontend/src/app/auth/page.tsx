@@ -113,6 +113,17 @@ export default function AuthPage() {
                 {!isLogin && (
                   <p className="text-xs text-muted-foreground">Password must be at least 8 characters</p>
                 )}
+                {isLogin && (
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => router.push('/forgot-password')}
+                      className="text-sm text-primary hover:text-primary/80 underline"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
               </div>
 
               <Button
