@@ -258,7 +258,126 @@ export const serviceName = new ServiceName();
 
 ---
 
+## Environment Variables
+
+### Backend (`backend/.env`)
+```bash
+# Server
+PORT=5001
+NODE_ENV=development
+JWT_SECRET=<long-random-string>
+
+# Supabase
+SUPABASE_URL=https://xxxxx.supabase.co
+SUPABASE_ANON_KEY=<anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+
+# TMDB
+TMDB_API_KEY=<tmdb-api-key>
+TMDB_BASE_URL=https://api.themoviedb.org/3
+
+# Email (Resend)
+RESEND_API_KEY=re_xxxxxxxxxx
+CRON_SECRET=<random-secret>
+EMAIL_FROM=Scout <onboarding@resend.dev>
+
+# URLs
+FRONTEND_URL=http://localhost:3000
+CORS_ORIGIN=http://localhost:3000
+```
+
+### Frontend
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:5001  # or production backend URL
+```
+
+---
+
+## Database Schema (Supabase)
+
+### Core Tables
+- **users** - User accounts with auth, preferences, subscription tier
+- **shows** - TV show metadata from TMDB
+- **user_shows** - User watchlist (many-to-many with progress tracking)
+
+### Notification Tables
+- **episode_cache** - Cached episode data for new episode detection
+- **notification_log** - Sent notification history (prevents duplicates)
+- **episode_poll_status** - TMDB polling schedule per show
+
+### Beta Landing
+- **beta_signups** - Email signups for beta access
+
+---
+
+## Authentication Flow
+1. User registers with email/password
+2. Password hashed with bcrypt (12 rounds)
+3. JWT token generated (7-day expiry)
+4. Token stored in localStorage
+5. API requests include `Authorization: Bearer <token>`
+6. Backend middleware validates token on protected routes
+
+---
+
+## Key Architecture Decisions
+
+### Separate Frontend/Backend
+- Allows independent scaling and deployment
+- Backend can be used by future mobile apps
+- Clear API contract between layers
+
+### Supabase over Firebase
+- PostgreSQL for relational data
+- Built-in auth (though we use custom JWT)
+- Row-level security for data protection
+
+### Resend for Email
+- Modern API, great developer experience
+- 3,000 free emails/month (sufficient for MVP)
+- Easy to switch to custom domain later
+
+### TMDB for Show Data
+- Comprehensive TV show database
+- Free API tier with reasonable limits
+- Real-time episode/season data
+
+---
+
+## Troubleshooting
+
+### "Route not found" in production
+1. Check if code is deployed (Vercel dashboard)
+2. Verify the route exists in backend
+3. Check if backend project auto-deploys from correct branch
+
+### Email verification not working
+1. Check RESEND_API_KEY in Vercel env vars
+2. Verify email_verified column exists in users table
+3. Check Resend dashboard for delivery logs
+
+### CORS errors
+1. Verify CORS_ORIGIN matches frontend URL
+2. Check FRONTEND_URL is set correctly
+3. Ensure backend allows the frontend domain
+
+### Database connection issues
+1. Verify SUPABASE_URL and keys are correct
+2. Check Supabase dashboard for connection limits
+3. Ensure service role key (not anon key) for backend
+
+---
+
+## Git Workflow
+- **main** - Production branch, auto-deploys to Vercel
+- **feat/*** - Feature branches, merge to main when ready
+- Always test locally before merging to main
+
+---
+
 ## Contact & Resources
 - **GitHub**: https://github.com/tans2/streamtrack
-- **TMDB API**: Used for show data and episode information
-- **Resend**: Email delivery service (3,000 free emails/month)
+- **TMDB API**: https://developer.themoviedb.org/docs
+- **Resend**: https://resend.com (3,000 free emails/month)
+- **Supabase**: https://supabase.com
+- **Vercel**: https://vercel.com
