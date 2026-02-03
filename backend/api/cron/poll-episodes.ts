@@ -8,6 +8,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 const getNotificationService = async () => {
   try {
     // Try to import from the compiled dist directory
+    // @ts-ignore - compiled at build time; types not available during Vercel build
     const { NotificationService } = await import('../../dist/services/notification.js');
     return NotificationService;
   } catch (error) {
