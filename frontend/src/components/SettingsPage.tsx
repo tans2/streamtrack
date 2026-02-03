@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Switch } from "./ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Badge } from "./ui/badge";
-import { ArrowLeft, Crown, X, Loader2, Mail, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Crown, Loader2, Mail, CheckCircle2, AlertCircle } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -43,13 +43,12 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
       shareWatchingStatus: true
     }
   });
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
   const [sendingVerification, setSendingVerification] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
 
-  const { user, updatePreferences, upgradeToPremium } = useAuth();
+  const { user, updatePreferences } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -197,17 +196,6 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
     }
   };
 
-  const handleUpgradePremium = async () => {
-    setLoading(true);
-    try {
-      await upgradeToPremium();
-    } catch (error: any) {
-      console.error('Upgrade error:', error);
-      // Error is already handled by AuthContext with toast
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen text-foreground">
@@ -310,34 +298,24 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
             <CardHeader>
               <CardTitle className="text-card-foreground flex items-center">
                 <Crown className="w-5 h-5 mr-2 text-secondary" />
-                Premium Upgrade
+                Premium
+                <Badge variant="secondary" className="ml-2 text-xs">Coming Soon</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <p className="text-muted-foreground">
-                  Unlock premium features like advanced notifications, group tracking with friends, 
-                  and priority customer support.
+                  Premium features like advanced notifications, group tracking, and priority support
+                  are still in development.
                 </p>
                 <div className="flex items-center space-x-4">
-                  <span className="text-2xl text-card-foreground">$4.99/month</span>
-                  <Button 
-                    className="bg-secondary hover:bg-secondary/90 text-foreground"
-                    onClick={handleUpgradePremium}
-                    disabled={loading || user?.subscription_tier === 'premium'}
+                  <Button
+                    className="bg-secondary/70 text-foreground cursor-not-allowed"
+                    disabled={true}
                   >
-                    {loading ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : user?.subscription_tier === 'premium' ? (
-                      'Premium Active'
-                    ) : (
-                      'Upgrade to Premium'
-                    )}
+                    Coming Soon
                   </Button>
                 </div>
-                {user?.subscription_tier === 'premium' && (
-                  <p className="text-sm text-green-600">✓ You have an active premium subscription</p>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -370,24 +348,6 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                     )}
                   </div>
                 ))}
-              </div>
-              <div className="mt-4">
-                <p className="text-muted-foreground text-sm">Selected platforms:</p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {Array.from(new Set(settings.selectedPlatforms)).map(platform => (
-                    <Badge 
-                      key={platform} 
-                      variant="outline" 
-                      className="border-primary/50 text-foreground hover:border-primary"
-                    >
-                      {platform}
-                      <X 
-                        className="w-3 h-3 ml-1 cursor-pointer hover:text-primary" 
-                        onClick={() => togglePlatform(platform)}
-                      />
-                    </Badge>
-                  ))}
-                </div>
               </div>
             </CardContent>
           </Card>

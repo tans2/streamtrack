@@ -39,6 +39,13 @@ export default function AuthPage() {
     }
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+  };
+
   return (
     <div className="min-h-screen text-foreground flex items-center justify-center p-6">
       <div className="w-full max-w-md">
@@ -79,6 +86,7 @@ export default function AuthPage() {
                     placeholder="Enter your full name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                  onKeyDown={handleKeyDown}
                     className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
                     required
                   />
@@ -93,6 +101,7 @@ export default function AuthPage() {
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={handleKeyDown}
                   className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
                   required
                 />
@@ -106,6 +115,7 @@ export default function AuthPage() {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={handleKeyDown}
                   className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
                   minLength={8}
                   required

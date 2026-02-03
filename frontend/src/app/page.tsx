@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Play, Bell, Users, Star, LogOut } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,16 +11,16 @@ export default function HomePage() {
   const { user, logout } = useAuth();
   
   const streamingPlatforms = [
-    "Netflix",
-    "Hulu", 
-    "Disney+",
-    "Prime Video",
-    "Paramount+",
-    "Peacock",
-    "HBO Max",
-    "Apple TV+",
-    "YouTube TV",
-    "Fubo TV",
+    { name: "Netflix", icon: "/platforms/netflix.png" },
+    { name: "Hulu", icon: "/platforms/hulu.svg" },
+    { name: "Disney+", icon: "/platforms/disneyplus.svg" },
+    { name: "Prime Video", icon: "/platforms/primevideo.svg" },
+    { name: "Paramount+", icon: "/platforms/paramountplus.svg" },
+    { name: "Peacock", icon: "/platforms/peacock.svg" },
+    { name: "HBO Max", icon: "/platforms/hbomax.svg" },
+    { name: "Apple TV+", icon: "/platforms/appletv.svg" },
+    { name: "YouTube TV", icon: "/platforms/youtubetv.svg" },
+    { name: "Fubo TV", icon: "/platforms/fubo.svg" },
   ];
 
   return (
@@ -49,7 +48,6 @@ export default function HomePage() {
           >
             My Watchlist
           </Button>
-          <ThemeToggle />
           <Button
             className="bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={() => user ? logout() : router.push('/auth')}
@@ -164,9 +162,17 @@ export default function HomePage() {
           <h2 className="text-3xl font-bold text-foreground mb-8">Supported Platforms</h2>
           <div className="flex flex-wrap justify-center gap-6">
             {streamingPlatforms.map((platform) => (
-              <div key={platform} className="flex items-center space-x-2 bg-card px-4 py-2 rounded-lg shadow-sm border border-border">
-                <span className="text-xl">📺</span>
-                <span className="text-card-foreground font-medium">{platform}</span>
+              <div
+                key={platform.name}
+                className="flex items-center justify-center bg-card px-4 py-2 rounded-lg shadow-sm border border-border"
+                title={platform.name}
+              >
+                <img
+                  src={platform.icon}
+                  alt={`${platform.name} logo`}
+                  className="h-6 w-auto max-w-[112px] object-contain"
+                />
+                <span className="sr-only">{platform.name}</span>
               </div>
             ))}
           </div>

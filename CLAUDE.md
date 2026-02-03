@@ -164,6 +164,28 @@ Configured in `backend/vercel.json`:
 2. Set Production Branch to `main`
 3. Ensure "Auto-Deploy" is enabled
 
+### Vercel Separate Projects (Avoid Root Build Issues)
+**Goal:** Keep frontend and backend as separate Vercel projects without build confusion.
+
+**Backend project settings (Vercel):**
+1. Root Directory: `backend`
+2. Build Command: `npm run build`
+3. Install Command: `npm install`
+4. Output Directory: *(empty)*
+
+**Frontend project settings (Vercel):**
+1. Root Directory: `frontend`
+2. Build Command: `npm run build`
+3. Install Command: `npm install`
+4. Output Directory: `.next`
+
+**Important deploy note:**
+- If backend Root Directory is `backend`, do **not** run `vercel --prod` from inside `backend/`
+  (it can resolve to `backend/backend` and fail).
+- Deploy the backend from repo root or use the Vercel Dashboard redeploy.
+- If a backend build log shows `npm run build:frontend` or `next build`,
+  the backend project is building from repo root instead of `backend/`.
+
 ### Email Service Not Working
 **Issue:** Emails not sending in production.
 **Checklist:**

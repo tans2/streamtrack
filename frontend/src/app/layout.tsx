@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ToastProvider } from '@/components/ui/toast-provider';
 
@@ -25,6 +26,9 @@ export default function RootLayout({
         >
           <AuthProvider>
             {children}
+            <div className="fixed bottom-6 right-6 z-50">
+              <ThemeToggle />
+            </div>
             <ToastProvider />
           </AuthProvider>
         </ThemeProvider>
