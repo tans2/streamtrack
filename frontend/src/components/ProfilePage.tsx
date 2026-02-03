@@ -97,7 +97,19 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     try {
       await watchlistService.updateShowStatus(showId, { status: newStatus as any });
       toast.success('Status updated successfully');
-      loadWatchlist(); // Reload to get updated data
+      setWatchlist(prev =>
+        prev.map(item =>
+          item.show_id === showId
+            ? {
+                ...item,
+                watch_status: newStatus as any
+              }
+            : item
+        )
+      );
+      if (newStatus === 'watching') {
+        loadWatchlist(); // Reload to get updated data for currently watching
+      }
     } catch (error: any) {
       console.error('Error updating status:', error);
       toast.error(error.message || 'Failed to update status');
@@ -739,6 +751,22 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                         >
                           Remove
                         </Button>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
+                        <div className="flex items-center gap-2">
+                          {notificationToggles[item.show_id] ? (
+                            <Bell className="w-4 h-4 text-primary" />
+                          ) : (
+                            <BellOff className="w-4 h-4 text-muted-foreground" />
+                          )}
+                          <span className="text-xs text-muted-foreground">Notifications</span>
+                        </div>
+                        <Switch
+                          checked={notificationToggles[item.show_id] ?? true}
+                          onCheckedChange={(checked) => handleNotificationToggle(item.show_id, checked)}
+                          disabled={togglingNotification === item.show_id}
+                          className="scale-75"
+                        />
                       </div>
                     </div>
                   </CardContent>
