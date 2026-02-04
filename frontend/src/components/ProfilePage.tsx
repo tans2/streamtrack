@@ -108,9 +108,6 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
             : item
         )
       );
-      if (newStatus === 'watching') {
-        loadWatchlist(); // Reload to get updated data for currently watching
-      }
     } catch (error: any) {
       console.error('Error updating status:', error);
       toast.error(error.message || 'Failed to update status');
