@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Bell, Users, Star, LogOut } from "lucide-react";
+import { Play, Bell, Users, LogOut, ScanSearch, ListChecks, Star } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -68,7 +68,7 @@ export default function HomePage() {
       <div className="max-w-6xl mx-auto px-6 py-16">
         <div className="text-center mb-16">
           <h1 className="text-6xl font-bold text-foreground mb-6">
-            🎬 Scout
+            📺 Scout
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Track your favorite shows across all streaming platforms. Never miss a new episode or season again.
@@ -128,11 +128,21 @@ export default function HomePage() {
         <div className="grid md:grid-cols-3 gap-8 mb-16">
           <div className="bg-card rounded-xl p-6 shadow-lg border border-border">
             <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-              <Star className="w-6 h-6 text-primary" />
+              <ScanSearch className="w-6 h-6 text-primary" />
             </div>
             <h3 className="text-xl font-semibold text-card-foreground mb-2">Universal Search</h3>
             <p className="text-muted-foreground">
-              Find shows across Netflix, Hulu, Disney+, Prime Video, and more with our comprehensive search engine.
+              Search any show and instantly see where it's streaming. Filter results by the platforms you have.
+            </p>
+          </div>
+          
+          <div className="bg-card rounded-xl p-6 shadow-lg border border-border">
+            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+              <ListChecks className="w-6 h-6 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold text-card-foreground mb-2">Single Watchlist</h3>
+            <p className="text-muted-foreground">
+              Keep a single watchlist across all services and never lose track of what you're watching.
             </p>
           </div>
           
@@ -140,19 +150,9 @@ export default function HomePage() {
             <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
               <Bell className="w-6 h-6 text-primary" />
             </div>
-            <h3 className="text-xl font-semibold text-card-foreground mb-2">Smart Watchlist</h3>
+            <h3 className="text-xl font-semibold text-card-foreground mb-2">Smart Alerts</h3>
             <p className="text-muted-foreground">
-              Track your progress, get notifications for new episodes, and never lose track of what you're watching.
-            </p>
-          </div>
-          
-          <div className="bg-card rounded-xl p-6 shadow-lg border border-border">
-            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-              <Users className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold text-card-foreground mb-2">Episode Alerts</h3>
-            <p className="text-muted-foreground">
-              Get notified when new episodes of your favorite shows are released on any platform.
+              Get alerts for new episodes, seasons, or when a show becomes available on your platforms.
             </p>
           </div>
         </div>

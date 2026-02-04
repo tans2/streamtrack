@@ -40,6 +40,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [showModalOverview, setShowModalOverview] = useState<boolean>(false);
   const [notificationToggles, setNotificationToggles] = useState<Record<string, boolean>>({});
   const [togglingNotification, setTogglingNotification] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'watching' | 'completed' | 'want_to_watch'>('all');
 
   const { user } = useAuth();
   const router = useRouter();
@@ -355,6 +356,11 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   const watchingShows = watchlist.filter(item => item.watch_status === 'watching');
   const completedShows = watchlist.filter(item => item.watch_status === 'completed');
   const planToWatchShows = watchlist.filter(item => item.watch_status === 'want_to_watch');
+  const filteredAllShows = activeFilter === 'completed'
+    ? completedShows
+    : activeFilter === 'want_to_watch'
+      ? planToWatchShows
+      : watchlist;
 
   const calculateProgress = (current: number, total: number) => {
     return Math.round((current / total) * 100);
@@ -468,35 +474,59 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
             Welcome back, {user?.name || 'User'}! 👋
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="bg-card border-border shadow-lg">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl mb-1 text-primary">{watchlist.length}</div>
-                <div className="text-muted-foreground">Total Shows</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-green-50 border-green-200 shadow-lg">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl mb-1 text-green-700">{watchingShows.length}</div>
-                <div className="text-green-600">Currently Watching</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-blue-50 border-blue-200 shadow-lg">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl mb-1 text-blue-700">{completedShows.length}</div>
-                <div className="text-blue-600">Completed</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-yellow-50 border-yellow-200 shadow-lg">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl mb-1 text-yellow-700">{planToWatchShows.length}</div>
-                <div className="text-yellow-600">Plan to Watch</div>
-              </CardContent>
-            </Card>
+            <button
+              type="button"
+              onClick={() => setActiveFilter('all')}
+              className="text-left"
+            >
+              <Card className={`border-border shadow-lg transition-colors ${activeFilter === 'all' ? 'bg-primary/10 border-primary' : 'bg-card hover:border-primary'}`}>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl mb-1 text-primary">{watchlist.length}</div>
+                  <div className="text-muted-foreground">Total Shows</div>
+                </CardContent>
+              </Card>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFilter('watching')}
+              className="text-left"
+            >
+              <Card className={`border-green-200 shadow-lg transition-colors ${activeFilter === 'watching' ? 'bg-green-100 border-green-400' : 'bg-green-50 hover:border-green-300'}`}>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl mb-1 text-green-700">{watchingShows.length}</div>
+                  <div className="text-green-600">Currently Watching</div>
+                </CardContent>
+              </Card>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFilter('completed')}
+              className="text-left"
+            >
+              <Card className={`border-blue-200 shadow-lg transition-colors ${activeFilter === 'completed' ? 'bg-blue-100 border-blue-400' : 'bg-blue-50 hover:border-blue-300'}`}>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl mb-1 text-blue-700">{completedShows.length}</div>
+                  <div className="text-blue-600">Completed</div>
+                </CardContent>
+              </Card>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFilter('want_to_watch')}
+              className="text-left"
+            >
+              <Card className={`border-yellow-200 shadow-lg transition-colors ${activeFilter === 'want_to_watch' ? 'bg-yellow-100 border-yellow-400' : 'bg-yellow-50 hover:border-yellow-300'}`}>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl mb-1 text-yellow-700">{planToWatchShows.length}</div>
+                  <div className="text-yellow-600">Plan to Watch</div>
+                </CardContent>
+              </Card>
+            </button>
           </div>
         </div>
 
         {/* Currently Watching */}
-        {watchingShows.length > 0 && (
+        {(activeFilter === 'all' || activeFilter === 'watching') && watchingShows.length > 0 && (
           <div className="mb-8">
             <h3 className="text-2xl mb-4 text-foreground">Currently Watching</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -695,11 +725,14 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
         )}
 
         {/* All Shows */}
-        <div>
-          <h3 className="text-2xl mb-4 text-foreground">All Shows</h3>
-          {watchlist.length > 0 ? (
+        {(activeFilter === 'all' || activeFilter === 'completed' || activeFilter === 'want_to_watch') && (
+          <div>
+            <h3 className="text-2xl mb-4 text-foreground">
+              {activeFilter === 'completed' ? 'Completed' : activeFilter === 'want_to_watch' ? 'Plan to Watch' : 'All Shows'}
+            </h3>
+            {filteredAllShows.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {watchlist.map(item => (
+              {filteredAllShows.map(item => (
                 <Card key={item.id} className="bg-card border-border hover:border-primary transition-colors group cursor-pointer shadow-lg">
                   <CardContent className="p-3">
                     <div 
@@ -774,17 +807,18 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground text-lg mb-4">
-                Your watchlist is empty. Start adding shows!
-              </p>
-              <Button onClick={() => router.push('/search')}>
-                <Search className="w-4 h-4 mr-2" />
-                Search Shows
-              </Button>
-            </div>
-          )}
-        </div>
+              <div className="text-center py-12">
+                <p className="text-muted-foreground text-lg mb-4">
+                  Your watchlist is empty. Start adding shows!
+                </p>
+                <Button onClick={() => router.push('/search')}>
+                  <Search className="w-4 h-4 mr-2" />
+                  Search Shows
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       
       {/* Show Details Modal */}
