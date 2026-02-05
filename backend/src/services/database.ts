@@ -875,6 +875,205 @@ export class DatabaseService {
       return null;
     }
   }
+
+  // ----- Daily Digest Methods -----
+
+  // Insert a single pending notification event (ON CONFLICT DO NOTHING)
+  static async insertPendingEvent(event: {
+    user_id: string;
+    show_id: string;
+    event_type: string;
+    season_number?: number;
+    episode_number?: number;
+    episode_title?: string;
+    air_date?: string;
+    poster_path?: string;
+    show_title: string;
+  }) {
+    try {
+      const { data, error } = await supabase
+        .from('pending_notification_events')
+        .upsert(event, {
+          onConflict: 'user_id,show_id,event_type,season_number,episode_number',
+          ignoreDuplicates: true
+        })
+        .select()
+        .single();
+
+      if (error && error.code !== '23505') throw error; // Ignore unique constraint violations
+      return data;
+    } catch (error) {
+      console.error('Error inserting pending event:', error);
+      return null;
+    }
+  }
+
+  // Batch insert pending notification events
+  static async bulkInsertPendingEvents(events: Array<{
+    user_id: string;
+    show_id: string;
+    event_type: string;
+    season_number?: number;
+    episode_number?: number;
+    episode_title?: string;
+    air_date?: string;
+    poster_path?: string;
+    show_title: string;
+  }>) {
+    try {
+      if (events.length === 0) return { inserted: 0 };
+
+      const { data, error } = await supabase
+        .from('pending_notification_events')
+        .upsert(events, {
+          onConflict: 'user_id,show_id,event_type,season_number,episode_number',
+          ignoreDuplicates: true
+        })
+        .select();
+
+      if (error) throw error;
+      return { inserted: data?.length || 0 };
+    } catch (error) {
+      console.error('Error bulk inserting pending events:', error);
+      return { inserted: 0 };
+    }
+  }
+
+  // Get all users who have unprocessed pending events
+  static async getUsersWithPendingEvents() {
+    try {
+      const { data, error } = await supabase
+        .from('pending_notification_events')
+        .select('user_id')
+        .is('processed_at', null);
+
+      if (error) throw error;
+
+      // Get unique user IDs
+      const userIds = [...new Set((data || []).map(item => item.user_id))];
+      if (userIds.length === 0) return [];
+
+      // Fetch user details
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id, email, name, email_verified, notification_preferences')
+        .in('id', userIds);
+
+      if (usersError) throw usersError;
+      return users || [];
+    } catch (error) {
+      console.error('Error fetching users with pending events:', error);
+      return [];
+    }
+  }
+
+  // Get all unprocessed pending events for a specific user
+  static async getPendingEventsForUser(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('pending_notification_events')
+        .select('*')
+        .eq('user_id', userId)
+        .is('processed_at', null)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching pending events for user:', error);
+      return [];
+    }
+  }
+
+  // Mark pending events as processed
+  static async markEventsProcessed(eventIds: string[], digestId: string) {
+    try {
+      if (eventIds.length === 0) return true;
+
+      const { error } = await supabase
+        .from('pending_notification_events')
+        .update({
+          processed_at: new Date().toISOString(),
+          digest_id: digestId
+        })
+        .in('id', eventIds);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error marking events as processed:', error);
+      return false;
+    }
+  }
+
+  // Log a digest email sent to a user
+  static async logDigest(userId: string, digestDate: string, eventCount: number, resendMessageId?: string) {
+    try {
+      const { data, error } = await supabase
+        .from('digest_log')
+        .upsert({
+          user_id: userId,
+          digest_date: digestDate,
+          event_count: eventCount,
+          resend_message_id: resendMessageId
+        }, {
+          onConflict: 'user_id,digest_date'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error logging digest:', error);
+      return null;
+    }
+  }
+
+  // Check if a digest has already been sent to a user for a given date
+  static async hasDigestBeenSent(userId: string, digestDate: string) {
+    try {
+      const { data, error } = await supabase
+        .from('digest_log')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('digest_date', digestDate)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
+      return !!data;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Get upcoming episodes from episode_cache (air_date within next N days, not yet aired)
+  static async getUpcomingEpisodes(daysAhead: number = 14) {
+    try {
+      const now = new Date();
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + daysAhead);
+
+      const todayStr = now.toISOString().split('T')[0];
+      const futureStr = futureDate.toISOString().split('T')[0];
+
+      const { data, error } = await supabase
+        .from('episode_cache')
+        .select(`
+          *,
+          shows (id, title, poster_path, tmdb_id)
+        `)
+        .gt('air_date', todayStr)
+        .lte('air_date', futureStr)
+        .order('air_date', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching upcoming episodes:', error);
+      return [];
+    }
+  }
 }
 
 

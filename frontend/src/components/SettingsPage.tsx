@@ -35,7 +35,9 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
       newEpisodes: true,
       seasonStart: true,
       friendActivity: false,
-      weeklyDigest: true
+      weeklyDigest: true,
+      upcomingReleases: true,
+      pauseAll: false
     },
     privacy: {
       publicWatchlist: false,
@@ -65,7 +67,9 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
           newEpisodes: user.notification_preferences?.new_episodes ?? true,
           seasonStart: user.notification_preferences?.new_seasons ?? true,
           friendActivity: user.notification_preferences?.push ?? false,
-          weeklyDigest: user.notification_preferences?.email ?? true
+          weeklyDigest: user.notification_preferences?.email ?? true,
+          upcomingReleases: user.notification_preferences?.upcoming_releases ?? true,
+          pauseAll: user.notification_preferences?.pause_all ?? false
         },
         privacy: {
           publicWatchlist: user.privacy_settings?.data_export_enabled ?? false,
@@ -90,7 +94,9 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
           newEpisodes: prefs.preferences.newEpisodes ?? prev.notifications.newEpisodes,
           seasonStart: prefs.preferences.seasonPremieres ?? prev.notifications.seasonStart,
           friendActivity: prefs.preferences.friendActivity ?? prev.notifications.friendActivity,
-          weeklyDigest: prefs.preferences.weeklyDigest ?? prev.notifications.weeklyDigest
+          weeklyDigest: prefs.preferences.weeklyDigest ?? prev.notifications.weeklyDigest,
+          upcomingReleases: prefs.preferences.upcomingReleases ?? prev.notifications.upcomingReleases,
+          pauseAll: prefs.preferences.pauseAll ?? prev.notifications.pauseAll
         }
       }));
     } catch (error) {
@@ -120,7 +126,9 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
       newEpisodes: 'newEpisodes',
       seasonStart: 'seasonPremieres',
       friendActivity: 'friendActivity',
-      weeklyDigest: 'weeklyDigest'
+      weeklyDigest: 'weeklyDigest',
+      upcomingReleases: 'upcomingReleases',
+      pauseAll: 'pauseAll'
     };
 
     const apiField = fieldMap[field];
@@ -181,7 +189,9 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
           email: settings.notifications.weeklyDigest,
           push: settings.notifications.friendActivity,
           new_episodes: settings.notifications.newEpisodes,
-          new_seasons: settings.notifications.seasonStart
+          new_seasons: settings.notifications.seasonStart,
+          upcoming_releases: settings.notifications.upcomingReleases,
+          pause_all: settings.notifications.pauseAll
         },
         privacy_settings: {
           data_export_enabled: settings.privacy.publicWatchlist,
@@ -397,52 +407,79 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 </div>
               )}
 
-              <div className="flex items-center justify-between">
+              {/* Pause All Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                 <div>
-                  <Label className="text-card-foreground">New Episode Releases</Label>
-                  <p className="text-muted-foreground text-sm">Get notified when new episodes are available</p>
+                  <Label className="text-card-foreground">Pause All Notifications</Label>
+                  <p className="text-muted-foreground text-sm">Temporarily pause all email notifications</p>
                 </div>
                 <Switch
-                  checked={settings.notifications.newEpisodes}
-                  onCheckedChange={(checked: boolean) => handleNotificationChange('newEpisodes', checked)}
+                  checked={settings.notifications.pauseAll}
+                  onCheckedChange={(checked: boolean) => handleNotificationChange('pauseAll', checked)}
                   disabled={!emailVerified || savingNotifications}
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-card-foreground">Season Premieres</Label>
-                  <p className="text-muted-foreground text-sm">Be the first to know when new seasons start</p>
+              <div className={settings.notifications.pauseAll ? 'opacity-50 pointer-events-none' : ''}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-card-foreground">New Episode Releases</Label>
+                    <p className="text-muted-foreground text-sm">Get notified when new episodes are available</p>
+                  </div>
+                  <Switch
+                    checked={settings.notifications.newEpisodes}
+                    onCheckedChange={(checked: boolean) => handleNotificationChange('newEpisodes', checked)}
+                    disabled={!emailVerified || savingNotifications || settings.notifications.pauseAll}
+                  />
                 </div>
-                <Switch
-                  checked={settings.notifications.seasonStart}
-                  onCheckedChange={(checked: boolean) => handleNotificationChange('seasonStart', checked)}
-                  disabled={!emailVerified || savingNotifications}
-                />
-              </div>
 
-              <div className="flex items-center justify-between opacity-50">
-                <div>
-                  <Label className="text-card-foreground">Friend Activity</Label>
-                  <p className="text-muted-foreground text-sm">See what your friends are watching (Premium - Coming Soon)</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-card-foreground">Season Premieres</Label>
+                    <p className="text-muted-foreground text-sm">Be the first to know when new seasons start</p>
+                  </div>
+                  <Switch
+                    checked={settings.notifications.seasonStart}
+                    onCheckedChange={(checked: boolean) => handleNotificationChange('seasonStart', checked)}
+                    disabled={!emailVerified || savingNotifications || settings.notifications.pauseAll}
+                  />
                 </div>
-                <Switch
-                  checked={settings.notifications.friendActivity}
-                  onCheckedChange={(checked: boolean) => handleNotificationChange('friendActivity', checked)}
-                  disabled={true}
-                />
-              </div>
 
-              <div className="flex items-center justify-between opacity-50">
-                <div>
-                  <Label className="text-card-foreground">Weekly Digest</Label>
-                  <p className="text-muted-foreground text-sm">Weekly summary of your watching activity (Coming Soon)</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-card-foreground">Upcoming Releases</Label>
+                    <p className="text-muted-foreground text-sm">Get a heads-up about new episodes and seasons coming in the next 2 weeks</p>
+                  </div>
+                  <Switch
+                    checked={settings.notifications.upcomingReleases}
+                    onCheckedChange={(checked: boolean) => handleNotificationChange('upcomingReleases', checked)}
+                    disabled={!emailVerified || savingNotifications || settings.notifications.pauseAll}
+                  />
                 </div>
-                <Switch
-                  checked={settings.notifications.weeklyDigest}
-                  onCheckedChange={(checked: boolean) => handleNotificationChange('weeklyDigest', checked)}
-                  disabled={true}
-                />
+
+                <div className="flex items-center justify-between opacity-50">
+                  <div>
+                    <Label className="text-card-foreground">Friend Activity</Label>
+                    <p className="text-muted-foreground text-sm">See what your friends are watching (Coming Soon)</p>
+                  </div>
+                  <Switch
+                    checked={settings.notifications.friendActivity}
+                    onCheckedChange={(checked: boolean) => handleNotificationChange('friendActivity', checked)}
+                    disabled={true}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between opacity-50">
+                  <div>
+                    <Label className="text-card-foreground">Weekly Digest</Label>
+                    <p className="text-muted-foreground text-sm">Weekly summary of your watching activity (Coming Soon)</p>
+                  </div>
+                  <Switch
+                    checked={settings.notifications.weeklyDigest}
+                    onCheckedChange={(checked: boolean) => handleNotificationChange('weeklyDigest', checked)}
+                    disabled={true}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

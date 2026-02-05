@@ -13,6 +13,8 @@ export interface User {
     push: boolean;
     new_episodes: boolean;
     new_seasons: boolean;
+    upcoming_releases: boolean;
+    pause_all: boolean;
   };
   privacy_settings: {
     data_export_enabled: boolean;

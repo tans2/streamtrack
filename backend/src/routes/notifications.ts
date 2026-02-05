@@ -45,7 +45,7 @@ router.get('/preferences', authenticateToken, async (req: any, res) => {
 router.put('/preferences', authenticateToken, async (req: any, res) => {
   try {
     const userId = req.user.id;
-    const { newEpisodes, seasonPremieres, friendActivity, weeklyDigest } = req.body;
+    const { newEpisodes, seasonPremieres, friendActivity, weeklyDigest, upcomingReleases, pauseAll } = req.body;
 
     // Build preferences object from provided values
     const preferences: any = {};
@@ -53,6 +53,8 @@ router.put('/preferences', authenticateToken, async (req: any, res) => {
     if (seasonPremieres !== undefined) preferences.seasonPremieres = seasonPremieres;
     if (friendActivity !== undefined) preferences.friendActivity = friendActivity;
     if (weeklyDigest !== undefined) preferences.weeklyDigest = weeklyDigest;
+    if (upcomingReleases !== undefined) preferences.upcomingReleases = upcomingReleases;
+    if (pauseAll !== undefined) preferences.pauseAll = pauseAll;
 
     // Import AuthService to update preferences
     const { AuthService } = await import('../services/auth');
@@ -247,7 +249,7 @@ router.post('/poll', async (req, res) => {
     const batchSize = Math.min(parseInt(req.query.batch as string) || 30, 50);
 
     console.log('Manual poll trigger: polling episodes...');
-    const results = await NotificationService.pollAndNotify(batchSize);
+    const results = await NotificationService.pollAndDetect(batchSize);
 
     res.json({
       success: true,
@@ -286,6 +288,35 @@ router.post('/check-show/:showId', authenticateToken, async (req: any, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to check show for new episodes'
+    });
+  }
+});
+
+// Manual trigger for sending daily digests (admin/cron only)
+router.post('/send-digests', async (req, res) => {
+  try {
+    const cronSecret = process.env.CRON_SECRET;
+    const authHeader = req.headers.authorization;
+
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized'
+      });
+    }
+
+    console.log('Manual digest trigger: sending daily digests...');
+    const results = await NotificationService.sendDailyDigests();
+
+    res.json({
+      success: true,
+      data: results
+    });
+  } catch (error: any) {
+    console.error('Error in manual digest send:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send daily digests'
     });
   }
 });
