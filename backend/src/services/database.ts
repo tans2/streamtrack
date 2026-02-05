@@ -640,12 +640,11 @@ export class DatabaseService {
         return { success: true, message: 'Email already verified', user };
       }
 
-      // Update user as verified
+      // Update user as verified (keep token so re-clicks still work)
       const { data, error } = await supabase
         .from('users')
         .update({
-          email_verified: true,
-          email_verification_token: null
+          email_verified: true
         })
         .eq('id', user.id)
         .select()

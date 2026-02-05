@@ -152,7 +152,13 @@ router.post('/verify-email', authenticateToken, async (req: any, res) => {
     const token = crypto.randomBytes(32).toString('hex');
 
     // Save token to database
-    await DatabaseService.setEmailVerificationToken(userId, token);
+    const saved = await DatabaseService.setEmailVerificationToken(userId, token);
+    if (!saved) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to save verification token. Please try again.'
+      });
+    }
 
     // Send verification email
     const result = await EmailService.sendVerificationEmail(userEmail, userName, token);
