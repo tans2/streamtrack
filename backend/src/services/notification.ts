@@ -198,12 +198,14 @@ export class NotificationService {
 
           // Check if this is a new episode
           if (!cachedKeys.has(key)) {
-            // Only notify about episodes that have aired (or will air today)
+            // Only notify about episodes that aired recently (within last 7 days)
             const airDate = episode.air_date ? new Date(episode.air_date) : null;
             const today = new Date();
             today.setHours(0, 0, 0, 0);
+            const sevenDaysAgo = new Date(today);
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-            if (airDate && airDate <= today) {
+            if (airDate && airDate <= today && airDate >= sevenDaysAgo) {
               // This is a newly detected aired episode
               if (seasonNum > lastKnownSeason ||
                   (seasonNum === lastKnownSeason && episode.episode_number > lastKnownEpisode)) {
