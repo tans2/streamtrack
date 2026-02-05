@@ -1,6 +1,7 @@
 {
   "rewrites": [
     { "source": "/api/cron/poll-episodes", "destination": "/api/cron/poll-episodes" },
+    { "source": "/api/cron/send-digest", "destination": "/api/cron/send-digest" },
     { "source": "/(.*)", "destination": "/api" }
   ]
 }

@@ -1,0 +1,27 @@
+name: Send Daily Digest (Cron)
+
+on:
+  schedule:
+    - cron: "0 13 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  send-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger backend digest endpoint
+        env:
+          BACKEND_DIGEST_CRON_URL: ${{ secrets.BACKEND_DIGEST_CRON_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$BACKEND_DIGEST_CRON_URL" ]; then
+            echo "BACKEND_DIGEST_CRON_URL is not set"
+            exit 1
+          fi
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET is not set"
+            exit 1
+          fi
+          curl -sS -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${BACKEND_DIGEST_CRON_URL}"

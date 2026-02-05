@@ -1,13 +1,10 @@
-// Vercel Cron Function: Poll episodes for new releases
-// Configured to run every 6 hours via vercel.json
+// Vercel Cron Function: Send daily digest emails
+// Triggered by GitHub Actions daily at 1pm UTC (8am EST)
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// We need to import the services after they're built
-// In production, this will use the compiled JS
 const getNotificationService = async () => {
   try {
-    // Try to import from the compiled dist directory
     // @ts-ignore - compiled at build time; types not available during Vercel build
     const { NotificationService } = await import('../../dist/services/notification.js');
     return NotificationService;
@@ -22,7 +19,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = req.headers.authorization;
 
-  // In development, allow without secret. In production, require it.
   if (process.env.NODE_ENV === 'production' && cronSecret) {
     if (authHeader !== `Bearer ${cronSecret}`) {
       console.error('Unauthorized cron request');
@@ -30,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  console.log('Starting episode polling cron job...');
+  console.log('Starting daily digest cron job...');
   const startTime = Date.now();
 
   try {
@@ -43,12 +39,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Poll shows for new episodes and queue events for daily digest (30 shows per batch)
-    const results = await NotificationService.pollAndDetect(30);
+    const results = await NotificationService.sendDailyDigests();
 
     const duration = Date.now() - startTime;
 
-    console.log('Episode polling completed:', {
+    console.log('Daily digest completed:', {
       duration: `${duration}ms`,
       ...results
     });
@@ -60,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
   } catch (error: any) {
-    console.error('Error in episode polling cron:', error);
+    console.error('Error in daily digest cron:', error);
 
     return res.status(500).json({
       success: false,

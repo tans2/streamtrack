@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { ArrowLeft, Settings, Search, Star, Play, Calendar, Loader2, Bell, BellOff } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { watchlistService, WatchlistItem } from '@/services/watchlistService';
 import { showService, Show } from '@/services/showService';
 import { notificationService } from '@/services/notificationService';
@@ -44,10 +44,32 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
 
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     loadWatchlist();
   }, []);
+
+  // Handle deep links from digest email CTAs
+  useEffect(() => {
+    if (!watchlist.length || loading) return;
+
+    const showId = searchParams.get('showId');
+    const action = searchParams.get('action');
+
+    if (showId) {
+      // Find and scroll to the show card
+      const element = document.getElementById(`show-${showId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+        // Remove highlight after a few seconds
+        setTimeout(() => {
+          element.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+        }, 3000);
+      }
+    }
+  }, [watchlist, loading, searchParams]);
 
   const loadWatchlist = async () => {
     setLoading(true);
@@ -528,10 +550,10 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
             <h3 className="text-2xl mb-4 text-foreground">Currently Watching</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {watchingShows.map(item => (
-                <Card key={item.id} className="bg-card border-border hover:border-primary transition-colors shadow-lg h-auto">
+                <Card key={item.id} id={`show-${item.show_id}`} className="bg-card border-border hover:border-primary transition-colors shadow-lg h-auto">
                   <CardContent className="p-4">
                     <div className="flex gap-4">
-                      <div 
+                      <div
                         className="w-24 flex-shrink-0 cursor-pointer group"
                         onClick={() => handleShowClick(item, false)}
                       >
@@ -730,7 +752,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
             {filteredAllShows.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
               {filteredAllShows.map(item => (
-                <Card key={item.id} className="bg-card border-border hover:border-primary transition-colors group cursor-pointer shadow-lg">
+                <Card key={item.id} id={`show-${item.show_id}`} className="bg-card border-border hover:border-primary transition-colors group cursor-pointer shadow-lg">
                   <CardContent className="p-3">
                     <div 
                       className="aspect-[2/3] mb-3 rounded-lg overflow-hidden bg-muted relative cursor-pointer"

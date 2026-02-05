@@ -209,7 +209,19 @@ export class TMDBService {
         number_of_episodes: show.number_of_episodes,
         in_production: show.in_production,
         networks: show.networks,
-        production_companies: show.production_companies
+        production_companies: show.production_companies,
+        next_episode_to_air: show.next_episode_to_air ? {
+          air_date: show.next_episode_to_air.air_date,
+          episode_number: show.next_episode_to_air.episode_number,
+          season_number: show.next_episode_to_air.season_number,
+          name: show.next_episode_to_air.name,
+        } : null,
+        last_episode_to_air: show.last_episode_to_air ? {
+          air_date: show.last_episode_to_air.air_date,
+          episode_number: show.last_episode_to_air.episode_number,
+          season_number: show.last_episode_to_air.season_number,
+          name: show.last_episode_to_air.name,
+        } : null,
       };
     } catch (error) {
       console.error(`Error fetching show details for TMDB ID ${tmdbId}:`, error);

@@ -6,6 +6,8 @@ export interface NotificationPreferences {
   seasonPremieres: boolean;
   friendActivity: boolean;
   weeklyDigest: boolean;
+  upcomingReleases: boolean;
+  pauseAll: boolean;
 }
 
 export interface NotificationPreferencesResponse {
