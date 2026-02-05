@@ -211,25 +211,25 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
     <div className="min-h-screen text-foreground">
       {/* Header */}
       <div className="border-b border-border bg-card/50">
-        <div className="container mx-auto px-6 py-4">
+        <div className="container mx-auto px-3 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
-                className="text-primary hover:text-primary hover:bg-primary/10 mr-4"
+                className="text-primary hover:text-primary hover:bg-primary/10 mr-2 sm:mr-4"
                 onClick={() => router.push('/profile')}
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Profile
+                <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Back to Profile</span>
               </Button>
-              <h1 className="text-2xl text-foreground">Settings</h1>
+              <h1 className="text-xl sm:text-2xl text-foreground">Settings</h1>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-8 max-w-4xl">
+      <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8 max-w-4xl">
         <div className="space-y-8">
           {/* Account Settings */}
           <Card className="bg-card border-border shadow-lg">
@@ -373,9 +373,9 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
             <CardContent className="space-y-4">
               {/* Email Verification Banner */}
               {!emailVerified && (
-                <div className="flex items-center justify-between p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:justify-between p-3 sm:p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <AlertCircle className="w-5 h-5 text-amber-500" />
+                    <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
                     <div>
                       <p className="text-sm font-medium text-card-foreground">Verify your email</p>
                       <p className="text-xs text-muted-foreground">Verify your email to receive notifications</p>

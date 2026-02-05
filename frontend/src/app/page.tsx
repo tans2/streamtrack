@@ -26,24 +26,24 @@ export default function HomePage() {
   return (
     <div className="min-h-screen text-foreground">
       {/* Navigation */}
-      <nav className="flex items-center justify-between p-6">
+      <nav className="flex items-center justify-between p-3 sm:p-6">
         <div className="flex items-center space-x-2">
           <Play className="w-8 h-8 text-primary" />
-          <span className="text-2xl font-bold text-primary">
+          <span className="text-xl sm:text-2xl font-bold text-primary">
             Scout
           </span>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4">
           <Button
             variant="ghost"
-            className="text-foreground hover:text-primary hover:bg-primary/10"
+            className="hidden sm:inline-flex text-foreground hover:text-primary hover:bg-primary/10"
             onClick={() => router.push('/search')}
           >
             Explore Shows
           </Button>
           <Button
             variant="ghost"
-            className="text-foreground hover:text-primary hover:bg-primary/10"
+            className="hidden sm:inline-flex text-foreground hover:text-primary hover:bg-primary/10"
             onClick={() => router.push('/profile')}
           >
             My Watchlist
@@ -65,20 +65,20 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <div className="max-w-6xl mx-auto px-6 py-16">
-        <div className="text-center mb-16">
-          <h1 className="text-6xl font-bold text-foreground mb-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-16">
+        <div className="text-center mb-8 sm:mb-16">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mb-4 sm:mb-6">
             📺 Scout
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto">
             Track your favorite shows across all streaming platforms. Never miss a new episode or season again.
           </p>
-          
-          <div className="space-y-6">
-            <p className="text-lg text-muted-foreground">
+
+          <div className="space-y-4 sm:space-y-6">
+            <p className="text-base sm:text-lg text-muted-foreground">
               {user ? `Welcome back, ${user.name || user.email}!` : 'Sign up to start tracking your favorite shows'}
             </p>
-            <div className="flex gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
               {!user ? (
                 <>
                   <Button 
@@ -125,8 +125,8 @@ export default function HomePage() {
         </div>
 
         {/* Features Section */}
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
-          <div className="bg-card rounded-xl p-6 shadow-lg border border-border">
+        <div className="grid md:grid-cols-3 gap-4 md:gap-8 mb-8 sm:mb-16">
+          <div className="bg-card rounded-xl p-4 sm:p-6 shadow-lg border border-border">
             <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
               <ScanSearch className="w-6 h-6 text-primary" />
             </div>
@@ -136,7 +136,7 @@ export default function HomePage() {
             </p>
           </div>
           
-          <div className="bg-card rounded-xl p-6 shadow-lg border border-border">
+          <div className="bg-card rounded-xl p-4 sm:p-6 shadow-lg border border-border">
             <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
               <ListChecks className="w-6 h-6 text-primary" />
             </div>
@@ -146,7 +146,7 @@ export default function HomePage() {
             </p>
           </div>
           
-          <div className="bg-card rounded-xl p-6 shadow-lg border border-border">
+          <div className="bg-card rounded-xl p-4 sm:p-6 shadow-lg border border-border">
             <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
               <Bell className="w-6 h-6 text-primary" />
             </div>
@@ -159,8 +159,8 @@ export default function HomePage() {
 
         {/* Streaming Platforms */}
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-foreground mb-8">Supported Platforms</h2>
-          <div className="flex flex-wrap justify-center gap-6">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8">Supported Platforms</h2>
+          <div className="flex flex-wrap justify-center gap-3 sm:gap-6">
             {streamingPlatforms.map((platform) => (
               <div
                 key={platform.name}
@@ -170,7 +170,7 @@ export default function HomePage() {
                 <img
                   src={platform.icon}
                   alt={`${platform.name} logo`}
-                  className="h-6 w-auto max-w-[112px] object-contain"
+                  className="h-5 max-w-[80px] sm:h-6 w-auto sm:max-w-[112px] object-contain"
                 />
                 <span className="sr-only">{platform.name}</span>
               </div>

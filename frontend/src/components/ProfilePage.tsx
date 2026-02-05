@@ -450,49 +450,49 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     <div className="min-h-screen text-foreground">
       {/* Header */}
       <div className="border-b border-border bg-card/50">
-        <div className="container mx-auto px-6 py-4">
+        <div className="container mx-auto px-3 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
-                className="text-primary hover:text-primary hover:bg-primary/10 mr-4"
+                className="text-primary hover:text-primary hover:bg-primary/10 mr-2 sm:mr-4"
                 onClick={() => router.push('/')}
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
+                <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Back</span>
               </Button>
-              <h1 className="text-2xl text-foreground">My Watchlist</h1>
+              <h1 className="text-xl sm:text-2xl text-foreground">My Watchlist</h1>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button 
-                variant="ghost" 
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Button
+                variant="ghost"
                 className="text-primary hover:text-primary hover:bg-primary/10"
                 onClick={() => router.push('/search')}
               >
-                <Search className="w-4 h-4 mr-2" />
-                Search Shows
+                <Search className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Search Shows</span>
               </Button>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 className="text-primary hover:text-primary hover:bg-primary/10"
                 onClick={() => router.push('/settings')}
               >
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
+                <Settings className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Settings</span>
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* User Stats */}
         <div className="mb-8">
-          <h2 className="text-3xl mb-4 text-foreground">
+          <h2 className="text-xl sm:text-2xl md:text-3xl mb-4 text-foreground">
             Welcome back, {user?.name || 'User'}! 👋
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
             <button
               type="button"
               onClick={() => setActiveFilter('all')}
@@ -547,14 +547,14 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
         {/* Currently Watching */}
         {(activeFilter === 'all' || activeFilter === 'watching') && watchingShows.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-2xl mb-4 text-foreground">Currently Watching</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <h3 className="text-xl sm:text-2xl mb-4 text-foreground">Currently Watching</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
               {watchingShows.map(item => (
                 <Card key={item.id} id={`show-${item.show_id}`} className="bg-card border-border hover:border-primary transition-colors shadow-lg h-auto">
-                  <CardContent className="p-4">
-                    <div className="flex gap-4">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex gap-3 sm:gap-4">
                       <div
-                        className="w-24 flex-shrink-0 cursor-pointer group"
+                        className="w-20 sm:w-24 flex-shrink-0 cursor-pointer group"
                         onClick={() => handleShowClick(item, false)}
                       >
                         <div className="aspect-[2/3] rounded-lg overflow-hidden bg-muted relative">
@@ -577,8 +577,8 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                         </h4>
                         <div className="space-y-3 flex-1">
                           <StatusBadge status={item.watch_status} />
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm text-muted-foreground whitespace-nowrap">Season</span>
+                          <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                            <span className="text-sm text-muted-foreground whitespace-nowrap"><span className="sm:hidden">S</span><span className="hidden sm:inline">Season</span></span>
                             <Select
                               value={(item.current_season || 1).toString()}
                               onValueChange={(value) => handleSeasonChange(item, parseInt(value))}
@@ -589,7 +589,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                               }}
                               disabled={savingProgress[item.show_id] || (seasonDataCache[item.show_id]?.loading)}
                             >
-                              <SelectTrigger className="w-20 h-8 text-sm">
+                              <SelectTrigger className="w-16 sm:w-20 h-9 sm:h-8 text-sm">
                                 {seasonDataCache[item.show_id]?.loading ? (
                                   <Loader2 className="w-3 h-3 animate-spin" />
                                 ) : (
@@ -623,7 +623,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                                 })()}
                               </SelectContent>
                             </Select>
-                            <span className="text-sm text-muted-foreground whitespace-nowrap">Episode</span>
+                            <span className="text-sm text-muted-foreground whitespace-nowrap"><span className="sm:hidden">E</span><span className="hidden sm:inline">Episode</span></span>
                             <Select
                               value={(item.current_episode || 1).toString()}
                               onValueChange={(value) => handleEpisodeChange(item, parseInt(value))}
@@ -642,7 +642,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                               }}
                               disabled={savingProgress[item.show_id] || (seasonDataCache[item.show_id]?.loading)}
                             >
-                              <SelectTrigger className="w-20 h-8 text-sm">
+                              <SelectTrigger className="w-16 sm:w-20 h-9 sm:h-8 text-sm">
                                 {savingProgress[item.show_id] ? (
                                   <Loader2 className="w-3 h-3 animate-spin" />
                                 ) : (
@@ -697,7 +697,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                               onValueChange={(newStatus) => handleStatusUpdate(item.show_id, newStatus)}
                               disabled={updatingStatus === item.show_id}
                             >
-                              <SelectTrigger className="w-28 h-8 text-sm">
+                              <SelectTrigger className="w-24 sm:w-28 h-9 sm:h-8 text-sm">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -710,7 +710,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-8 text-sm hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                              className="h-9 sm:h-8 text-sm hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                               onClick={() => handleRemoveFromWatchlist(item.show_id, item.shows.title)}
                             >
                               Remove
@@ -730,7 +730,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                               checked={notificationToggles[item.show_id] ?? true}
                               onCheckedChange={(checked) => handleNotificationToggle(item.show_id, checked)}
                               disabled={togglingNotification === item.show_id}
-                              className="scale-75"
+                              className=""
                             />
                           </div>
                         </div>
@@ -746,14 +746,14 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
         {/* All Shows */}
         {(activeFilter === 'all' || activeFilter === 'completed' || activeFilter === 'want_to_watch') && (
           <div>
-            <h3 className="text-2xl mb-4 text-foreground">
+            <h3 className="text-xl sm:text-2xl mb-4 text-foreground">
               {activeFilter === 'completed' ? 'Completed' : activeFilter === 'want_to_watch' ? 'Plan to Watch' : 'All Shows'}
             </h3>
             {filteredAllShows.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-4">
               {filteredAllShows.map(item => (
                 <Card key={item.id} id={`show-${item.show_id}`} className="bg-card border-border hover:border-primary transition-colors group cursor-pointer shadow-lg">
-                  <CardContent className="p-3">
+                  <CardContent className="p-2 sm:p-3">
                     <div 
                       className="aspect-[2/3] mb-3 rounded-lg overflow-hidden bg-muted relative cursor-pointer"
                       onClick={() => handleShowClick(item, true)}
@@ -785,7 +785,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                           onValueChange={(newStatus) => handleStatusUpdate(item.show_id, newStatus)}
                           disabled={updatingStatus === item.show_id}
                         >
-                          <SelectTrigger className="w-full h-7 text-xs">
+                          <SelectTrigger className="w-full h-9 sm:h-7 text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -798,7 +798,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-xs px-2 py-1 h-auto w-full hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                          className="text-xs px-2 py-2 sm:py-1 h-auto w-full hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                           onClick={() => handleRemoveFromWatchlist(item.show_id, item.shows.title)}
                         >
                           Remove
@@ -817,7 +817,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                           checked={notificationToggles[item.show_id] ?? true}
                           onCheckedChange={(checked) => handleNotificationToggle(item.show_id, checked)}
                           disabled={togglingNotification === item.show_id}
-                          className="scale-75"
+                          className=""
                         />
                       </div>
                     </div>
