@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Switch } from "./ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Badge } from "./ui/badge";
-import { ArrowLeft, Crown, Loader2, Mail, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Crown, Loader2, Mail, CheckCircle2, AlertCircle, LogOut } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -50,7 +50,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
   const [sendingVerification, setSendingVerification] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
 
-  const { user, updatePreferences } = useAuth();
+  const { user, updatePreferences, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -220,11 +220,19 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 className="text-primary hover:text-primary hover:bg-primary/10 mr-2 sm:mr-4"
                 onClick={() => router.push('/profile')}
               >
-                <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                <ArrowLeft className="w-4 h-4" />
                 <span className="hidden sm:inline">Back to Profile</span>
               </Button>
               <h1 className="text-xl sm:text-2xl text-foreground">Settings</h1>
             </div>
+            <Button
+              variant="ghost"
+              className="text-primary hover:text-primary hover:bg-primary/10"
+              onClick={() => logout()}
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
           </div>
         </div>
       </div>

@@ -5,7 +5,7 @@ import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { Skeleton } from "./ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { ArrowLeft, Settings, Search, Star, Play, Calendar, Loader2, Bell, BellOff } from "lucide-react";
+import { ArrowLeft, Settings, Search, Star, Play, Calendar, Loader2, Bell, BellOff, LogOut } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -42,7 +42,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [togglingNotification, setTogglingNotification] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'watching' | 'completed' | 'want_to_watch'>('all');
 
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -459,7 +459,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                 className="text-primary hover:text-primary hover:bg-primary/10 mr-2 sm:mr-4"
                 onClick={() => router.push('/')}
               >
-                <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                <ArrowLeft className="w-4 h-4" />
                 <span className="hidden sm:inline">Back</span>
               </Button>
               <h1 className="text-xl sm:text-2xl text-foreground">My Watchlist</h1>
@@ -470,7 +470,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                 className="text-primary hover:text-primary hover:bg-primary/10"
                 onClick={() => router.push('/search')}
               >
-                <Search className="w-4 h-4 sm:mr-2" />
+                <Search className="w-4 h-4" />
                 <span className="hidden sm:inline">Search Shows</span>
               </Button>
               <Button
@@ -478,8 +478,16 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                 className="text-primary hover:text-primary hover:bg-primary/10"
                 onClick={() => router.push('/settings')}
               >
-                <Settings className="w-4 h-4 sm:mr-2" />
+                <Settings className="w-4 h-4" />
                 <span className="hidden sm:inline">Settings</span>
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-primary hover:text-primary hover:bg-primary/10"
+                onClick={() => logout()}
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign Out</span>
               </Button>
             </div>
           </div>
