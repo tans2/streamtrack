@@ -637,7 +637,7 @@ export class DatabaseService {
       }
 
       if (user.email_verified) {
-        return { success: true, message: 'Email already verified', user };
+        return { success: true, message: 'You can now receive email notifications from Scout', user };
       }
 
       // Update user as verified (keep token so re-clicks still work)
@@ -652,7 +652,7 @@ export class DatabaseService {
 
       if (error) throw error;
 
-      return { success: true, message: 'Email verified successfully', user: data };
+      return { success: true, message: 'You can now receive email notifications from Scout', user: data };
     } catch (error) {
       console.error('Error verifying email:', error);
       return { success: false, error: 'Failed to verify email' };
