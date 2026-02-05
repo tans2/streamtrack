@@ -234,31 +234,31 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
     <div className="min-h-screen text-foreground">
       {/* Header */}
       <div className="border-b border-border bg-card/50">
-        <div className="container mx-auto px-6 py-4">
+        <div className="container mx-auto px-3 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
-                className="text-primary hover:text-primary hover:bg-primary/10 mr-4"
+                className="text-primary hover:text-primary hover:bg-primary/10 mr-2 sm:mr-4"
                 onClick={() => router.push('/')}
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
+                <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Back</span>
               </Button>
-              <h1 className="text-2xl text-foreground">Search Shows</h1>
+              <h1 className="text-xl sm:text-2xl text-foreground">Search Shows</h1>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button 
-                variant="ghost" 
-                className="text-primary hover:text-primary hover:bg-primary/10"
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Button
+                variant="ghost"
+                className="hidden sm:inline-flex text-primary hover:text-primary hover:bg-primary/10"
                 onClick={() => router.push('/profile')}
               >
                 My Watchlist
               </Button>
-              <Button 
-                variant="ghost" 
-                className="text-primary hover:text-primary hover:bg-primary/10"
+              <Button
+                variant="ghost"
+                className="hidden sm:inline-flex text-primary hover:text-primary hover:bg-primary/10"
                 onClick={() => router.push('/settings')}
               >
                 Settings
@@ -268,10 +268,10 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* Search Form */}
-        <Card className="bg-card border-border shadow-lg mb-8">
-          <CardContent className="p-6">
+        <Card className="bg-card border-border shadow-lg mb-6 sm:mb-8">
+          <CardContent className="p-4 sm:p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
               <div className="space-y-2">
                 <Label htmlFor="search" className="text-card-foreground">Search by Title</Label>

@@ -121,11 +121,11 @@ export default function ShowDetailsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-full sm:max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <DialogTitle className="text-2xl font-bold text-foreground mb-2">
+              <DialogTitle className="text-xl sm:text-2xl font-bold text-foreground mb-2">
                 {show.title}
               </DialogTitle>
               <div className="flex items-center gap-4 text-muted-foreground">
@@ -144,9 +144,9 @@ export default function ShowDetailsModal({
           <div className="pr-4">
           <div className="space-y-6">
             {/* Show Overview */}
-            <div className="flex gap-6">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
               <div className="flex-shrink-0">
-                <div className="w-48 h-72 rounded-lg overflow-hidden bg-muted">
+                <div className="w-32 h-48 sm:w-48 sm:h-72 mx-auto sm:mx-0 rounded-lg overflow-hidden bg-muted">
                   <ImageWithFallback
                     src={getPosterUrl(show.poster_path)}
                     alt={show.title}

@@ -8,7 +8,7 @@ const resendApiKey = process.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 // Email sender configuration
-const FROM_EMAIL = process.env.EMAIL_FROM || 'Scout <notifications@scout.tv>';
+const FROM_EMAIL = process.env.EMAIL_FROM || 'Scout <notifications@scout.stephaniet.dev>';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 export interface EmailResult {
