@@ -95,9 +95,6 @@ export default function VerifyEmailPage() {
           <CardContent className="text-center">
             {status === 'success' && (
               <div className="space-y-4">
-                <p className="text-muted-foreground text-sm">
-                  You can now receive email notifications for new episodes and season premieres.
-                </p>
                 <Button
                   onClick={() => router.push('/settings')}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground"
