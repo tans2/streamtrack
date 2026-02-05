@@ -54,7 +54,7 @@ export default function HomePage() {
           >
             {user ? (
               <>
-                <LogOut className="w-4 h-4 mr-2" />
+                <LogOut className="w-4 h-4" />
                 Sign Out
               </>
             ) : (
@@ -86,7 +86,7 @@ export default function HomePage() {
                     className="bg-primary hover:bg-primary/90"
                     onClick={() => router.push('/signup')}
                   >
-                    <Star className="w-5 h-5 mr-2" />
+                    <Star className="w-5 h-5" />
                     Get Started
                   </Button>
                   <Button 
@@ -95,7 +95,7 @@ export default function HomePage() {
                     className="bg-secondary hover:bg-secondary/80"
                     onClick={() => router.push('/search')}
                   >
-                    <Users className="w-5 h-5 mr-2" />
+                    <Users className="w-5 h-5" />
                     Explore Shows
                   </Button>
                 </>
@@ -106,7 +106,7 @@ export default function HomePage() {
                     className="bg-primary hover:bg-primary/90"
                     onClick={() => router.push('/profile')}
                   >
-                    <Star className="w-5 h-5 mr-2" />
+                    <Star className="w-5 h-5" />
                     View My Watchlist
                   </Button>
                   <Button 
@@ -115,7 +115,7 @@ export default function HomePage() {
                     className="bg-secondary hover:bg-secondary/80"
                     onClick={() => router.push('/search')}
                   >
-                    <Users className="w-5 h-5 mr-2" />
+                    <Users className="w-5 h-5" />
                     Explore Shows
                   </Button>
                 </>

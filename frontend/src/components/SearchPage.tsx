@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
-import { ArrowLeft, Search, Star, Plus, Loader2, Check } from "lucide-react";
+import { ArrowLeft, Search, Star, Plus, Loader2, Check, LogOut } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -50,7 +50,7 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
   const [watchlistTmdbIds, setWatchlistTmdbIds] = useState<Set<number>>(new Set());
   const [watchlistLoading, setWatchlistLoading] = useState(false);
 
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
 
   // Load user's watchlist on mount (for "In Watchlist" checking)
@@ -243,7 +243,7 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
                 className="text-primary hover:text-primary hover:bg-primary/10 mr-2 sm:mr-4"
                 onClick={() => router.push('/')}
               >
-                <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                <ArrowLeft className="w-4 h-4" />
                 <span className="hidden sm:inline">Back</span>
               </Button>
               <h1 className="text-xl sm:text-2xl text-foreground">Search Shows</h1>
@@ -262,6 +262,14 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
                 onClick={() => router.push('/settings')}
               >
                 Settings
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-primary hover:text-primary hover:bg-primary/10"
+                onClick={() => logout()}
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign Out</span>
               </Button>
             </div>
           </div>
