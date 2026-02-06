@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { GeistSans } from 'geist/font/sans';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -16,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={GeistSans.className}>
       <body className="min-h-screen bg-background">
         <ThemeProvider
           attribute="class"

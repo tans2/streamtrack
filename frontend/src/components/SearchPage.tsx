@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -7,6 +8,8 @@ import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
 import { ArrowLeft, Search, Star, Plus, Loader2, Check, LogOut } from "lucide-react";
+import { staggerContainer, fadeInUp, cardHover } from '@/lib/animations';
+import { SkeletonGrid } from './ui/skeleton-card';
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -364,18 +367,17 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
           </h2>
           
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <img src="/logo.png" alt="" className="w-16 h-16 mb-4 animate-pulse" />
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Scouting...</span>
-              </div>
-            </div>
+            <SkeletonGrid count={8} />
           ) : shows && shows.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+              variants={staggerContainer}
+              initial="hidden"
+              animate="show"
+            >
               {shows.map(show => (
-                <Card 
-                  key={show.tmdb_id} 
+                <motion.div key={show.tmdb_id} variants={fadeInUp} {...cardHover}>
+                <Card
                   className="bg-card border-border hover:border-primary transition-colors shadow-lg cursor-pointer hover:shadow-lg"
                   onClick={() => setSelectedShow(show)}
                 >
@@ -455,8 +457,9 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
                     )}
                   </CardContent>
                 </Card>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           ) : !loading && hasSearched && shows.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground text-lg">
