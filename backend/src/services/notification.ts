@@ -24,6 +24,7 @@ interface NewEpisodeDetection {
     season_number: number;
     name: string;
   } | null;
+  providers?: string; // Comma-separated list of streaming platform names
 }
 
 export class NotificationService {
@@ -178,6 +179,10 @@ export class NotificationService {
 
       // Fetch and compare episodes from TMDB
       const episodesToCache: any[] = [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const sevenDaysAgo = new Date(today);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
       for (const seasonNum of seasonsToCheck) {
         const seasonData = await TMDBService.getShowSeasons(tmdbId, seasonNum);
@@ -185,30 +190,39 @@ export class NotificationService {
 
         for (const episode of seasonData.episodes) {
           const key = `${seasonNum}-${episode.episode_number}`;
+          const airDate = episode.air_date ? new Date(episode.air_date) : null;
+          const hasAired = airDate && airDate <= today;
 
-          // Prepare for caching
-          episodesToCache.push({
-            show_id: showId,
-            tmdb_id: tmdbId,
-            season_number: seasonNum,
-            episode_number: episode.episode_number,
-            title: episode.title,
-            air_date: episode.air_date
-          });
+          // Only cache episodes that have ALREADY AIRED (not future episodes)
+          // This prevents the bug where future episodes get cached early,
+          // causing them to be missed when they actually air
+          if (hasAired) {
+            episodesToCache.push({
+              show_id: showId,
+              tmdb_id: tmdbId,
+              season_number: seasonNum,
+              episode_number: episode.episode_number,
+              title: episode.title,
+              air_date: episode.air_date
+            });
+          }
 
-          // Check if this is a new episode
-          if (!cachedKeys.has(key)) {
-            // Only notify about episodes that aired recently (within last 7 days)
-            const airDate = episode.air_date ? new Date(episode.air_date) : null;
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const sevenDaysAgo = new Date(today);
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+          // Check if this is a new episode that needs notification
+          // An episode is "new" if:
+          // 1. It's not in the cache (first time seeing it) OR
+          // 2. It's newer than last_known_episode (handles the case where cache got populated early)
+          const isNewerThanLastKnown = seasonNum > lastKnownSeason ||
+            (seasonNum === lastKnownSeason && episode.episode_number > lastKnownEpisode);
+          const notInCache = !cachedKeys.has(key);
 
-            if (airDate && airDate <= today && airDate >= sevenDaysAgo) {
-              // This is a newly detected aired episode
-              if (seasonNum > lastKnownSeason ||
-                  (seasonNum === lastKnownSeason && episode.episode_number > lastKnownEpisode)) {
+          // Only notify about episodes that aired recently (within last 7 days)
+          if (airDate && airDate <= today && airDate >= sevenDaysAgo) {
+            if (notInCache || isNewerThanLastKnown) {
+              // Avoid duplicates - only add if not already in newEpisodes
+              const alreadyAdded = newEpisodes.some(
+                e => e.season_number === seasonNum && e.episode_number === episode.episode_number
+              );
+              if (!alreadyAdded) {
                 newEpisodes.push({
                   season_number: seasonNum,
                   episode_number: episode.episode_number,
@@ -224,9 +238,24 @@ export class NotificationService {
         await this.delay(100);
       }
 
-      // Cache all episodes we found
+      // Cache only aired episodes
       if (episodesToCache.length > 0) {
         await DatabaseService.upsertEpisodeCache(episodesToCache);
+      }
+
+      // Fetch streaming providers for the show
+      let providers: string | undefined;
+      try {
+        const providerData = await TMDBService.getWatchProviders(tmdbId, 'US');
+        if (providerData.providers && providerData.providers.length > 0) {
+          // Get unique provider names (limit to top 3)
+          const providerNames = providerData.providers
+            .slice(0, 3)
+            .map(p => p.name);
+          providers = providerNames.join(', ');
+        }
+      } catch (providerError) {
+        console.warn(`Could not fetch providers for ${showTitle}:`, providerError);
       }
 
       return {
@@ -237,7 +266,8 @@ export class NotificationService {
         newEpisodes,
         isNewSeason,
         newSeasonNumber,
-        nextEpisodeToAir: showDetails.next_episode_to_air
+        nextEpisodeToAir: showDetails.next_episode_to_air,
+        providers
       };
 
     } catch (error) {
@@ -271,6 +301,7 @@ export class NotificationService {
         air_date?: string;
         poster_path?: string;
         show_title: string;
+        providers?: string;
       }> = [];
 
       for (const user of users) {
@@ -302,7 +333,8 @@ export class NotificationService {
               )?.title,
               air_date: detection.newEpisodes[0]?.air_date,
               poster_path: detection.posterPath || undefined,
-              show_title: detection.showTitle
+              show_title: detection.showTitle,
+              providers: detection.providers
             });
           }
         }
@@ -326,7 +358,8 @@ export class NotificationService {
               episode_title: episode.title,
               air_date: episode.air_date,
               poster_path: detection.posterPath || undefined,
-              show_title: detection.showTitle
+              show_title: detection.showTitle,
+              providers: detection.providers
             });
           }
         }
@@ -370,6 +403,7 @@ export class NotificationService {
         air_date?: string;
         poster_path?: string;
         show_title: string;
+        providers?: string;
       }> = [];
 
       for (const user of users) {
@@ -388,7 +422,8 @@ export class NotificationService {
           episode_title: detection.nextEpisodeToAir!.name,
           air_date: detection.nextEpisodeToAir!.air_date,
           poster_path: detection.posterPath || undefined,
-          show_title: detection.showTitle
+          show_title: detection.showTitle,
+          providers: detection.providers
         });
       }
 
@@ -456,7 +491,8 @@ export class NotificationService {
               seasonNumber: e.season_number,
               episodeNumber: e.episode_number,
               episodeTitle: e.episode_title,
-              showId: e.show_id
+              showId: e.show_id,
+              providers: e.providers
             }));
 
           const newSeasons = events
@@ -466,7 +502,8 @@ export class NotificationService {
               posterPath: e.poster_path,
               seasonNumber: e.season_number,
               airDate: e.air_date,
-              showId: e.show_id
+              showId: e.show_id,
+              providers: e.providers
             }));
 
           const upcomingReleases = events
@@ -478,7 +515,8 @@ export class NotificationService {
               episodeInfo: e.episode_title
                 ? `S${e.season_number}E${e.episode_number}: "${e.episode_title}"`
                 : `Season ${e.season_number}, Episode ${e.episode_number}`,
-              showId: e.show_id
+              showId: e.show_id,
+              providers: e.providers
             }));
 
           // Send digest email

@@ -392,6 +392,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
         episodeNumber: number;
         episodeTitle: string | null;
         showId: string;
+        providers?: string | null;
       }>;
       newSeasons: Array<{
         showTitle: string;
@@ -399,6 +400,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
         seasonNumber: number;
         airDate: string | null;
         showId: string;
+        providers?: string | null;
       }>;
       upcomingReleases: Array<{
         showTitle: string;
@@ -406,6 +408,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
         airDate: string;
         episodeInfo: string;
         showId: string;
+        providers?: string | null;
       }>;
     }
   ): Promise<EmailResult> {
@@ -443,6 +446,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
             : `Season ${ep.seasonNumber}, Episode ${ep.episodeNumber}`;
           const updateUrl = `${FRONTEND_URL}/profile?action=update&showId=${ep.showId}&season=${ep.seasonNumber}&episode=${ep.episodeNumber}`;
           const viewUrl = `${FRONTEND_URL}/profile?showId=${ep.showId}`;
+          const platformInfo = ep.providers ? `<p style="margin: 0 0 8px 0; font-size: 12px; color: #888;">Available on: ${ep.providers}</p>` : '';
 
           return `
             <table style="width: 100%; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
@@ -454,7 +458,8 @@ If you didn't request a password reset, you can safely ignore this email. Your p
                 ` : ''}
                 <td style="vertical-align: top;">
                   <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 15px; color: #333;">${ep.showTitle}</p>
-                  <p style="margin: 0 0 8px 0; font-size: 14px; color: #666;">${episodeInfo}</p>
+                  <p style="margin: 0 0 4px 0; font-size: 14px; color: #666;">${episodeInfo}</p>
+                  ${platformInfo}
                   <div>
                     <a href="${updateUrl}" style="background: #CC5500; color: white; padding: 6px 16px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: 500; display: inline-block; margin-right: 8px;">Update Status</a>
                     <a href="${viewUrl}" style="color: #CC5500; text-decoration: none; font-size: 13px; font-weight: 500;">View Show</a>
@@ -477,6 +482,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
             ? new Date(season.airDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
             : 'Now available';
           const viewUrl = `${FRONTEND_URL}/profile?showId=${season.showId}`;
+          const platformInfo = season.providers ? `<p style="margin: 0 0 8px 0; font-size: 12px; color: #888;">Available on: ${season.providers}</p>` : '';
 
           return `
             <table style="width: 100%; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
@@ -489,7 +495,8 @@ If you didn't request a password reset, you can safely ignore this email. Your p
                 <td style="vertical-align: top;">
                   <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 15px; color: #333;">${season.showTitle}</p>
                   <p style="margin: 0 0 4px 0; font-size: 14px; color: #666;">Season ${season.seasonNumber}</p>
-                  <p style="margin: 0 0 8px 0; font-size: 13px; color: #999;">${dateInfo}</p>
+                  <p style="margin: 0 0 4px 0; font-size: 13px; color: #999;">${dateInfo}</p>
+                  ${platformInfo}
                   <a href="${viewUrl}" style="color: #CC5500; text-decoration: none; font-size: 13px; font-weight: 500;">View Show</a>
                 </td>
               </tr>
@@ -507,6 +514,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
           const posterImage = upcoming.posterPath ? `https://image.tmdb.org/t/p/w200${upcoming.posterPath}` : null;
           const dateStr = new Date(upcoming.airDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
           const viewUrl = `${FRONTEND_URL}/profile?showId=${upcoming.showId}`;
+          const platformText = upcoming.providers ? ` on ${upcoming.providers}` : '';
 
           return `
             <table style="width: 100%; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 12px;">
@@ -522,7 +530,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
                     <span style="color: #999;"> &middot; </span>
                     <span style="color: #666; font-size: 13px;">${upcoming.episodeInfo}</span>
                   </p>
-                  <p style="margin: 2px 0 0 0; font-size: 12px; color: #CC5500; font-weight: 500;">${dateStr}</p>
+                  <p style="margin: 2px 0 0 0; font-size: 12px; color: #CC5500; font-weight: 500;">${dateStr}${platformText}</p>
                 </td>
               </tr>
             </table>
@@ -541,20 +549,25 @@ If you didn't request a password reset, you can safely ignore this email. Your p
           const info = ep.episodeTitle
             ? `S${ep.seasonNumber}E${ep.episodeNumber}: "${ep.episodeTitle}"`
             : `S${ep.seasonNumber}E${ep.episodeNumber}`;
-          return `${ep.showTitle} - ${info}`;
+          const platform = ep.providers ? ` (on ${ep.providers})` : '';
+          return `${ep.showTitle} - ${info}${platform}`;
         }),
         ''
       ] : []),
       ...(newSeasons.length > 0 ? [
         '--- NEW SEASONS ---',
-        ...newSeasons.map(s => `${s.showTitle} - Season ${s.seasonNumber}`),
+        ...newSeasons.map(s => {
+          const platform = s.providers ? ` (on ${s.providers})` : '';
+          return `${s.showTitle} - Season ${s.seasonNumber}${platform}`;
+        }),
         ''
       ] : []),
       ...(upcomingReleases.length > 0 ? [
         '--- COMING UP (NEXT 2 WEEKS) ---',
         ...upcomingReleases.map(u => {
           const dateStr = new Date(u.airDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          return `${u.showTitle} - ${u.episodeInfo} (${dateStr})`;
+          const platform = u.providers ? ` on ${u.providers}` : '';
+          return `${u.showTitle} - ${u.episodeInfo} (${dateStr}${platform})`;
         }),
         ''
       ] : []),

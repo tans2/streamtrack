@@ -53,6 +53,73 @@ CRON_SECRET=<random-secret>
 EMAIL_FROM=Scout <onboarding@resend.dev>
 ```
 
+### 1b. Daily Digest Notifications (Completed)
+**Purpose**: Aggregate notification events and send a single daily digest email to users.
+
+**How It Works:**
+1. Episode polling detects new episodes and queues events in `pending_notification_events`
+2. GitHub Actions cron job runs daily at 1 PM UTC
+3. Backend aggregates unprocessed events per user and sends a digest email
+4. Events are marked as processed and logged in `digest_log`
+
+**Components:**
+- `backend/api/cron/send-digest.ts` - Digest endpoint (triggered by GitHub Actions)
+- `.github/workflows/cron-send-digest.yml` - GitHub Actions cron (daily at 1 PM UTC)
+- `backend/supabase/migrations/002_daily_digest.sql` - Database migration
+
+**Database Tables Created:**
+- `pending_notification_events` - Queues notification events for digest aggregation
+- `digest_log` - Tracks daily digest emails sent per user
+
+**Event Types Supported:**
+- `new_episode` - New episode released
+- `season_premiere` - First episode of a new season
+- `show_premiere` - First episode of a new show
+- `upcoming_release` - Upcoming episode reminder
+
+**Streaming Provider Information:**
+- Digest emails include "Available on: [platform names]" for each episode
+- Provider data fetched from TMDB Watch Providers API during episode detection
+- Shows up to 3 platforms (e.g., "Netflix, Hulu, Max")
+- Stored in `pending_notification_events.providers` column
+
+**Bug Fix: Future Episode Caching (Feb 2025)**
+- **Issue**: Future episodes were cached on first poll, so when they aired they were already in cache and not detected as "new"
+- **Root cause**: Initial polling cached ALL episodes from TMDB regardless of air date
+- **Fix implemented**:
+  1. Only cache episodes that have already aired (air_date <= today)
+  2. Alternative detection: episodes newer than `last_known_episode` in `episode_poll_status` trigger notifications even if already in cache
+- **Cleanup script**: `backend/src/scripts/cleanup-cache.ts` - removes future episodes from cache
+
+**GitHub Secrets Required:**
+```
+BACKEND_DIGEST_CRON_URL=https://<backend-url>/api/cron/send-digest
+CRON_SECRET=<same-as-vercel-env>
+```
+
+**Testing Locally:**
+```bash
+curl -X POST -H "Authorization: Bearer <CRON_SECRET>" http://localhost:5001/api/cron/send-digest
+```
+
+**Debug Scripts:**
+```bash
+# Manually run daily digest
+npx ts-node src/scripts/run-digest.ts
+
+# Manually run episode polling
+npx ts-node src/scripts/run-poll.ts
+
+# Debug specific show (searches TMDB, checks cache, poll status, events)
+npx ts-node src/scripts/debug-digest.ts
+
+# Test polling a single show by TMDB ID
+npx ts-node src/scripts/test-poll-show.ts
+
+# Clean up future episodes from cache
+npx ts-node src/scripts/cleanup-cache.ts
+```
+
 ### 2. Password Reset Feature (Completed)
 **Purpose**: Allow users to reset forgotten passwords via email.
 
@@ -77,12 +144,82 @@ EMAIL_FROM=Scout <onboarding@resend.dev>
 - `users.password_reset_token`
 - `users.password_reset_expires_at`
 
+### 3. Fox Scout Logo & Branding (Completed)
+**Purpose**: Consistent brand identity with custom fox mascot logo throughout the app.
+
+**Logo Asset:**
+- Source: `frontend/Fox Scout Logo.png` - Cute orange fox holding a TV, transparent background
+- Colors match Scout brand (`#CC5500` orange tones)
+
+**Logo Placements:**
+- **Favicon**: `frontend/src/app/icon.png` (auto-detected by Next.js App Router)
+- **Main logo**: `frontend/public/logo.png` (used in nav headers, hero section)
+
+**Files Modified for Logo:**
+- `frontend/src/app/page.tsx` - Nav header + hero section (logo above "Scout" text)
+- `frontend/src/app/auth/page.tsx` - Nav header
+- `frontend/src/app/verify-email/page.tsx` - Nav header
+- `frontend/src/app/forgot-password/page.tsx` - Nav header
+- `frontend/src/app/reset-password/page.tsx` - Nav header
+- `frontend/src/components/SignUpPage.tsx` - Nav header
+- `frontend/src/components/LandingPage.tsx` - Nav header
+
+**Loading States with "Scouting..." text:**
+- `frontend/src/components/ProfilePage.tsx` - Shows animated logo while loading watchlist
+- `frontend/src/components/SearchPage.tsx` - Shows animated logo while searching
+
+**404 Error Page:**
+- `frontend/src/app/not-found.tsx` - Fox logo with friendly message "The fox couldn't find what you're looking for"
+
+**Implementation Pattern:**
+```jsx
+// Nav header logo (replacing Play icon)
+<img src="/logo.png" alt="Scout" className="w-8 h-8" />
+
+// Hero section (logo above text)
+<img src="/logo.png" alt="" className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4" />
+<h1>Scout</h1>
+
+// Loading state
+<img src="/logo.png" alt="" className="w-16 h-16 mb-4 animate-pulse" />
+<div className="flex items-center gap-2 text-muted-foreground">
+  <Loader2 className="w-4 h-4 animate-spin" />
+  <span>Scouting...</span>
+</div>
+```
+
+### 4. Mobile Browser Optimization (Completed)
+**Purpose**: Responsive design improvements for mobile devices.
+
+**Changes:**
+- Responsive padding and spacing throughout (`px-3 sm:px-6`, `py-4 sm:py-8`)
+- Collapsible navigation buttons (icons on mobile, text on desktop)
+- Touch-friendly button sizes (`h-9 sm:h-8`)
+- Consistent Sign Out button across all authenticated pages
+
+**Files Updated:**
+- `frontend/src/components/ProfilePage.tsx`
+- `frontend/src/components/SearchPage.tsx`
+- `frontend/src/components/SettingsPage.tsx`
+- `frontend/src/app/page.tsx`
+
 ---
 
 ## Database Migrations
 
 ### Notifications Migration (`backend/supabase/migrations/001_notifications.sql`)
 Run in Supabase SQL Editor to enable notifications feature.
+
+### Daily Digest Migration (`backend/supabase/migrations/002_daily_digest.sql`)
+Run in Supabase SQL Editor to enable daily digest notifications.
+Creates tables: `pending_notification_events`, `digest_log`
+
+### Providers Migration (`backend/supabase/migrations/003_add_providers_to_events.sql`)
+Run in Supabase SQL Editor to add streaming provider info to notification events.
+```sql
+ALTER TABLE pending_notification_events
+  ADD COLUMN IF NOT EXISTS providers TEXT;
+```
 
 ### Password Reset Migration
 ```sql
@@ -116,6 +253,8 @@ The project uses **separate Vercel projects** for frontend and backend:
 **Important:** Both projects need to be configured to deploy from `main` branch for production.
 
 ### Cron Jobs
+
+**Vercel Cron (Episode Polling):**
 Configured in `backend/vercel.json`:
 ```json
 {
@@ -125,6 +264,12 @@ Configured in `backend/vercel.json`:
   }]
 }
 ```
+
+**GitHub Actions Cron (Daily Digest):**
+Configured in `.github/workflows/cron-send-digest.yml`:
+- Schedule: Daily at 1 PM UTC (`0 13 * * *`)
+- Endpoint: `POST /api/cron/send-digest`
+- Requires GitHub secrets: `BACKEND_DIGEST_CRON_URL`, `CRON_SECRET`
 
 ---
 
@@ -152,6 +297,15 @@ Configured in `backend/vercel.json`:
 - `PUT /preferences/:showId` - Toggle per-show notifications (requires auth)
 - `POST /verify-email` - Send verification email (requires auth)
 - `GET /verify/:token` - Verify email with token
+
+### Cron Endpoints (`/api/cron`)
+- `POST /poll-episodes` - Poll TMDB for new episodes (Vercel cron, requires CRON_SECRET)
+- `POST /send-digest` - Send daily digest emails (GitHub Actions, requires CRON_SECRET)
+
+### Debug Endpoints (`/api/notifications/debug`) — Development Only
+- `GET /pending-events` - View all pending notification events (requires auth)
+- `POST /poll-show` - Poll a specific show by TMDB ID (requires auth, body: `{ tmdbId: number }`)
+- `POST /cleanup-cache` - Delete future episodes from cache (requires auth)
 
 ---
 
@@ -199,7 +353,7 @@ Configured in `backend/vercel.json`:
 
 ### High Priority
 - [ ] Push notifications (web)
-- [ ] Weekly digest email
+- [x] ~~Weekly digest email~~ → Daily digest implemented (see section 1b)
 - [ ] Import watchlist from other services (Trakt, TV Time)
 
 ### Medium Priority
@@ -326,6 +480,8 @@ NEXT_PUBLIC_API_URL=http://localhost:5001  # or production backend URL
 - **episode_cache** - Cached episode data for new episode detection
 - **notification_log** - Sent notification history (prevents duplicates)
 - **episode_poll_status** - TMDB polling schedule per show
+- **pending_notification_events** - Queued events for daily digest aggregation
+- **digest_log** - Tracks daily digest emails sent per user
 
 ### Beta Landing
 - **beta_signups** - Email signups for beta access
