@@ -364,17 +364,12 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
           </h2>
           
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Card key={i} className="bg-card border-border shadow-lg">
-                  <CardContent className="p-4">
-                    <Skeleton className="aspect-[2/3] mb-4 rounded-lg" />
-                    <Skeleton className="h-4 mb-2" />
-                    <Skeleton className="h-3 w-1/2 mb-3" />
-                    <Skeleton className="h-8 w-full" />
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="flex flex-col items-center justify-center py-16">
+              <img src="/logo.png" alt="" className="w-16 h-16 mb-4 animate-pulse" />
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Scouting...</span>
+              </div>
             </div>
           ) : shows && shows.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

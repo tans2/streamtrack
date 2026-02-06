@@ -414,33 +414,11 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen text-foreground">
-        <div className="border-b border-border bg-card/50">
-          <div className="container mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Skeleton className="h-8 w-20 mr-4" />
-                <Skeleton className="h-8 w-32" />
-              </div>
-              <div className="flex items-center space-x-4">
-                <Skeleton className="h-8 w-24" />
-                <Skeleton className="h-8 w-20" />
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="container mx-auto px-6 py-8">
-          <Skeleton className="h-12 w-64 mb-8" />
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full" />
-            ))}
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <Skeleton key={i} className="aspect-[2/3] w-full" />
-            ))}
-          </div>
+      <div className="min-h-screen text-foreground flex flex-col items-center justify-center">
+        <img src="/logo.png" alt="" className="w-16 h-16 mb-4 animate-pulse" />
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Scouting...</span>
         </div>
       </div>
     );

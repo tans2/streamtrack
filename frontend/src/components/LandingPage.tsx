@@ -1,6 +1,6 @@
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { Play, Bell, Star, Search } from "lucide-react";
+import { Bell, Star, Search } from "lucide-react";
 
 interface LandingPageProps {
   onNavigate: (page: string) => void;
@@ -27,7 +27,7 @@ export default function LandingPage({
       {/* Navigation */}
       <nav className="flex items-center justify-between p-6">
         <div className="flex items-center space-x-2">
-          <Play className="w-8 h-8 text-primary" />
+          <img src="/logo.png" alt="Scout" className="w-8 h-8" />
           <span className="text-2xl font-bold text-primary">
             Scout
           </span>

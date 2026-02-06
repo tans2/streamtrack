@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Bell, Users, LogOut, ScanSearch, ListChecks, Star } from "lucide-react";
+import { Bell, Users, LogOut, ScanSearch, ListChecks, Star } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -28,7 +28,7 @@ export default function HomePage() {
       {/* Navigation */}
       <nav className="flex items-center justify-between p-3 sm:p-6">
         <div className="flex items-center space-x-2">
-          <Play className="w-8 h-8 text-primary" />
+          <img src="/logo.png" alt="Scout" className="w-8 h-8" />
           <span className="text-xl sm:text-2xl font-bold text-primary">
             Scout
           </span>
@@ -67,8 +67,9 @@ export default function HomePage() {
       {/* Hero Section */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-16">
         <div className="text-center mb-8 sm:mb-16">
+          <img src="/logo.png" alt="" className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4" />
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mb-4 sm:mb-6">
-            📺 Scout
+            Scout
           </h1>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto">
             Track your favorite shows across all streaming platforms. Never miss a new episode or season again.

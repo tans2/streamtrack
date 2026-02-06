@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Loader2, CheckCircle2, XCircle, KeyRound } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 
@@ -62,7 +62,7 @@ export default function ResetPasswordPage() {
         {/* Header */}
         <div className="flex items-center justify-center mb-8">
           <div className="flex items-center space-x-2">
-            <Play className="w-8 h-8 text-primary" />
+            <img src="/logo.png" alt="Scout" className="w-8 h-8" />
             <span className="text-2xl text-primary font-semibold">Scout</span>
           </div>
         </div>
