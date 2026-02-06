@@ -888,6 +888,7 @@ export class DatabaseService {
     air_date?: string;
     poster_path?: string;
     show_title: string;
+    providers?: string;
   }) {
     try {
       const { data, error } = await supabase
@@ -918,6 +919,7 @@ export class DatabaseService {
     air_date?: string;
     poster_path?: string;
     show_title: string;
+    providers?: string;
   }>) {
     try {
       if (events.length === 0) return { inserted: 0 };
