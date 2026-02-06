@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Loader2, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
 import { notificationService } from '@/services/notificationService';
 
 export default function VerifyEmailPage() {
@@ -42,7 +42,7 @@ export default function VerifyEmailPage() {
         {/* Header */}
         <div className="flex items-center justify-center mb-8">
           <div className="flex items-center space-x-2">
-            <Play className="w-8 h-8 text-primary" />
+            <img src="/logo.png" alt="Scout" className="w-8 h-8" />
             <span className="text-2xl text-primary font-semibold">Scout</span>
           </div>
         </div>

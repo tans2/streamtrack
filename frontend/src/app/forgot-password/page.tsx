@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Play, Loader2, Mail, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Mail, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
             Back to Login
           </Button>
           <div className="flex items-center space-x-2">
-            <Play className="w-6 h-6 text-primary" />
+            <img src="/logo.png" alt="Scout" className="w-6 h-6" />
             <span className="text-xl text-primary">Scout</span>
           </div>
         </div>
