@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -6,6 +7,8 @@ import { Progress } from "./ui/progress";
 import { Skeleton } from "./ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { ArrowLeft, Settings, Search, Star, Play, Calendar, Loader2, Bell, BellOff, LogOut } from "lucide-react";
+import { staggerContainer, fadeInUp, cardHover } from '@/lib/animations';
+import { SkeletonGrid } from './ui/skeleton-card';
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -414,11 +417,28 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen text-foreground flex flex-col items-center justify-center">
-        <img src="/logo.png" alt="" className="w-16 h-16 mb-4 animate-pulse" />
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Scouting...</span>
+      <div className="min-h-screen text-foreground">
+        <div className="border-b border-border bg-card/50">
+          <div className="container mx-auto px-3 sm:px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-20 h-8 bg-muted rounded animate-pulse mr-4" />
+                <div className="w-32 h-8 bg-muted rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
+          <div className="mb-8">
+            <div className="w-64 h-8 bg-muted rounded animate-pulse mb-4" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-24 bg-muted rounded-lg animate-pulse" />
+              ))}
+            </div>
+          </div>
+          <div className="w-48 h-8 bg-muted rounded animate-pulse mb-4" />
+          <SkeletonGrid count={8} />
         </div>
       </div>
     );
@@ -534,9 +554,15 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
         {(activeFilter === 'all' || activeFilter === 'watching') && watchingShows.length > 0 && (
           <div className="mb-8">
             <h3 className="text-xl sm:text-2xl mb-4 text-foreground">Currently Watching</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6"
+              variants={staggerContainer}
+              initial="hidden"
+              animate="show"
+            >
               {watchingShows.map(item => (
-                <Card key={item.id} id={`show-${item.show_id}`} className="bg-card border-border hover:border-primary transition-colors shadow-lg h-auto">
+                <motion.div key={item.id} variants={fadeInUp} {...cardHover}>
+                <Card id={`show-${item.show_id}`} className="bg-card border-border hover:border-primary transition-colors shadow-lg h-auto">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex gap-3 sm:gap-4">
                       <div
@@ -724,8 +750,9 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                     </div>
                   </CardContent>
                 </Card>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
         )}
 
@@ -736,9 +763,15 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
               {activeFilter === 'completed' ? 'Completed' : activeFilter === 'want_to_watch' ? 'Plan to Watch' : 'All Shows'}
             </h3>
             {filteredAllShows.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-4">
+            <motion.div
+              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-4"
+              variants={staggerContainer}
+              initial="hidden"
+              animate="show"
+            >
               {filteredAllShows.map(item => (
-                <Card key={item.id} id={`show-${item.show_id}`} className="bg-card border-border hover:border-primary transition-colors group cursor-pointer shadow-lg">
+                <motion.div key={item.id} variants={fadeInUp} {...cardHover}>
+                <Card id={`show-${item.show_id}`} className="bg-card border-border hover:border-primary transition-colors group cursor-pointer shadow-lg">
                   <CardContent className="p-2 sm:p-3">
                     <div 
                       className="aspect-[2/3] mb-3 rounded-lg overflow-hidden bg-muted relative cursor-pointer"
@@ -809,8 +842,9 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                     </div>
                   </CardContent>
                 </Card>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           ) : (
               <div className="text-center py-12">
                 <p className="text-muted-foreground text-lg mb-4">
