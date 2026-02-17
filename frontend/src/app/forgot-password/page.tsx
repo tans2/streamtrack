@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Loader2, Mail, CheckCircle2 } from 'lucide-react';
+import { Loader2, Mail, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
+import { NavBar } from '@/components/ui/nav-bar';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -34,25 +35,10 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen text-foreground flex items-center justify-center p-6">
+    <div className="min-h-screen text-foreground">
+      <NavBar variant="auth" backHref="/auth" backLabel="Back to Login" />
+      <div className="flex items-center justify-center p-6" style={{ minHeight: 'calc(100vh - 72px)' }}>
       <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="flex items-center mb-8">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-primary hover:text-primary hover:bg-primary/10 mr-4"
-            onClick={() => router.push('/auth')}
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Login
-          </Button>
-          <div className="flex items-center space-x-2">
-            <img src="/logo.png" alt="Scout" className="w-6 h-6" />
-            <span className="text-xl text-primary">Scout</span>
-          </div>
-        </div>
-
         <Card className="bg-card border-border shadow-lg">
           <CardHeader className="text-center">
             {sent ? (
@@ -154,6 +140,7 @@ export default function ForgotPasswordPage() {
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

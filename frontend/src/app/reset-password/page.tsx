@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, CheckCircle2, XCircle, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
+import { NavBar } from '@/components/ui/nav-bar';
 
 export default function ResetPasswordPage() {
   const searchParams = useSearchParams();
@@ -57,16 +58,10 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen text-foreground flex items-center justify-center p-6">
+    <div className="min-h-screen text-foreground">
+      <NavBar variant="auth" />
+      <div className="flex items-center justify-center p-6" style={{ minHeight: 'calc(100vh - 72px)' }}>
       <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="flex items-center justify-center mb-8">
-          <div className="flex items-center space-x-2">
-            <img src="/logo.png" alt="Scout" className="w-8 h-8" />
-            <span className="text-2xl text-primary font-semibold">Scout</span>
-          </div>
-        </div>
-
         <Card className="bg-card border-border shadow-lg">
           <CardHeader className="text-center">
             {status === 'form' && (
@@ -199,6 +194,7 @@ export default function ResetPasswordPage() {
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

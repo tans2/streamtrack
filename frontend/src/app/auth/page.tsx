@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { NavBar } from '@/components/ui/nav-bar';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -47,25 +48,10 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen text-foreground flex items-center justify-center p-6">
+    <div className="min-h-screen text-foreground">
+      <NavBar variant="auth" backHref="/" backLabel="Back" />
+      <div className="flex items-center justify-center p-6" style={{ minHeight: 'calc(100vh - 72px)' }}>
       <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="flex items-center mb-8">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-primary hover:text-primary hover:bg-primary/10 mr-4"
-            onClick={() => router.push('/')}
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <div className="flex items-center space-x-2">
-            <img src="/logo.png" alt="Scout" className="w-6 h-6" />
-            <span className="text-xl text-primary">Scout</span>
-          </div>
-        </div>
-
         <Card className="bg-card border-border shadow-lg">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-card-foreground">
@@ -167,6 +153,7 @@ export default function AuthPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );
