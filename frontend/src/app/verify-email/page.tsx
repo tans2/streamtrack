@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
 import { notificationService } from '@/services/notificationService';
+import { NavBar } from '@/components/ui/nav-bar';
 
 export default function VerifyEmailPage() {
   const searchParams = useSearchParams();
@@ -37,16 +38,10 @@ export default function VerifyEmailPage() {
   };
 
   return (
-    <div className="min-h-screen text-foreground flex items-center justify-center p-6">
+    <div className="min-h-screen text-foreground">
+      <NavBar variant="auth" />
+      <div className="flex items-center justify-center p-6" style={{ minHeight: 'calc(100vh - 72px)' }}>
       <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="flex items-center justify-center mb-8">
-          <div className="flex items-center space-x-2">
-            <img src="/logo.png" alt="Scout" className="w-8 h-8" />
-            <span className="text-2xl text-primary font-semibold">Scout</span>
-          </div>
-        </div>
-
         <Card className="bg-card border-border shadow-lg">
           <CardHeader className="text-center">
             {status === 'loading' && (
@@ -129,6 +124,7 @@ export default function VerifyEmailPage() {
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

@@ -6,9 +6,10 @@ import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { Skeleton } from "./ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { ArrowLeft, Settings, Search, Star, Play, Calendar, Loader2, Bell, BellOff, LogOut } from "lucide-react";
+import { Settings, Search, Star, Play, Calendar, Loader2, Bell, BellOff, LogOut } from "lucide-react";
 import { staggerContainer, fadeInUp, cardHover } from '@/lib/animations';
 import { SkeletonGrid } from './ui/skeleton-card';
+import { NavBar } from './ui/nav-bar';
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -418,16 +419,26 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   if (loading) {
     return (
       <div className="min-h-screen text-foreground">
-        <div className="border-b border-border bg-card/50">
-          <div className="container mx-auto px-3 sm:px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="w-20 h-8 bg-muted rounded animate-pulse mr-4" />
-                <div className="w-32 h-8 bg-muted rounded animate-pulse" />
-              </div>
-            </div>
-          </div>
-        </div>
+        <NavBar
+          variant="authenticated"
+          pageTitle="My Watchlist"
+          actions={
+            <>
+              <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => router.push('/search')}>
+                <Search className="w-4 h-4" />
+                <span className="hidden sm:inline">Search Shows</span>
+              </Button>
+              <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => router.push('/settings')}>
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">Settings</span>
+              </Button>
+              <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => logout()}>
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </Button>
+            </>
+          }
+        />
         <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
           <div className="mb-8">
             <div className="w-64 h-8 bg-muted rounded animate-pulse mb-4" />
@@ -446,51 +457,26 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
 
   return (
     <div className="min-h-screen text-foreground">
-      {/* Header */}
-      <div className="border-b border-border bg-card/50">
-        <div className="container mx-auto px-3 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-primary hover:text-primary hover:bg-primary/10 mr-2 sm:mr-4"
-                onClick={() => router.push('/')}
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Back</span>
-              </Button>
-              <h1 className="text-xl sm:text-2xl text-foreground">My Watchlist</h1>
-            </div>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <Button
-                variant="ghost"
-                className="text-primary hover:text-primary hover:bg-primary/10"
-                onClick={() => router.push('/search')}
-              >
-                <Search className="w-4 h-4" />
-                <span className="hidden sm:inline">Search Shows</span>
-              </Button>
-              <Button
-                variant="ghost"
-                className="text-primary hover:text-primary hover:bg-primary/10"
-                onClick={() => router.push('/settings')}
-              >
-                <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline">Settings</span>
-              </Button>
-              <Button
-                variant="ghost"
-                className="text-primary hover:text-primary hover:bg-primary/10"
-                onClick={() => logout()}
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Sign Out</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <NavBar
+        variant="authenticated"
+        pageTitle="My Watchlist"
+        actions={
+          <>
+            <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => router.push('/search')}>
+              <Search className="w-4 h-4" />
+              <span className="hidden sm:inline">Search Shows</span>
+            </Button>
+            <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => router.push('/settings')}>
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">Settings</span>
+            </Button>
+            <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => logout()}>
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
+          </>
+        }
+      />
 
       <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* User Stats */}

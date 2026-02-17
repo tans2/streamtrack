@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Switch } from "./ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Badge } from "./ui/badge";
-import { ArrowLeft, Crown, Loader2, Mail, CheckCircle2, AlertCircle, LogOut } from "lucide-react";
+import { Crown, Loader2, Mail, CheckCircle2, AlertCircle, LogOut } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
+import { NavBar } from './ui/nav-bar';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { notificationService } from '@/services/notificationService';
@@ -209,33 +210,16 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
 
   return (
     <div className="min-h-screen text-foreground">
-      {/* Header */}
-      <div className="border-b border-border bg-card/50">
-        <div className="container mx-auto px-3 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-primary hover:text-primary hover:bg-primary/10 mr-2 sm:mr-4"
-                onClick={() => router.push('/profile')}
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Back to Profile</span>
-              </Button>
-              <h1 className="text-xl sm:text-2xl text-foreground">Settings</h1>
-            </div>
-            <Button
-              variant="ghost"
-              className="text-primary hover:text-primary hover:bg-primary/10"
-              onClick={() => logout()}
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </Button>
-          </div>
-        </div>
-      </div>
+      <NavBar
+        variant="authenticated"
+        pageTitle="Settings"
+        actions={
+          <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => logout()}>
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Sign Out</span>
+          </Button>
+        }
+      />
 
       <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8 max-w-4xl">
         <div className="space-y-8">

@@ -1,15 +1,17 @@
 "use client";
 
+import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Bell, Users, LogOut, ScanSearch, ListChecks, Star } from "lucide-react";
+import { Bell, LogOut, ScanSearch, ListChecks, Star } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { NavBar } from '@/components/ui/nav-bar';
+import { staggerContainer, fadeInUp, fadeIn } from '@/lib/animations';
 
 export default function HomePage() {
   const router = useRouter();
   const { user, logout } = useAuth();
-  
+
   const streamingPlatforms = [
     { name: "Netflix", icon: "/platforms/netflix.png" },
     { name: "Hulu", icon: "/platforms/hulu.svg" },
@@ -25,148 +27,150 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen text-foreground">
-      {/* Navigation */}
-      <nav className="flex items-center justify-between p-3 sm:p-6">
-        <div className="flex items-center space-x-2">
-          <img src="/logo.png" alt="Scout" className="w-8 h-8" />
-          <span className="text-xl sm:text-2xl font-bold text-primary">
-            Scout
-          </span>
-        </div>
-        <div className="flex items-center space-x-2 sm:space-x-4">
-          <Button
-            variant="ghost"
-            className="hidden sm:inline-flex text-foreground hover:text-primary hover:bg-primary/10"
-            onClick={() => router.push('/search')}
-          >
-            Explore Shows
-          </Button>
-          <Button
-            variant="ghost"
-            className="hidden sm:inline-flex text-foreground hover:text-primary hover:bg-primary/10"
-            onClick={() => router.push('/profile')}
-          >
-            My Watchlist
-          </Button>
-          <Button
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={() => user ? logout() : router.push('/auth')}
-          >
-            {user ? (
-              <>
-                <LogOut className="w-4 h-4" />
-                Sign Out
-              </>
-            ) : (
-              'Sign In'
-            )}
-          </Button>
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-16">
-        <div className="text-center mb-8 sm:mb-16">
-          <img src="/logo.png" alt="" className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4" />
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mb-4 sm:mb-6">
-            Scout
-          </h1>
-          <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto">
-            Track your favorite shows across all streaming platforms. Never miss a new episode or season again.
-          </p>
-
-          <div className="space-y-4 sm:space-y-6">
-            <p className="text-base sm:text-lg text-muted-foreground">
-              {user ? `Welcome back, ${user.name || user.email}!` : 'Sign up to start tracking your favorite shows'}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-              {!user ? (
+      <NavBar
+        variant="landing"
+        actions={
+          <>
+            <Button
+              variant="ghost"
+              className="hidden sm:inline-flex text-foreground hover:text-primary hover:bg-primary/10"
+              onClick={() => router.push('/search')}
+            >
+              Explore Shows
+            </Button>
+            <Button
+              variant="ghost"
+              className="hidden sm:inline-flex text-foreground hover:text-primary hover:bg-primary/10"
+              onClick={() => router.push('/profile')}
+            >
+              My Watchlist
+            </Button>
+            <Button
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => user ? logout() : router.push('/auth')}
+            >
+              {user ? (
                 <>
-                  <Button 
-                    size="lg" 
-                    className="bg-primary hover:bg-primary/90"
-                    onClick={() => router.push('/signup')}
-                  >
-                    <Star className="w-5 h-5" />
-                    Get Started
-                  </Button>
-                  <Button 
-                    size="lg" 
-                    variant="secondary" 
-                    className="bg-secondary hover:bg-secondary/80"
-                    onClick={() => router.push('/search')}
-                  >
-                    <Users className="w-5 h-5" />
-                    Explore Shows
-                  </Button>
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
                 </>
               ) : (
-                <>
-                  <Button 
-                    size="lg" 
-                    className="bg-primary hover:bg-primary/90"
-                    onClick={() => router.push('/profile')}
-                  >
-                    <Star className="w-5 h-5" />
-                    View My Watchlist
-                  </Button>
-                  <Button 
-                    size="lg" 
-                    variant="secondary" 
-                    className="bg-secondary hover:bg-secondary/80"
-                    onClick={() => router.push('/search')}
-                  >
-                    <Users className="w-5 h-5" />
-                    Explore Shows
-                  </Button>
-                </>
+                'Sign In'
               )}
-            </div>
-          </div>
-        </div>
+            </Button>
+          </>
+        }
+      />
 
-        {/* Features Section */}
-        <div className="grid md:grid-cols-3 gap-4 md:gap-8 mb-8 sm:mb-16">
-          <div className="bg-card rounded-xl p-4 sm:p-6 shadow-lg border border-border">
-            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-              <ScanSearch className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold text-card-foreground mb-2">Universal Search</h3>
-            <p className="text-muted-foreground">
-              Search any show and instantly see where it's streaming. Filter results by the platforms you have.
+      {/* Hero Section */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+        <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center mb-16 sm:mb-24">
+          {/* Left column - Headline */}
+          <motion.div
+            variants={fadeIn}
+            initial="hidden"
+            animate="show"
+          >
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight">
+              <span className="text-foreground">Welcome to </span>
+              <span className="text-primary">Scout</span>
+              <br />
+              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                your TV sidekick
+              </span>
+            </h1>
+            <p className="text-lg sm:text-xl text-muted-foreground mt-4 sm:mt-6 max-w-lg">
+              Track your favorite shows across every streaming platform. Never miss a new episode again.
             </p>
-          </div>
-          
-          <div className="bg-card rounded-xl p-4 sm:p-6 shadow-lg border border-border">
-            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-              <ListChecks className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold text-card-foreground mb-2">Single Watchlist</h3>
-            <p className="text-muted-foreground">
-              Keep a single watchlist across all services and never lose track of what you're watching.
-            </p>
-          </div>
-          
-          <div className="bg-card rounded-xl p-4 sm:p-6 shadow-lg border border-border">
-            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-              <Bell className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold text-card-foreground mb-2">Smart Alerts</h3>
-            <p className="text-muted-foreground">
-              Get alerts for new episodes, seasons, or when a show becomes available on your platforms.
-            </p>
-          </div>
+            {!user && (
+              <div className="flex flex-col sm:flex-row gap-3 mt-6 sm:mt-8">
+                <Button
+                  size="lg"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  onClick={() => router.push('/signup')}
+                >
+                  <Star className="w-5 h-5" />
+                  Get Started Free
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => router.push('/search')}
+                >
+                  Explore Shows
+                </Button>
+              </div>
+            )}
+          </motion.div>
+
+          {/* Right column - Feature cards stacked */}
+          <motion.div
+            className="space-y-4"
+            variants={staggerContainer}
+            initial="hidden"
+            animate="show"
+          >
+            <motion.div variants={fadeInUp}>
+              <div className="flex items-start gap-4 p-4 sm:p-5 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <ScanSearch className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-card-foreground">Universal Search</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Search any show and instantly see where it's streaming.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div variants={fadeInUp}>
+              <div className="flex items-start gap-4 p-4 sm:p-5 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-accent/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <ListChecks className="w-5 h-5 sm:w-6 sm:h-6 text-accent" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-card-foreground">Single Watchlist</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    One list across all platforms. Track progress, status, and more.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div variants={fadeInUp}>
+              <div className="flex items-start gap-4 p-4 sm:p-5 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-secondary/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-secondary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-card-foreground">Smart Alerts</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Daily digest emails when new episodes drop for your shows.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
         </div>
 
         {/* Streaming Platforms */}
-        <div className="text-center">
+        <motion.div
+          className="text-center"
+          variants={fadeIn}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+        >
           <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8">Supported Platforms</h2>
           <div className="flex flex-wrap justify-center gap-3 sm:gap-6">
             {streamingPlatforms.map((platform) => (
-              <div
+              <motion.div
                 key={platform.name}
                 className="flex items-center justify-center bg-card px-4 py-2 rounded-lg shadow-sm border border-border"
                 title={platform.name}
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
               >
                 <img
                   src={platform.icon}
@@ -174,12 +178,11 @@ export default function HomePage() {
                   className="h-5 max-w-[80px] sm:h-6 w-auto sm:max-w-[112px] object-contain"
                 />
                 <span className="sr-only">{platform.name}</span>
-              </div>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
       </div>
-
     </div>
   );
 }

@@ -151,42 +151,11 @@ npx ts-node src/scripts/cleanup-cache.ts
 - Source: `frontend/Fox Scout Logo.png` - Cute orange fox holding a TV, transparent background
 - Colors match Scout brand (`#CC5500` orange tones)
 
-**Logo Placements:**
+**Logo Placements (via Shared NavBar):**
 - **Favicon**: `frontend/src/app/icon.png` (auto-detected by Next.js App Router)
-- **Main logo**: `frontend/public/logo.png` (used in nav headers, hero section)
-
-**Files Modified for Logo:**
-- `frontend/src/app/page.tsx` - Nav header + hero section (logo above "Scout" text)
-- `frontend/src/app/auth/page.tsx` - Nav header
-- `frontend/src/app/verify-email/page.tsx` - Nav header
-- `frontend/src/app/forgot-password/page.tsx` - Nav header
-- `frontend/src/app/reset-password/page.tsx` - Nav header
-- `frontend/src/components/SignUpPage.tsx` - Nav header
-- `frontend/src/components/LandingPage.tsx` - Nav header
-
-**Loading States with "Scouting..." text:**
-- `frontend/src/components/ProfilePage.tsx` - Shows animated logo while loading watchlist
-- `frontend/src/components/SearchPage.tsx` - Shows animated logo while searching
-
-**404 Error Page:**
-- `frontend/src/app/not-found.tsx` - Fox logo with friendly message "The fox couldn't find what you're looking for"
-
-**Implementation Pattern:**
-```jsx
-// Nav header logo (replacing Play icon)
-<img src="/logo.png" alt="Scout" className="w-8 h-8" />
-
-// Hero section (logo above text)
-<img src="/logo.png" alt="" className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4" />
-<h1>Scout</h1>
-
-// Loading state
-<img src="/logo.png" alt="" className="w-16 h-16 mb-4 animate-pulse" />
-<div className="flex items-center gap-2 text-muted-foreground">
-  <Loader2 className="w-4 h-4 animate-spin" />
-  <span>Scouting...</span>
-</div>
-```
+- **Main logo**: `frontend/public/logo.png` (used via NavBar component on all pages)
+- **NavBar**: All pages use `<NavBar />` from `frontend/src/components/ui/nav-bar.tsx`
+- **404 Page**: `frontend/src/app/not-found.tsx` - Fox logo with friendly message
 
 ### 4. Mobile Browser Optimization (Completed)
 **Purpose**: Responsive design improvements for mobile devices.
@@ -202,6 +171,80 @@ npx ts-node src/scripts/cleanup-cache.ts
 - `frontend/src/components/SearchPage.tsx`
 - `frontend/src/components/SettingsPage.tsx`
 - `frontend/src/app/page.tsx`
+
+### 5. Framer Motion & Animation System (Completed)
+**Purpose**: Smooth animations throughout the app for a polished, modern feel.
+
+**Dependencies Added:**
+- `framer-motion` v12.33.0 - Animation library
+- `geist` v1.7.0 - Vercel's Geist Sans font family
+
+**Animation Presets (`frontend/src/lib/animations.ts`):**
+- `staggerContainer` - Parent container that staggers children animations (0.05s gap)
+- `fadeInUp` - Fade in from below with spring physics
+- `scaleOnTap` - Button press/hover scale effect
+- `cardHover` - Card lift on hover (y: -6)
+- `successPop` - Scale pop for success indicators
+- `fadeIn` - Simple opacity fade
+- `slideInRight` - Slide from right for modals/panels
+- `shimmer` - Looping opacity pulse for skeleton loaders
+
+**Skeleton Loading Components (`frontend/src/components/ui/skeleton-card.tsx`):**
+- `SkeletonCard` - Single skeleton card (poster or horizontal variant)
+- `SkeletonGrid` - Grid of skeleton cards with shimmer animation
+
+**Pages Using Animations:**
+- `ProfilePage.tsx` - staggerContainer + fadeInUp for watchlist grids, cardHover on cards
+- `SearchPage.tsx` - staggerContainer + fadeInUp for search results, cardHover on cards
+- `page.tsx` (Landing) - fadeIn for hero, staggerContainer for features, viewport animations for platforms
+
+**Geist Font Integration:**
+- `frontend/src/app/layout.tsx` - GeistSans applied to `<html>` via className
+- `frontend/tailwind.config.js` - `var(--font-geist-sans)` as primary sans-serif
+
+### 6. Shared NavBar Component (Completed)
+**Purpose**: Consistent Scout logo and branding across all pages via a shared navigation component.
+
+**Component:** `frontend/src/components/ui/nav-bar.tsx`
+
+**Variants:**
+- `landing` - Full-width, no border. Logo + "Scout" on left, custom actions on right.
+- `auth` - Optional back button + Logo + "Scout" clickable to home.
+- `authenticated` - Full-width with border-bottom and card background. Logo + "Scout" as home link, page title via `/` separator, custom actions on right.
+
+**Props:**
+- `variant`: `'landing' | 'auth' | 'authenticated'`
+- `backHref?`: string - Auth variant back button destination
+- `backLabel?`: string - Auth variant back button text
+- `pageTitle?`: string - Authenticated variant page title after logo
+- `actions?`: ReactNode - Right-side action buttons
+
+**Files Using NavBar:**
+- `frontend/src/app/page.tsx` (landing)
+- `frontend/src/app/auth/page.tsx` (auth)
+- `frontend/src/app/forgot-password/page.tsx` (auth)
+- `frontend/src/app/reset-password/page.tsx` (auth)
+- `frontend/src/app/verify-email/page.tsx` (auth)
+- `frontend/src/components/SignUpPage.tsx` (auth)
+- `frontend/src/components/ProfilePage.tsx` (authenticated)
+- `frontend/src/components/SearchPage.tsx` (authenticated)
+- `frontend/src/components/SettingsPage.tsx` (authenticated)
+
+### 7. Landing Page Redesign (Completed)
+**Purpose**: Modern, animated landing page with split hero layout.
+
+**Layout:**
+- NavBar (landing variant) with Explore Shows, My Watchlist, Sign In/Out
+- Two-column hero: bold gradient headline on left ("Welcome to Scout, your TV sidekick"), stacked feature cards on right
+- Stacks vertically on mobile
+- Animated streaming platforms section with hover scale effects
+- CTA buttons only shown for unauthenticated users (nav handles authenticated navigation)
+
+**Animations Used:**
+- `fadeIn` for hero headline
+- `staggerContainer` + `fadeInUp` for feature cards
+- `fadeIn` with viewport trigger for platforms section
+- `whileHover` scale on platform logos
 
 ---
 

@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
-import { ArrowLeft, Search, Star, Plus, Loader2, Check, LogOut } from "lucide-react";
+import { Search, Star, Plus, Loader2, Check, LogOut } from "lucide-react";
 import { staggerContainer, fadeInUp, cardHover } from '@/lib/animations';
 import { SkeletonGrid } from './ui/skeleton-card';
+import { NavBar } from './ui/nav-bar';
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -235,49 +236,24 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
 
   return (
     <div className="min-h-screen text-foreground">
-      {/* Header */}
-      <div className="border-b border-border bg-card/50">
-        <div className="container mx-auto px-3 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-primary hover:text-primary hover:bg-primary/10 mr-2 sm:mr-4"
-                onClick={() => router.push('/')}
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Back</span>
-              </Button>
-              <h1 className="text-xl sm:text-2xl text-foreground">Search Shows</h1>
-            </div>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <Button
-                variant="ghost"
-                className="hidden sm:inline-flex text-primary hover:text-primary hover:bg-primary/10"
-                onClick={() => router.push('/profile')}
-              >
-                My Watchlist
-              </Button>
-              <Button
-                variant="ghost"
-                className="hidden sm:inline-flex text-primary hover:text-primary hover:bg-primary/10"
-                onClick={() => router.push('/settings')}
-              >
-                Settings
-              </Button>
-              <Button
-                variant="ghost"
-                className="text-primary hover:text-primary hover:bg-primary/10"
-                onClick={() => logout()}
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Sign Out</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <NavBar
+        variant="authenticated"
+        pageTitle="Search Shows"
+        actions={
+          <>
+            <Button variant="ghost" className="hidden sm:inline-flex text-primary hover:text-primary hover:bg-primary/10" onClick={() => router.push('/profile')}>
+              My Watchlist
+            </Button>
+            <Button variant="ghost" className="hidden sm:inline-flex text-primary hover:text-primary hover:bg-primary/10" onClick={() => router.push('/settings')}>
+              Settings
+            </Button>
+            <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => logout()}>
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
+          </>
+        }
+      />
 
       <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* Search Form */}
