@@ -209,7 +209,8 @@ export class TMDBService {
         number_of_episodes: show.number_of_episodes,
         in_production: show.in_production,
         networks: show.networks,
-        production_companies: show.production_companies
+        production_companies: show.production_companies,
+        next_episode_to_air: show.next_episode_to_air
       };
     } catch (error) {
       console.error(`Error fetching show details for TMDB ID ${tmdbId}:`, error);
