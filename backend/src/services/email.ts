@@ -388,11 +388,9 @@ If you didn't request a password reset, you can safely ignore this email. Your p
       newEpisodes: Array<{
         showTitle: string;
         posterPath: string | null;
-        seasonNumber: number;
-        episodeNumber: number;
-        episodeTitle: string | null;
         showId: string;
         providers?: string | null;
+        episodeSummary: string;
       }>;
       newSeasons: Array<{
         showTitle: string;
@@ -435,16 +433,12 @@ If you didn't request a password reset, you can safely ignore this email. Your p
       year: 'numeric'
     });
 
-    // Build new episodes section
+    // Build new episodes section (grouped by show)
     const newEpisodesHtml = newEpisodes.length > 0 ? `
       <div style="margin-bottom: 30px;">
         <h3 style="color: #CC5500; margin: 0 0 15px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #CC5500; padding-bottom: 8px;">New Episodes</h3>
         ${newEpisodes.map(ep => {
           const posterImage = ep.posterPath ? `https://image.tmdb.org/t/p/w200${ep.posterPath}` : null;
-          const episodeInfo = ep.episodeTitle
-            ? `S${ep.seasonNumber}E${ep.episodeNumber}: "${ep.episodeTitle}"`
-            : `Season ${ep.seasonNumber}, Episode ${ep.episodeNumber}`;
-          const updateUrl = `${FRONTEND_URL}/profile?action=update&showId=${ep.showId}&season=${ep.seasonNumber}&episode=${ep.episodeNumber}`;
           const viewUrl = `${FRONTEND_URL}/profile?showId=${ep.showId}`;
           const platformInfo = ep.providers ? `<p style="margin: 0 0 8px 0; font-size: 12px; color: #888;">Available on: ${ep.providers}</p>` : '';
 
@@ -458,11 +452,10 @@ If you didn't request a password reset, you can safely ignore this email. Your p
                 ` : ''}
                 <td style="vertical-align: top;">
                   <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 15px; color: #333;">${ep.showTitle}</p>
-                  <p style="margin: 0 0 4px 0; font-size: 14px; color: #666;">${episodeInfo}</p>
+                  <p style="margin: 0 0 4px 0; font-size: 14px; color: #666;">${ep.episodeSummary}</p>
                   ${platformInfo}
                   <div>
-                    <a href="${updateUrl}" style="background: #CC5500; color: white; padding: 6px 16px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: 500; display: inline-block; margin-right: 8px;">Update Status</a>
-                    <a href="${viewUrl}" style="color: #CC5500; text-decoration: none; font-size: 13px; font-weight: 500;">View Show</a>
+                    <a href="${viewUrl}" style="background: #CC5500; color: white; padding: 6px 16px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: 500; display: inline-block; margin-right: 8px;">View Show</a>
                   </div>
                 </td>
               </tr>
@@ -546,11 +539,8 @@ If you didn't request a password reset, you can safely ignore this email. Your p
       ...(newEpisodes.length > 0 ? [
         '--- NEW EPISODES ---',
         ...newEpisodes.map(ep => {
-          const info = ep.episodeTitle
-            ? `S${ep.seasonNumber}E${ep.episodeNumber}: "${ep.episodeTitle}"`
-            : `S${ep.seasonNumber}E${ep.episodeNumber}`;
           const platform = ep.providers ? ` (on ${ep.providers})` : '';
-          return `${ep.showTitle} - ${info}${platform}`;
+          return `${ep.showTitle} - ${ep.episodeSummary}${platform}`;
         }),
         ''
       ] : []),
