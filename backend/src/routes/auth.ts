@@ -148,21 +148,10 @@ router.get('/shows', authenticateToken, async (req: any, res) => {
 
 // Upgrade to premium
 router.post('/upgrade-premium', authenticateToken, async (req: any, res) => {
-  try {
-    const updatedUser = await AuthService.upgradeToPremium(req.user.id);
-
-    res.json({
-      success: true,
-      data: updatedUser,
-      message: 'Successfully upgraded to premium!'
-    });
-  } catch (error: any) {
-    console.error('Upgrade premium error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to upgrade to premium'
-    });
-  }
+  res.status(403).json({
+    success: false,
+    error: 'Premium is coming soon.'
+  });
 });
 
 // Logout (client-side token removal)

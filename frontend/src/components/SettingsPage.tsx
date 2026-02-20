@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Switch } from "./ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Badge } from "./ui/badge";
-import { ArrowLeft, Crown, X, Loader2, Mail, CheckCircle2, AlertCircle } from "lucide-react";
+import { Crown, Loader2, Mail, CheckCircle2, AlertCircle, LogOut } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
+import { NavBar } from './ui/nav-bar';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { notificationService } from '@/services/notificationService';
@@ -35,7 +36,9 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
       newEpisodes: true,
       seasonStart: true,
       friendActivity: false,
-      weeklyDigest: true
+      weeklyDigest: true,
+      upcomingReleases: true,
+      pauseAll: false
     },
     privacy: {
       publicWatchlist: false,
@@ -43,13 +46,12 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
       shareWatchingStatus: true
     }
   });
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
   const [sendingVerification, setSendingVerification] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
 
-  const { user, updatePreferences, upgradeToPremium } = useAuth();
+  const { user, updatePreferences, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -66,7 +68,9 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
           newEpisodes: user.notification_preferences?.new_episodes ?? true,
           seasonStart: user.notification_preferences?.new_seasons ?? true,
           friendActivity: user.notification_preferences?.push ?? false,
-          weeklyDigest: user.notification_preferences?.email ?? true
+          weeklyDigest: user.notification_preferences?.email ?? true,
+          upcomingReleases: user.notification_preferences?.upcoming_releases ?? true,
+          pauseAll: user.notification_preferences?.pause_all ?? false
         },
         privacy: {
           publicWatchlist: user.privacy_settings?.data_export_enabled ?? false,
@@ -91,7 +95,9 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
           newEpisodes: prefs.preferences.newEpisodes ?? prev.notifications.newEpisodes,
           seasonStart: prefs.preferences.seasonPremieres ?? prev.notifications.seasonStart,
           friendActivity: prefs.preferences.friendActivity ?? prev.notifications.friendActivity,
-          weeklyDigest: prefs.preferences.weeklyDigest ?? prev.notifications.weeklyDigest
+          weeklyDigest: prefs.preferences.weeklyDigest ?? prev.notifications.weeklyDigest,
+          upcomingReleases: prefs.preferences.upcomingReleases ?? prev.notifications.upcomingReleases,
+          pauseAll: prefs.preferences.pauseAll ?? prev.notifications.pauseAll
         }
       }));
     } catch (error) {
@@ -121,7 +127,9 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
       newEpisodes: 'newEpisodes',
       seasonStart: 'seasonPremieres',
       friendActivity: 'friendActivity',
-      weeklyDigest: 'weeklyDigest'
+      weeklyDigest: 'weeklyDigest',
+      upcomingReleases: 'upcomingReleases',
+      pauseAll: 'pauseAll'
     };
 
     const apiField = fieldMap[field];
@@ -182,7 +190,9 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
           email: settings.notifications.weeklyDigest,
           push: settings.notifications.friendActivity,
           new_episodes: settings.notifications.newEpisodes,
-          new_seasons: settings.notifications.seasonStart
+          new_seasons: settings.notifications.seasonStart,
+          upcoming_releases: settings.notifications.upcomingReleases,
+          pause_all: settings.notifications.pauseAll
         },
         privacy_settings: {
           data_export_enabled: settings.privacy.publicWatchlist,
@@ -197,41 +207,21 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
     }
   };
 
-  const handleUpgradePremium = async () => {
-    setLoading(true);
-    try {
-      await upgradeToPremium();
-    } catch (error: any) {
-      console.error('Upgrade error:', error);
-      // Error is already handled by AuthContext with toast
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen text-foreground">
-      {/* Header */}
-      <div className="border-b border-border bg-card/50">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                className="text-primary hover:text-primary hover:bg-primary/10 mr-4"
-                onClick={() => router.push('/profile')}
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Profile
-              </Button>
-              <h1 className="text-2xl text-foreground">Settings</h1>
-            </div>
-          </div>
-        </div>
-      </div>
+      <NavBar
+        variant="authenticated"
+        pageTitle="Settings"
+        actions={
+          <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => logout()}>
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Sign Out</span>
+          </Button>
+        }
+      />
 
-      <div className="container mx-auto px-6 py-8 max-w-4xl">
+      <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8 max-w-4xl">
         <div className="space-y-8">
           {/* Account Settings */}
           <Card className="bg-card border-border shadow-lg">
@@ -310,34 +300,24 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
             <CardHeader>
               <CardTitle className="text-card-foreground flex items-center">
                 <Crown className="w-5 h-5 mr-2 text-secondary" />
-                Premium Upgrade
+                Premium
+                <Badge variant="secondary" className="ml-2 text-xs">Coming Soon</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <p className="text-muted-foreground">
-                  Unlock premium features like advanced notifications, group tracking with friends, 
-                  and priority customer support.
+                  Premium features like advanced notifications, group tracking, and priority support
+                  are still in development.
                 </p>
                 <div className="flex items-center space-x-4">
-                  <span className="text-2xl text-card-foreground">$4.99/month</span>
-                  <Button 
-                    className="bg-secondary hover:bg-secondary/90 text-foreground"
-                    onClick={handleUpgradePremium}
-                    disabled={loading || user?.subscription_tier === 'premium'}
+                  <Button
+                    className="bg-secondary/70 text-foreground cursor-not-allowed"
+                    disabled={true}
                   >
-                    {loading ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : user?.subscription_tier === 'premium' ? (
-                      'Premium Active'
-                    ) : (
-                      'Upgrade to Premium'
-                    )}
+                    Coming Soon
                   </Button>
                 </div>
-                {user?.subscription_tier === 'premium' && (
-                  <p className="text-sm text-green-600">✓ You have an active premium subscription</p>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -371,24 +351,6 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                   </div>
                 ))}
               </div>
-              <div className="mt-4">
-                <p className="text-muted-foreground text-sm">Selected platforms:</p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {Array.from(new Set(settings.selectedPlatforms)).map(platform => (
-                    <Badge 
-                      key={platform} 
-                      variant="outline" 
-                      className="border-primary/50 text-foreground hover:border-primary"
-                    >
-                      {platform}
-                      <X 
-                        className="w-3 h-3 ml-1 cursor-pointer hover:text-primary" 
-                        onClick={() => togglePlatform(platform)}
-                      />
-                    </Badge>
-                  ))}
-                </div>
-              </div>
             </CardContent>
           </Card>
 
@@ -403,9 +365,9 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
             <CardContent className="space-y-4">
               {/* Email Verification Banner */}
               {!emailVerified && (
-                <div className="flex items-center justify-between p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:justify-between p-3 sm:p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <AlertCircle className="w-5 h-5 text-amber-500" />
+                    <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
                     <div>
                       <p className="text-sm font-medium text-card-foreground">Verify your email</p>
                       <p className="text-xs text-muted-foreground">Verify your email to receive notifications</p>
@@ -437,52 +399,79 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 </div>
               )}
 
-              <div className="flex items-center justify-between">
+              {/* Pause All Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                 <div>
-                  <Label className="text-card-foreground">New Episode Releases</Label>
-                  <p className="text-muted-foreground text-sm">Get notified when new episodes are available</p>
+                  <Label className="text-card-foreground">Pause All Notifications</Label>
+                  <p className="text-muted-foreground text-sm">Temporarily pause all email notifications</p>
                 </div>
                 <Switch
-                  checked={settings.notifications.newEpisodes}
-                  onCheckedChange={(checked: boolean) => handleNotificationChange('newEpisodes', checked)}
+                  checked={settings.notifications.pauseAll}
+                  onCheckedChange={(checked: boolean) => handleNotificationChange('pauseAll', checked)}
                   disabled={!emailVerified || savingNotifications}
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-card-foreground">Season Premieres</Label>
-                  <p className="text-muted-foreground text-sm">Be the first to know when new seasons start</p>
+              <div className={settings.notifications.pauseAll ? 'opacity-50 pointer-events-none' : ''}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-card-foreground">New Episode Releases</Label>
+                    <p className="text-muted-foreground text-sm">Get notified when new episodes are available</p>
+                  </div>
+                  <Switch
+                    checked={settings.notifications.newEpisodes}
+                    onCheckedChange={(checked: boolean) => handleNotificationChange('newEpisodes', checked)}
+                    disabled={!emailVerified || savingNotifications || settings.notifications.pauseAll}
+                  />
                 </div>
-                <Switch
-                  checked={settings.notifications.seasonStart}
-                  onCheckedChange={(checked: boolean) => handleNotificationChange('seasonStart', checked)}
-                  disabled={!emailVerified || savingNotifications}
-                />
-              </div>
 
-              <div className="flex items-center justify-between opacity-50">
-                <div>
-                  <Label className="text-card-foreground">Friend Activity</Label>
-                  <p className="text-muted-foreground text-sm">See what your friends are watching (Premium - Coming Soon)</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-card-foreground">Season Premieres</Label>
+                    <p className="text-muted-foreground text-sm">Be the first to know when new seasons start</p>
+                  </div>
+                  <Switch
+                    checked={settings.notifications.seasonStart}
+                    onCheckedChange={(checked: boolean) => handleNotificationChange('seasonStart', checked)}
+                    disabled={!emailVerified || savingNotifications || settings.notifications.pauseAll}
+                  />
                 </div>
-                <Switch
-                  checked={settings.notifications.friendActivity}
-                  onCheckedChange={(checked: boolean) => handleNotificationChange('friendActivity', checked)}
-                  disabled={true}
-                />
-              </div>
 
-              <div className="flex items-center justify-between opacity-50">
-                <div>
-                  <Label className="text-card-foreground">Weekly Digest</Label>
-                  <p className="text-muted-foreground text-sm">Weekly summary of your watching activity (Coming Soon)</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-card-foreground">Upcoming Releases</Label>
+                    <p className="text-muted-foreground text-sm">Get a heads-up about new episodes and seasons coming in the next 2 weeks</p>
+                  </div>
+                  <Switch
+                    checked={settings.notifications.upcomingReleases}
+                    onCheckedChange={(checked: boolean) => handleNotificationChange('upcomingReleases', checked)}
+                    disabled={!emailVerified || savingNotifications || settings.notifications.pauseAll}
+                  />
                 </div>
-                <Switch
-                  checked={settings.notifications.weeklyDigest}
-                  onCheckedChange={(checked: boolean) => handleNotificationChange('weeklyDigest', checked)}
-                  disabled={true}
-                />
+
+                <div className="flex items-center justify-between opacity-50">
+                  <div>
+                    <Label className="text-card-foreground">Friend Activity</Label>
+                    <p className="text-muted-foreground text-sm">See what your friends are watching (Coming Soon)</p>
+                  </div>
+                  <Switch
+                    checked={settings.notifications.friendActivity}
+                    onCheckedChange={(checked: boolean) => handleNotificationChange('friendActivity', checked)}
+                    disabled={true}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between opacity-50">
+                  <div>
+                    <Label className="text-card-foreground">Weekly Digest</Label>
+                    <p className="text-muted-foreground text-sm">Weekly summary of your watching activity (Coming Soon)</p>
+                  </div>
+                  <Switch
+                    checked={settings.notifications.weeklyDigest}
+                    onCheckedChange={(checked: boolean) => handleNotificationChange('weeklyDigest', checked)}
+                    disabled={true}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

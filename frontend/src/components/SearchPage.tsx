@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -6,7 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
-import { ArrowLeft, Search, Star, Plus, Loader2, Check } from "lucide-react";
+import { Search, Star, Plus, Loader2, Check, LogOut } from "lucide-react";
+import { staggerContainer, fadeInUp, cardHover } from '@/lib/animations';
+import { SkeletonGrid } from './ui/skeleton-card';
+import { NavBar } from './ui/nav-bar';
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -14,6 +18,7 @@ import { showService, Show } from '@/services/showService';
 import { watchlistService } from '@/services/watchlistService';
 import { toast } from 'sonner';
 import ShowDetailsModal from './ShowDetailsModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "./ui/dialog";
 
 interface SearchPageProps {
   onNavigate: (page: string) => void;
@@ -34,12 +39,22 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
   const [recentlyAddedShows, setRecentlyAddedShows] = useState<Set<number>>(new Set());
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [addModalShow, setAddModalShow] = useState<Show | null>(null);
+  const [addModalStatus, setAddModalStatus] = useState<'want_to_watch' | 'watching' | 'completed'>('want_to_watch');
+  const [addModalSeason, setAddModalSeason] = useState(1);
+  const [addModalEpisode, setAddModalEpisode] = useState(1);
+  const [submittingAddModal, setSubmittingAddModal] = useState(false);
+  const [addModalTotalSeasons, setAddModalTotalSeasons] = useState(1);
+  const [addModalEpisodeCounts, setAddModalEpisodeCounts] = useState<Record<number, number>>({});
+  const [addModalLoadingSeasons, setAddModalLoadingSeasons] = useState(false);
+  const [addModalLoadingEpisodes, setAddModalLoadingEpisodes] = useState(false);
   
   // Track watchlist tmdb_ids for O(1) lookup
   const [watchlistTmdbIds, setWatchlistTmdbIds] = useState<Set<number>>(new Set());
   const [watchlistLoading, setWatchlistLoading] = useState(false);
 
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
 
   // Load user's watchlist on mount (for "In Watchlist" checking)
@@ -105,7 +120,7 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
     }
   }, [searchQuery, selectedCountry, selectedTier]);
 
-  const handleAddToWatchlist = useCallback(async (tmdbId: number, title: string) => {
+  const handleQuickAdd = useCallback(async (tmdbId: number, title: string) => {
     if (!user) {
       toast.error('Please sign in to add shows to your watchlist');
       router.push('/auth');
@@ -114,7 +129,15 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
 
     setAddingToWatchlist(tmdbId);
     try {
-      await watchlistService.addToWatchlist(tmdbId);
+      const result = await watchlistService.addToWatchlist(tmdbId);
+      const showId = result.show?.id || result.followed?.show_id;
+      if (showId) {
+        await watchlistService.updateShowStatus(showId, {
+          status: 'want_to_watch',
+          currentSeason: 1,
+          currentEpisode: 1
+        });
+      }
       // Update both tracking sets for immediate UI feedback
       setRecentlyAddedShows(prev => new Set(prev).add(tmdbId));
       setWatchlistTmdbIds(prev => new Set(prev).add(tmdbId));
@@ -126,6 +149,78 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
       setAddingToWatchlist(null);
     }
   }, [user, router]);
+
+  const openAddModal = (show: Show) => {
+    setAddModalShow(show);
+    setAddModalStatus('want_to_watch');
+    setAddModalSeason(1);
+    setAddModalEpisode(1);
+    setAddModalEpisodeCounts({});
+    setAddModalOpen(true);
+  };
+
+  const loadAddModalSeasonInfo = async (show: Show) => {
+    setAddModalLoadingSeasons(true);
+    try {
+      const seasonInfo = await showService.getSeasonInfo(show.tmdb_id);
+      const totalSeasons = seasonInfo.total_seasons || show.totalSeasons || 1;
+      setAddModalTotalSeasons(totalSeasons);
+    } catch (error) {
+      setAddModalTotalSeasons(show.totalSeasons || 1);
+    } finally {
+      setAddModalLoadingSeasons(false);
+    }
+  };
+
+  const loadAddModalEpisodeCount = async (show: Show, seasonNumber: number) => {
+    setAddModalLoadingEpisodes(true);
+    try {
+      const seasonInfo = await showService.getSeasonInfo(show.tmdb_id, seasonNumber);
+      const episodeCount = seasonInfo.season?.episode_count || 1;
+      setAddModalEpisodeCounts(prev => ({ ...prev, [seasonNumber]: episodeCount }));
+    } catch (error) {
+      setAddModalEpisodeCounts(prev => ({ ...prev, [seasonNumber]: prev[seasonNumber] || 1 }));
+    } finally {
+      setAddModalLoadingEpisodes(false);
+    }
+  };
+
+  useEffect(() => {
+    if (addModalOpen && addModalShow) {
+      loadAddModalSeasonInfo(addModalShow);
+      loadAddModalEpisodeCount(addModalShow, addModalSeason);
+    }
+  }, [addModalOpen, addModalShow]);
+
+  const handleAddWithOptions = async () => {
+    if (!user || !addModalShow) {
+      toast.error('Please sign in to add shows to your watchlist');
+      router.push('/auth');
+      return;
+    }
+
+    setSubmittingAddModal(true);
+    try {
+      const result = await watchlistService.addToWatchlist(addModalShow.tmdb_id);
+      const showId = result.show?.id || result.followed?.show_id;
+      if (showId) {
+        await watchlistService.updateShowStatus(showId, {
+          status: addModalStatus,
+          currentSeason: addModalSeason,
+          currentEpisode: addModalEpisode
+        });
+      }
+      setRecentlyAddedShows(prev => new Set(prev).add(addModalShow.tmdb_id));
+      setWatchlistTmdbIds(prev => new Set(prev).add(addModalShow.tmdb_id));
+      toast.success(`"${addModalShow.title}" added to your watchlist!`);
+      setAddModalOpen(false);
+    } catch (error: any) {
+      console.error('Add to watchlist error:', error);
+      toast.error(error.message || 'Failed to add to watchlist');
+    } finally {
+      setSubmittingAddModal(false);
+    }
+  };
 
   const getProviderNames = (show: Show) => {
     if (!show.providers || show.providers.length === 0) {
@@ -141,46 +236,29 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
 
   return (
     <div className="min-h-screen text-foreground">
-      {/* Header */}
-      <div className="border-b border-border bg-card/50">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                className="text-primary hover:text-primary hover:bg-primary/10 mr-4"
-                onClick={() => router.push('/')}
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
-              <h1 className="text-2xl text-foreground">Search Shows</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button 
-                variant="ghost" 
-                className="text-primary hover:text-primary hover:bg-primary/10"
-                onClick={() => router.push('/profile')}
-              >
-                My Watchlist
-              </Button>
-              <Button 
-                variant="ghost" 
-                className="text-primary hover:text-primary hover:bg-primary/10"
-                onClick={() => router.push('/settings')}
-              >
-                Settings
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <NavBar
+        variant="authenticated"
+        pageTitle="Search Shows"
+        actions={
+          <>
+            <Button variant="ghost" className="hidden sm:inline-flex text-primary hover:text-primary hover:bg-primary/10" onClick={() => router.push('/profile')}>
+              My Watchlist
+            </Button>
+            <Button variant="ghost" className="hidden sm:inline-flex text-primary hover:text-primary hover:bg-primary/10" onClick={() => router.push('/settings')}>
+              Settings
+            </Button>
+            <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => logout()}>
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
+          </>
+        }
+      />
 
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* Search Form */}
-        <Card className="bg-card border-border shadow-lg mb-8">
-          <CardContent className="p-6">
+        <Card className="bg-card border-border shadow-lg mb-6 sm:mb-8">
+          <CardContent className="p-4 sm:p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
               <div className="space-y-2">
                 <Label htmlFor="search" className="text-card-foreground">Search by Title</Label>
@@ -265,23 +343,17 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
           </h2>
           
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Card key={i} className="bg-card border-border shadow-lg">
-                  <CardContent className="p-4">
-                    <Skeleton className="aspect-[2/3] mb-4 rounded-lg" />
-                    <Skeleton className="h-4 mb-2" />
-                    <Skeleton className="h-3 w-1/2 mb-3" />
-                    <Skeleton className="h-8 w-full" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <SkeletonGrid count={8} />
           ) : shows && shows.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+              variants={staggerContainer}
+              initial="hidden"
+              animate="show"
+            >
               {shows.map(show => (
-                <Card 
-                  key={show.tmdb_id} 
+                <motion.div key={show.tmdb_id} variants={fadeInUp} {...cardHover}>
+                <Card
                   className="bg-card border-border hover:border-primary transition-colors shadow-lg cursor-pointer hover:shadow-lg"
                   onClick={() => setSelectedShow(show)}
                 >
@@ -328,27 +400,42 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
                         In Watchlist
                       </Button>
                     ) : (
-                      <Button 
-                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent card click
-                          handleAddToWatchlist(show.tmdb_id, show.title);
-                        }}
-                        disabled={addingToWatchlist === show.tmdb_id}
-                      >
-                        {addingToWatchlist === show.tmdb_id ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <Plus className="w-4 h-4 mr-2" />
-                        )}
-                        Add to Watchlist
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleQuickAdd(show.tmdb_id, show.title);
+                          }}
+                          disabled={addingToWatchlist === show.tmdb_id}
+                          title="Quick add (Plan to Watch)"
+                        >
+                          {addingToWatchlist === show.tmdb_id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Plus className="w-4 h-4" />
+                          )}
+                        </Button>
+                        <Button 
+                          className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent card click
+                            openAddModal(show);
+                          }}
+                          disabled={addingToWatchlist === show.tmdb_id}
+                        >
+                          Add to Watchlist
+                        </Button>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           ) : !loading && hasSearched && shows.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground text-lg">
@@ -379,6 +466,106 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
           }
         }}
       />
+
+      <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Add {addModalShow?.title ? `"${addModalShow.title}"` : 'show'} to Watchlist
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={addModalStatus} onValueChange={(value) => setAddModalStatus(value as any)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="want_to_watch">Plan to Watch</SelectItem>
+                  <SelectItem value="watching">Watching</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Starting Season</Label>
+                <Select
+                  value={addModalSeason.toString()}
+                  onValueChange={(value) => {
+                    const nextSeason = Math.max(1, Number(value));
+                    setAddModalSeason(nextSeason);
+                    setAddModalEpisode(1);
+                    if (addModalShow) {
+                      loadAddModalEpisodeCount(addModalShow, nextSeason);
+                    }
+                  }}
+                  disabled={addModalLoadingSeasons}
+                >
+                  <SelectTrigger>
+                    {addModalLoadingSeasons ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <SelectValue />
+                    )}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: addModalTotalSeasons }, (_, i) => i + 1).map(seasonNum => (
+                      <SelectItem key={seasonNum} value={seasonNum.toString()}>
+                        Season {seasonNum}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Starting Episode</Label>
+                <Select
+                  value={addModalEpisode.toString()}
+                  onValueChange={(value) => setAddModalEpisode(Math.max(1, Number(value)))}
+                  disabled={addModalLoadingEpisodes}
+                >
+                  <SelectTrigger>
+                    {addModalLoadingEpisodes ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <SelectValue />
+                    )}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from(
+                      { length: addModalEpisodeCounts[addModalSeason] || 1 },
+                      (_, i) => i + 1
+                    ).map(episodeNum => (
+                      <SelectItem key={episodeNum} value={episodeNum.toString()}>
+                        Episode {episodeNum}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <DialogClose asChild>
+              <Button variant="outline" disabled={submittingAddModal}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button onClick={handleAddWithOptions} disabled={submittingAddModal}>
+              {submittingAddModal ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                'Add to Watchlist'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

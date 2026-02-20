@@ -1,6 +1,6 @@
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { Play, Bell, Users, Star } from "lucide-react";
+import { Bell, Star, Search } from "lucide-react";
 
 interface LandingPageProps {
   onNavigate: (page: string) => void;
@@ -27,7 +27,7 @@ export default function LandingPage({
       {/* Navigation */}
       <nav className="flex items-center justify-between p-6">
         <div className="flex items-center space-x-2">
-          <Play className="w-8 h-8 text-primary" />
+          <img src="/logo.png" alt="Scout" className="w-8 h-8" />
           <span className="text-2xl font-bold text-primary">
             Scout
           </span>
@@ -122,37 +122,48 @@ export default function LandingPage({
           </div>
         </div>
 
-        {/* Coming Soon Features */}
-        <div className="text-left max-w-4xl mx-auto">
+        {/* Highlights */}
+        <div className="text-left max-w-5xl mx-auto">
           <h2 className="text-3xl mb-8 text-center text-primary">
-            Coming Soon
+            Highlights
           </h2>
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-card p-6 rounded-lg border border-border shadow-lg">
               <div className="flex items-center mb-4">
-                <Bell className="w-6 h-6 text-accent mr-3" />
+                <Search className="w-6 h-6 text-accent mr-3" />
                 <h3 className="text-xl text-card-foreground">
-                  Smart Notifications
+                  Universal Search
                 </h3>
               </div>
               <p className="text-muted-foreground">
-                Never miss a season premiere or new episode
-                release. Get personalized notifications for all
-                your tracked shows across every platform.
+                Search any show and instantly see where it's streaming.
+                Filter results by the platforms you have.
               </p>
             </div>
 
             <div className="bg-card p-6 rounded-lg border border-border shadow-lg">
               <div className="flex items-center mb-4">
-                <Users className="w-6 h-6 text-accent mr-3" />
+                <Star className="w-6 h-6 text-accent mr-3" />
                 <h3 className="text-xl text-card-foreground">
-                  Group Tracking
+                  Smart Watchlist
                 </h3>
               </div>
               <p className="text-muted-foreground">
-                Share watchlists with friends and family. See
-                what everyone's watching, get recommendations,
-                and never spoil anything again.
+                Keep a single watchlist across all services and update
+                each show's status as you watch.
+              </p>
+            </div>
+
+            <div className="bg-card p-6 rounded-lg border border-border shadow-lg">
+              <div className="flex items-center mb-4">
+                <Bell className="w-6 h-6 text-accent mr-3" />
+                <h3 className="text-xl text-card-foreground">
+                  Episode Alerts
+                </h3>
+              </div>
+              <p className="text-muted-foreground">
+                Get alerts for new episodes, seasons, or when a show becomes
+                available on your platforms.
               </p>
             </div>
           </div>

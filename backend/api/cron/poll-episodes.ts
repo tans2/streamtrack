@@ -8,6 +8,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 const getNotificationService = async () => {
   try {
     // Try to import from the compiled dist directory
+    // @ts-ignore - compiled at build time; types not available during Vercel build
     const { NotificationService } = await import('../../dist/services/notification.js');
     return NotificationService;
   } catch (error) {
@@ -42,8 +43,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Poll shows for new episodes (30 shows per batch)
-    const results = await NotificationService.pollAndNotify(30);
+    // Poll shows for new episodes and queue events for daily digest (30 shows per batch)
+    const results = await NotificationService.pollAndDetect(30);
 
     const duration = Date.now() - startTime;
 

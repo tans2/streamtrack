@@ -22,5 +22,8 @@ temp/
 out/
 .cypress/
 # End Generation Here
-```
 .vercel
+
+# Private documentation
+ROADMAP.md
+CLAUDE.md
