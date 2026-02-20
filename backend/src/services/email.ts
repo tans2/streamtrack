@@ -538,7 +538,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
 
     // Build plaintext version
     const plaintext = [
-      `Hey ${name}! Here's your daily watchlist update for ${today}.`,
+      `Hey ${name}! Here's your watchlist update for ${today}.`,
       '',
       ...(newEpisodes.length > 0 ? [
         '--- NEW EPISODES ---',
@@ -583,8 +583,15 @@ If you didn't request a password reset, you can safely ignore this email. Your p
           </head>
           <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background: #fafafa;">
             <div style="text-align: center; margin-bottom: 24px;">
-              <h1 style="color: #CC5500; margin: 0; font-size: 28px;">Scout</h1>
-              <p style="color: #999; margin: 4px 0 0 0; font-size: 13px;">Daily Watchlist Digest</p>
+              <table style="margin: 0 auto;"><tr>
+                <td style="vertical-align: middle; padding-right: 10px;">
+                  <img src="${FRONTEND_URL}/logo.png" alt="Scout" width="36" height="36" style="display: block; border-radius: 6px;">
+                </td>
+                <td style="vertical-align: middle;">
+                  <h1 style="color: #CC5500; margin: 0; font-size: 28px; line-height: 1;">Scout</h1>
+                </td>
+              </tr></table>
+              <p style="color: #999; margin: 8px 0 0 0; font-size: 13px;">Watchlist Digest</p>
             </div>
 
             <div style="background: #ffffff; border-radius: 8px; padding: 30px; margin-bottom: 20px; border: 1px solid #eee;">
