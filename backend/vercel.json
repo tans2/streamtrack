@@ -1,12 +1,8 @@
 {
   "rewrites": [
     { "source": "/api/cron/poll-episodes", "destination": "/api/cron/poll-episodes" },
+    { "source": "/api/cron/send-digest", "destination": "/api/cron/send-digest" },
     { "source": "/(.*)", "destination": "/api" }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/poll-episodes",
-      "schedule": "0 */6 * * *"
-    }
   ]
 }
+

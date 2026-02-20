@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Loader2, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
 import { notificationService } from '@/services/notificationService';
+import { NavBar } from '@/components/ui/nav-bar';
 
 export default function VerifyEmailPage() {
   const searchParams = useSearchParams();
@@ -37,16 +38,10 @@ export default function VerifyEmailPage() {
   };
 
   return (
-    <div className="min-h-screen text-foreground flex items-center justify-center p-6">
+    <div className="min-h-screen text-foreground">
+      <NavBar variant="auth" />
+      <div className="flex items-center justify-center p-6" style={{ minHeight: 'calc(100vh - 72px)' }}>
       <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="flex items-center justify-center mb-8">
-          <div className="flex items-center space-x-2">
-            <Play className="w-8 h-8 text-primary" />
-            <span className="text-2xl text-primary font-semibold">Scout</span>
-          </div>
-        </div>
-
         <Card className="bg-card border-border shadow-lg">
           <CardHeader className="text-center">
             {status === 'loading' && (
@@ -95,9 +90,6 @@ export default function VerifyEmailPage() {
           <CardContent className="text-center">
             {status === 'success' && (
               <div className="space-y-4">
-                <p className="text-muted-foreground text-sm">
-                  You can now receive email notifications for new episodes and season premieres.
-                </p>
                 <Button
                   onClick={() => router.push('/settings')}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground"
@@ -132,6 +124,7 @@ export default function VerifyEmailPage() {
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

@@ -1,0 +1,27 @@
+name: Poll Episodes (Cron)
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  poll-episodes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger backend cron endpoint
+        env:
+          BACKEND_CRON_URL: ${{ secrets.BACKEND_CRON_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$BACKEND_CRON_URL" ]; then
+            echo "BACKEND_CRON_URL is not set"
+            exit 1
+          fi
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET is not set"
+            exit 1
+          fi
+          curl -sS -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${BACKEND_CRON_URL}"

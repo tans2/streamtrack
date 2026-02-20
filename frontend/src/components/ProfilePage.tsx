@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { Skeleton } from "./ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { ArrowLeft, Settings, Search, Star, Play, Calendar, Loader2, Bell, BellOff } from "lucide-react";
+import { Settings, Search, Star, Play, Calendar, Loader2, Bell, BellOff, LogOut } from "lucide-react";
+import { staggerContainer, fadeInUp, cardHover } from '@/lib/animations';
+import { SkeletonGrid } from './ui/skeleton-card';
+import { NavBar } from './ui/nav-bar';
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { watchlistService, WatchlistItem } from '@/services/watchlistService';
 import { showService, Show } from '@/services/showService';
 import { notificationService } from '@/services/notificationService';
@@ -40,13 +44,36 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [showModalOverview, setShowModalOverview] = useState<boolean>(false);
   const [notificationToggles, setNotificationToggles] = useState<Record<string, boolean>>({});
   const [togglingNotification, setTogglingNotification] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'watching' | 'completed' | 'want_to_watch'>('all');
 
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     loadWatchlist();
   }, []);
+
+  // Handle deep links from digest email CTAs
+  useEffect(() => {
+    if (!watchlist.length || loading) return;
+
+    const showId = searchParams.get('showId');
+    const action = searchParams.get('action');
+
+    if (showId) {
+      // Find and scroll to the show card
+      const element = document.getElementById(`show-${showId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+        // Remove highlight after a few seconds
+        setTimeout(() => {
+          element.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+        }, 3000);
+      }
+    }
+  }, [watchlist, loading, searchParams]);
 
   const loadWatchlist = async () => {
     setLoading(true);
@@ -97,7 +124,16 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     try {
       await watchlistService.updateShowStatus(showId, { status: newStatus as any });
       toast.success('Status updated successfully');
-      loadWatchlist(); // Reload to get updated data
+      setWatchlist(prev =>
+        prev.map(item =>
+          item.show_id === showId
+            ? {
+                ...item,
+                watch_status: newStatus as any
+              }
+            : item
+        )
+      );
     } catch (error: any) {
       console.error('Error updating status:', error);
       toast.error(error.message || 'Failed to update status');
@@ -343,6 +379,11 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   const watchingShows = watchlist.filter(item => item.watch_status === 'watching');
   const completedShows = watchlist.filter(item => item.watch_status === 'completed');
   const planToWatchShows = watchlist.filter(item => item.watch_status === 'want_to_watch');
+  const filteredAllShows = activeFilter === 'completed'
+    ? completedShows
+    : activeFilter === 'want_to_watch'
+      ? planToWatchShows
+      : watchlist;
 
   const calculateProgress = (current: number, total: number) => {
     return Math.round((current / total) * 100);
@@ -378,32 +419,37 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   if (loading) {
     return (
       <div className="min-h-screen text-foreground">
-        <div className="border-b border-border bg-card/50">
-          <div className="container mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Skeleton className="h-8 w-20 mr-4" />
-                <Skeleton className="h-8 w-32" />
-              </div>
-              <div className="flex items-center space-x-4">
-                <Skeleton className="h-8 w-24" />
-                <Skeleton className="h-8 w-20" />
-              </div>
+        <NavBar
+          variant="authenticated"
+          pageTitle="My Watchlist"
+          actions={
+            <>
+              <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => router.push('/search')}>
+                <Search className="w-4 h-4" />
+                <span className="hidden sm:inline">Search Shows</span>
+              </Button>
+              <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => router.push('/settings')}>
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">Settings</span>
+              </Button>
+              <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => logout()}>
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </Button>
+            </>
+          }
+        />
+        <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
+          <div className="mb-8">
+            <div className="w-64 h-8 bg-muted rounded animate-pulse mb-4" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-24 bg-muted rounded-lg animate-pulse" />
+              ))}
             </div>
           </div>
-        </div>
-        <div className="container mx-auto px-6 py-8">
-          <Skeleton className="h-12 w-64 mb-8" />
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full" />
-            ))}
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <Skeleton key={i} className="aspect-[2/3] w-full" />
-            ))}
-          </div>
+          <div className="w-48 h-8 bg-muted rounded animate-pulse mb-4" />
+          <SkeletonGrid count={8} />
         </div>
       </div>
     );
@@ -411,89 +457,102 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
 
   return (
     <div className="min-h-screen text-foreground">
-      {/* Header */}
-      <div className="border-b border-border bg-card/50">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                className="text-primary hover:text-primary hover:bg-primary/10 mr-4"
-                onClick={() => router.push('/')}
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
-              <h1 className="text-2xl text-foreground">My Watchlist</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button 
-                variant="ghost" 
-                className="text-primary hover:text-primary hover:bg-primary/10"
-                onClick={() => router.push('/search')}
-              >
-                <Search className="w-4 h-4 mr-2" />
-                Search Shows
-              </Button>
-              <Button 
-                variant="ghost" 
-                className="text-primary hover:text-primary hover:bg-primary/10"
-                onClick={() => router.push('/settings')}
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <NavBar
+        variant="authenticated"
+        pageTitle="My Watchlist"
+        actions={
+          <>
+            <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => router.push('/search')}>
+              <Search className="w-4 h-4" />
+              <span className="hidden sm:inline">Search Shows</span>
+            </Button>
+            <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => router.push('/settings')}>
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">Settings</span>
+            </Button>
+            <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => logout()}>
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
+          </>
+        }
+      />
 
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* User Stats */}
         <div className="mb-8">
-          <h2 className="text-3xl mb-4 text-foreground">
+          <h2 className="text-xl sm:text-2xl md:text-3xl mb-4 text-foreground">
             Welcome back, {user?.name || 'User'}! 👋
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="bg-card border-border shadow-lg">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl mb-1 text-primary">{watchlist.length}</div>
-                <div className="text-muted-foreground">Total Shows</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-green-50 border-green-200 shadow-lg">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl mb-1 text-green-700">{watchingShows.length}</div>
-                <div className="text-green-600">Currently Watching</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-blue-50 border-blue-200 shadow-lg">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl mb-1 text-blue-700">{completedShows.length}</div>
-                <div className="text-blue-600">Completed</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-yellow-50 border-yellow-200 shadow-lg">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl mb-1 text-yellow-700">{planToWatchShows.length}</div>
-                <div className="text-yellow-600">Plan to Watch</div>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            <button
+              type="button"
+              onClick={() => setActiveFilter('all')}
+              className="text-left"
+            >
+              <Card className={`border-border shadow-lg transition-colors ${activeFilter === 'all' ? 'bg-primary/10 border-primary' : 'bg-card hover:border-primary'}`}>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl mb-1 text-primary">{watchlist.length}</div>
+                  <div className="text-muted-foreground">Total Shows</div>
+                </CardContent>
+              </Card>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFilter('watching')}
+              className="text-left"
+            >
+              <Card className={`border-green-200 shadow-lg transition-colors ${activeFilter === 'watching' ? 'bg-green-100 border-green-400' : 'bg-green-50 hover:border-green-300'}`}>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl mb-1 text-green-700">{watchingShows.length}</div>
+                  <div className="text-green-600">Currently Watching</div>
+                </CardContent>
+              </Card>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFilter('completed')}
+              className="text-left"
+            >
+              <Card className={`border-blue-200 shadow-lg transition-colors ${activeFilter === 'completed' ? 'bg-blue-100 border-blue-400' : 'bg-blue-50 hover:border-blue-300'}`}>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl mb-1 text-blue-700">{completedShows.length}</div>
+                  <div className="text-blue-600">Completed</div>
+                </CardContent>
+              </Card>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFilter('want_to_watch')}
+              className="text-left"
+            >
+              <Card className={`border-yellow-200 shadow-lg transition-colors ${activeFilter === 'want_to_watch' ? 'bg-yellow-100 border-yellow-400' : 'bg-yellow-50 hover:border-yellow-300'}`}>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl mb-1 text-yellow-700">{planToWatchShows.length}</div>
+                  <div className="text-yellow-600">Plan to Watch</div>
+                </CardContent>
+              </Card>
+            </button>
           </div>
         </div>
 
         {/* Currently Watching */}
-        {watchingShows.length > 0 && (
+        {(activeFilter === 'all' || activeFilter === 'watching') && watchingShows.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-2xl mb-4 text-foreground">Currently Watching</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <h3 className="text-xl sm:text-2xl mb-4 text-foreground">Currently Watching</h3>
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6"
+              variants={staggerContainer}
+              initial="hidden"
+              animate="show"
+            >
               {watchingShows.map(item => (
-                <Card key={item.id} className="bg-card border-border hover:border-primary transition-colors shadow-lg h-auto">
-                  <CardContent className="p-4">
-                    <div className="flex gap-4">
-                      <div 
-                        className="w-24 flex-shrink-0 cursor-pointer group"
+                <motion.div key={item.id} variants={fadeInUp} {...cardHover}>
+                <Card id={`show-${item.show_id}`} className="bg-card border-border hover:border-primary transition-colors shadow-lg h-auto">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex gap-3 sm:gap-4">
+                      <div
+                        className="w-20 sm:w-24 flex-shrink-0 cursor-pointer group"
                         onClick={() => handleShowClick(item, false)}
                       >
                         <div className="aspect-[2/3] rounded-lg overflow-hidden bg-muted relative">
@@ -516,8 +575,8 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                         </h4>
                         <div className="space-y-3 flex-1">
                           <StatusBadge status={item.watch_status} />
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm text-muted-foreground whitespace-nowrap">Season</span>
+                          <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                            <span className="text-sm text-muted-foreground whitespace-nowrap"><span className="sm:hidden">S</span><span className="hidden sm:inline">Season</span></span>
                             <Select
                               value={(item.current_season || 1).toString()}
                               onValueChange={(value) => handleSeasonChange(item, parseInt(value))}
@@ -528,7 +587,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                               }}
                               disabled={savingProgress[item.show_id] || (seasonDataCache[item.show_id]?.loading)}
                             >
-                              <SelectTrigger className="w-20 h-8 text-sm">
+                              <SelectTrigger className="w-16 sm:w-20 h-9 sm:h-8 text-sm">
                                 {seasonDataCache[item.show_id]?.loading ? (
                                   <Loader2 className="w-3 h-3 animate-spin" />
                                 ) : (
@@ -562,7 +621,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                                 })()}
                               </SelectContent>
                             </Select>
-                            <span className="text-sm text-muted-foreground whitespace-nowrap">Episode</span>
+                            <span className="text-sm text-muted-foreground whitespace-nowrap"><span className="sm:hidden">E</span><span className="hidden sm:inline">Episode</span></span>
                             <Select
                               value={(item.current_episode || 1).toString()}
                               onValueChange={(value) => handleEpisodeChange(item, parseInt(value))}
@@ -581,7 +640,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                               }}
                               disabled={savingProgress[item.show_id] || (seasonDataCache[item.show_id]?.loading)}
                             >
-                              <SelectTrigger className="w-20 h-8 text-sm">
+                              <SelectTrigger className="w-16 sm:w-20 h-9 sm:h-8 text-sm">
                                 {savingProgress[item.show_id] ? (
                                   <Loader2 className="w-3 h-3 animate-spin" />
                                 ) : (
@@ -636,7 +695,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                               onValueChange={(newStatus) => handleStatusUpdate(item.show_id, newStatus)}
                               disabled={updatingStatus === item.show_id}
                             >
-                              <SelectTrigger className="w-28 h-8 text-sm">
+                              <SelectTrigger className="w-24 sm:w-28 h-9 sm:h-8 text-sm">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -649,7 +708,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-8 text-sm hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                              className="h-9 sm:h-8 text-sm hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                               onClick={() => handleRemoveFromWatchlist(item.show_id, item.shows.title)}
                             >
                               Remove
@@ -669,7 +728,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                               checked={notificationToggles[item.show_id] ?? true}
                               onCheckedChange={(checked) => handleNotificationToggle(item.show_id, checked)}
                               disabled={togglingNotification === item.show_id}
-                              className="scale-75"
+                              className=""
                             />
                           </div>
                         </div>
@@ -677,19 +736,29 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                     </div>
                   </CardContent>
                 </Card>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
         )}
 
         {/* All Shows */}
-        <div>
-          <h3 className="text-2xl mb-4 text-foreground">All Shows</h3>
-          {watchlist.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {watchlist.map(item => (
-                <Card key={item.id} className="bg-card border-border hover:border-primary transition-colors group cursor-pointer shadow-lg">
-                  <CardContent className="p-3">
+        {(activeFilter === 'all' || activeFilter === 'completed' || activeFilter === 'want_to_watch') && (
+          <div>
+            <h3 className="text-xl sm:text-2xl mb-4 text-foreground">
+              {activeFilter === 'completed' ? 'Completed' : activeFilter === 'want_to_watch' ? 'Plan to Watch' : 'All Shows'}
+            </h3>
+            {filteredAllShows.length > 0 ? (
+            <motion.div
+              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-4"
+              variants={staggerContainer}
+              initial="hidden"
+              animate="show"
+            >
+              {filteredAllShows.map(item => (
+                <motion.div key={item.id} variants={fadeInUp} {...cardHover}>
+                <Card id={`show-${item.show_id}`} className="bg-card border-border hover:border-primary transition-colors group cursor-pointer shadow-lg">
+                  <CardContent className="p-2 sm:p-3">
                     <div 
                       className="aspect-[2/3] mb-3 rounded-lg overflow-hidden bg-muted relative cursor-pointer"
                       onClick={() => handleShowClick(item, true)}
@@ -721,7 +790,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                           onValueChange={(newStatus) => handleStatusUpdate(item.show_id, newStatus)}
                           disabled={updatingStatus === item.show_id}
                         >
-                          <SelectTrigger className="w-full h-7 text-xs">
+                          <SelectTrigger className="w-full h-9 sm:h-7 text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -734,29 +803,47 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-xs px-2 py-1 h-auto w-full hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                          className="text-xs px-2 py-2 sm:py-1 h-auto w-full hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                           onClick={() => handleRemoveFromWatchlist(item.show_id, item.shows.title)}
                         >
                           Remove
                         </Button>
                       </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
+                        <div className="flex items-center gap-2">
+                          {notificationToggles[item.show_id] ? (
+                            <Bell className="w-4 h-4 text-primary" />
+                          ) : (
+                            <BellOff className="w-4 h-4 text-muted-foreground" />
+                          )}
+                          <span className="text-xs text-muted-foreground">Notifications</span>
+                        </div>
+                        <Switch
+                          checked={notificationToggles[item.show_id] ?? true}
+                          onCheckedChange={(checked) => handleNotificationToggle(item.show_id, checked)}
+                          disabled={togglingNotification === item.show_id}
+                          className=""
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           ) : (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground text-lg mb-4">
-                Your watchlist is empty. Start adding shows!
-              </p>
-              <Button onClick={() => router.push('/search')}>
-                <Search className="w-4 h-4 mr-2" />
-                Search Shows
-              </Button>
-            </div>
-          )}
-        </div>
+              <div className="text-center py-12">
+                <p className="text-muted-foreground text-lg mb-4">
+                  Your watchlist is empty. Start adding shows!
+                </p>
+                <Button onClick={() => router.push('/search')}>
+                  <Search className="w-4 h-4 mr-2" />
+                  Search Shows
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       
       {/* Show Details Modal */}

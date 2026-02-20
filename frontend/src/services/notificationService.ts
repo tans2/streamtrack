@@ -6,6 +6,8 @@ export interface NotificationPreferences {
   seasonPremieres: boolean;
   friendActivity: boolean;
   weeklyDigest: boolean;
+  upcomingReleases: boolean;
+  pauseAll: boolean;
 }
 
 export interface NotificationPreferencesResponse {
@@ -73,7 +75,12 @@ class NotificationService {
   async verifyEmail(token: string): Promise<{ message: string }> {
     try {
       const response = await apiClient.get(buildApiUrl(`notifications/verify/${token}`));
-      return handleApiResponse<{ message: string }>(response);
+      if (response.data?.success) {
+        return {
+          message: response.data.message || 'Your email has been verified successfully!'
+        };
+      }
+      throw new Error(response.data?.error || 'Failed to verify email');
     } catch (error) {
       throw new Error(handleApiError(error as AxiosError));
     }

@@ -1,7 +1,7 @@
 import express from 'express';
 import crypto from 'crypto';
 import { authenticateToken } from './auth';
-import { DatabaseService } from '../services/database';
+import { DatabaseService, supabase } from '../services/database';
 import { EmailService } from '../services/email';
 import { NotificationService } from '../services/notification';
 
@@ -45,7 +45,7 @@ router.get('/preferences', authenticateToken, async (req: any, res) => {
 router.put('/preferences', authenticateToken, async (req: any, res) => {
   try {
     const userId = req.user.id;
-    const { newEpisodes, seasonPremieres, friendActivity, weeklyDigest } = req.body;
+    const { newEpisodes, seasonPremieres, friendActivity, weeklyDigest, upcomingReleases, pauseAll } = req.body;
 
     // Build preferences object from provided values
     const preferences: any = {};
@@ -53,6 +53,8 @@ router.put('/preferences', authenticateToken, async (req: any, res) => {
     if (seasonPremieres !== undefined) preferences.seasonPremieres = seasonPremieres;
     if (friendActivity !== undefined) preferences.friendActivity = friendActivity;
     if (weeklyDigest !== undefined) preferences.weeklyDigest = weeklyDigest;
+    if (upcomingReleases !== undefined) preferences.upcomingReleases = upcomingReleases;
+    if (pauseAll !== undefined) preferences.pauseAll = pauseAll;
 
     // Import AuthService to update preferences
     const { AuthService } = await import('../services/auth');
@@ -150,7 +152,13 @@ router.post('/verify-email', authenticateToken, async (req: any, res) => {
     const token = crypto.randomBytes(32).toString('hex');
 
     // Save token to database
-    await DatabaseService.setEmailVerificationToken(userId, token);
+    const saved = await DatabaseService.setEmailVerificationToken(userId, token);
+    if (!saved) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to save verification token. Please try again.'
+      });
+    }
 
     // Send verification email
     const result = await EmailService.sendVerificationEmail(userEmail, userName, token);
@@ -247,7 +255,7 @@ router.post('/poll', async (req, res) => {
     const batchSize = Math.min(parseInt(req.query.batch as string) || 30, 50);
 
     console.log('Manual poll trigger: polling episodes...');
-    const results = await NotificationService.pollAndNotify(batchSize);
+    const results = await NotificationService.pollAndDetect(batchSize);
 
     res.json({
       success: true,
@@ -286,6 +294,200 @@ router.post('/check-show/:showId', authenticateToken, async (req: any, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to check show for new episodes'
+    });
+  }
+});
+
+// Debug: Get pending notification events (admin only)
+router.get('/debug/pending-events', async (req, res) => {
+  try {
+    const cronSecret = process.env.CRON_SECRET;
+    const authHeader = req.headers.authorization;
+
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized'
+      });
+    }
+
+    const { data: events, error } = await supabase
+      .from('pending_notification_events')
+      .select(`
+        *,
+        users!inner (email, name)
+      `)
+      .is('processed_at', null)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) {
+      return res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+
+    res.json({
+      success: true,
+      count: events?.length || 0,
+      data: events
+    });
+  } catch (error: any) {
+    console.error('Error getting pending events:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get pending events'
+    });
+  }
+});
+
+// Debug: Poll a specific show by TMDB ID (admin only)
+router.post('/debug/poll-show', async (req, res) => {
+  try {
+    const cronSecret = process.env.CRON_SECRET;
+    const authHeader = req.headers.authorization;
+
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized'
+      });
+    }
+
+    const { tmdbId } = req.body;
+    if (!tmdbId) {
+      return res.status(400).json({
+        success: false,
+        error: 'tmdbId is required'
+      });
+    }
+
+    // Get show from database
+    const show = await DatabaseService.getShowByTmdbId(tmdbId);
+    if (!show) {
+      return res.status(404).json({
+        success: false,
+        error: 'Show not found in database'
+      });
+    }
+
+    // Get poll status
+    const { data: pollStatus } = await supabase
+      .from('episode_poll_status')
+      .select('*')
+      .eq('show_id', show.id)
+      .single();
+
+    // Detect new episodes
+    const detection = await NotificationService.checkShowForNewEpisodes(show.id, tmdbId);
+
+    // Queue events if new episodes found
+    let queuedCount = 0;
+    if (detection && detection.newEpisodes.length > 0) {
+      queuedCount = await NotificationService.queueEventsForShow(detection);
+    }
+
+    // Update poll status
+    if (detection && detection.newEpisodes.length > 0) {
+      const latestEpisode = detection.newEpisodes[detection.newEpisodes.length - 1];
+      await DatabaseService.updatePollStatus(
+        show.id,
+        latestEpisode.season_number,
+        latestEpisode.episode_number
+      );
+    }
+
+    res.json({
+      success: true,
+      data: {
+        show: { id: show.id, title: show.title, tmdb_id: show.tmdb_id },
+        pollStatus: pollStatus || 'not initialized',
+        detection: detection ? {
+          newEpisodes: detection.newEpisodes,
+          isNewSeason: detection.isNewSeason,
+          nextEpisodeToAir: detection.nextEpisodeToAir
+        } : null,
+        eventsQueued: queuedCount
+      }
+    });
+  } catch (error: any) {
+    console.error('Error in debug poll-show:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to poll show'
+    });
+  }
+});
+
+// Debug: Clean up future episodes from cache (admin only)
+router.post('/debug/cleanup-cache', async (req, res) => {
+  try {
+    const cronSecret = process.env.CRON_SECRET;
+    const authHeader = req.headers.authorization;
+
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized'
+      });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // Delete future episodes from cache
+    const { data, error } = await supabase
+      .from('episode_cache')
+      .delete()
+      .gt('air_date', today)
+      .select();
+
+    if (error) {
+      return res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Deleted ${data?.length || 0} future episodes from cache`,
+      deleted: data
+    });
+  } catch (error: any) {
+    console.error('Error cleaning up cache:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to clean up cache'
+    });
+  }
+});
+
+// Manual trigger for sending daily digests (admin/cron only)
+router.post('/send-digests', async (req, res) => {
+  try {
+    const cronSecret = process.env.CRON_SECRET;
+    const authHeader = req.headers.authorization;
+
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized'
+      });
+    }
+
+    console.log('Manual digest trigger: sending daily digests...');
+    const results = await NotificationService.sendDailyDigests();
+
+    res.json({
+      success: true,
+      data: results
+    });
+  } catch (error: any) {
+    console.error('Error in manual digest send:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send daily digests'
     });
   }
 });

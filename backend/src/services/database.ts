@@ -637,15 +637,14 @@ export class DatabaseService {
       }
 
       if (user.email_verified) {
-        return { success: true, message: 'Email already verified', user };
+        return { success: true, message: 'You can now receive email notifications from Scout', user };
       }
 
-      // Update user as verified
+      // Update user as verified (keep token so re-clicks still work)
       const { data, error } = await supabase
         .from('users')
         .update({
-          email_verified: true,
-          email_verification_token: null
+          email_verified: true
         })
         .eq('id', user.id)
         .select()
@@ -653,7 +652,7 @@ export class DatabaseService {
 
       if (error) throw error;
 
-      return { success: true, message: 'Email verified successfully', user: data };
+      return { success: true, message: 'You can now receive email notifications from Scout', user: data };
     } catch (error) {
       console.error('Error verifying email:', error);
       return { success: false, error: 'Failed to verify email' };
@@ -860,7 +859,54 @@ export class DatabaseService {
     }
   }
 
-  // ===== DAILY DIGEST METHODS =====
+  // Check if user exists by email (for forgot password - don't reveal if exists)
+  static async getUserByEmail(email: string) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, name')
+        .eq('email', email)
+        .single();
+
+      if (error) return null;
+      return data;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // ----- Daily Digest Methods -----
+
+  // Insert a single pending notification event (ON CONFLICT DO NOTHING)
+  static async insertPendingEvent(event: {
+    user_id: string;
+    show_id: string;
+    event_type: string;
+    season_number?: number;
+    episode_number?: number;
+    episode_title?: string;
+    air_date?: string;
+    poster_path?: string;
+    show_title: string;
+    providers?: string;
+  }) {
+    try {
+      const { data, error } = await supabase
+        .from('pending_notification_events')
+        .upsert(event, {
+          onConflict: 'user_id,show_id,event_type,season_number,episode_number',
+          ignoreDuplicates: true
+        })
+        .select()
+        .single();
+
+      if (error && error.code !== '23505') throw error; // Ignore unique constraint violations
+      return data;
+    } catch (error) {
+      console.error('Error inserting pending event:', error);
+      return null;
+    }
+  }
 
   // Batch insert pending notification events
   static async bulkInsertPendingEvents(events: Array<{
@@ -873,6 +919,7 @@ export class DatabaseService {
     air_date?: string;
     poster_path?: string;
     show_title: string;
+    providers?: string;
   }>) {
     try {
       if (events.length === 0) return { inserted: 0 };
@@ -939,7 +986,7 @@ export class DatabaseService {
     }
   }
 
-  // Mark events as processed after sending digest
+  // Mark pending events as processed
   static async markEventsProcessed(eventIds: string[], digestId: string) {
     try {
       if (eventIds.length === 0) return true;
@@ -960,7 +1007,7 @@ export class DatabaseService {
     }
   }
 
-  // Log a sent digest email
+  // Log a digest email sent to a user
   static async logDigest(userId: string, digestDate: string, eventCount: number, resendMessageId?: string) {
     try {
       const { data, error } = await supabase
@@ -984,7 +1031,7 @@ export class DatabaseService {
     }
   }
 
-  // Check if a digest has already been sent to a user today
+  // Check if a digest has already been sent to a user for a given date
   static async hasDigestBeenSent(userId: string, digestDate: string) {
     try {
       const { data, error } = await supabase
@@ -1001,19 +1048,31 @@ export class DatabaseService {
     }
   }
 
-  // Check if user exists by email (for forgot password - don't reveal if exists)
-  static async getUserByEmail(email: string) {
+  // Get upcoming episodes from episode_cache (air_date within next N days, not yet aired)
+  static async getUpcomingEpisodes(daysAhead: number = 14) {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, email, name')
-        .eq('email', email)
-        .single();
+      const now = new Date();
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + daysAhead);
 
-      if (error) return null;
-      return data;
+      const todayStr = now.toISOString().split('T')[0];
+      const futureStr = futureDate.toISOString().split('T')[0];
+
+      const { data, error } = await supabase
+        .from('episode_cache')
+        .select(`
+          *,
+          shows (id, title, poster_path, tmdb_id)
+        `)
+        .gt('air_date', todayStr)
+        .lte('air_date', futureStr)
+        .order('air_date', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
     } catch (error) {
-      return null;
+      console.error('Error fetching upcoming episodes:', error);
+      return [];
     }
   }
 }
