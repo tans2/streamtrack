@@ -60,6 +60,8 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
 
     const showId = searchParams.get('showId');
     const action = searchParams.get('action');
+    const season = searchParams.get('season');
+    const episode = searchParams.get('episode');
 
     if (showId) {
       // Find and scroll to the show card
@@ -67,10 +69,26 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         element.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
-        // Remove highlight after a few seconds
         setTimeout(() => {
           element.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
         }, 3000);
+      }
+
+      // Auto-update episode progress when action=update with season/episode
+      if (action === 'update' && season && episode) {
+        const seasonNum = parseInt(season, 10);
+        const episodeNum = parseInt(episode, 10);
+        const item = watchlist.find(w => w.show_id === showId);
+        if (item && !isNaN(seasonNum) && !isNaN(episodeNum)) {
+          // Only update if the deep link episode is ahead of current progress
+          const isAhead = seasonNum > (item.current_season || 1) ||
+            (seasonNum === (item.current_season || 1) && episodeNum > (item.current_episode || 1));
+          if (isAhead) {
+            handleProgressUpdate(item, seasonNum, episodeNum);
+          }
+        }
+        // Clear the query params to prevent re-triggering
+        router.replace('/profile', { scroll: false });
       }
     }
   }, [watchlist, loading, searchParams]);
