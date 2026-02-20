@@ -538,7 +538,19 @@ export class NotificationService {
           }
 
           const newEpisodes = Array.from(showMap.values()).map(show => {
+            // Deduplicate episodes (same episode can come from new_episode + moved upcoming_release)
+            const seen = new Set<string>();
+            show.episodes = show.episodes.filter(ep => {
+              const key = `${ep.seasonNumber}-${ep.episodeNumber}`;
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
+
             show.episodes.sort((a, b) => a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber);
+
+            // Track latest episode for "Update Status" link
+            const latest = show.episodes[show.episodes.length - 1];
 
             // Group by season, then find consecutive ranges
             const seasonGroups = new Map<number, number[]>();
@@ -550,14 +562,16 @@ export class NotificationService {
             const parts: string[] = [];
             for (const [season, eps] of seasonGroups) {
               eps.sort((a, b) => a - b);
+              // Deduplicate within season (safety net)
+              const unique = [...new Set(eps)];
               const ranges: string[] = [];
-              let start = eps[0], end = eps[0];
-              for (let i = 1; i < eps.length; i++) {
-                if (eps[i] === end + 1) {
-                  end = eps[i];
+              let start = unique[0], end = unique[0];
+              for (let i = 1; i < unique.length; i++) {
+                if (unique[i] === end + 1) {
+                  end = unique[i];
                 } else {
                   ranges.push(start === end ? `E${start}` : `E${start}-${end}`);
-                  start = end = eps[i];
+                  start = end = unique[i];
                 }
               }
               ranges.push(start === end ? `E${start}` : `E${start}-${end}`);
@@ -569,7 +583,9 @@ export class NotificationService {
               posterPath: show.posterPath,
               showId: show.showId,
               providers: show.providers,
-              episodeSummary: parts.join(', ')
+              episodeSummary: parts.join(', '),
+              latestSeason: latest.seasonNumber,
+              latestEpisode: latest.episodeNumber
             };
           });
 
