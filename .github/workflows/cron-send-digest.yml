@@ -22,6 +22,13 @@ jobs:
             echo "CRON_SECRET is not set"
             exit 1
           fi
-          curl -sS -X POST \
+          response=$(curl -sSL -w "\n%{http_code}" -X POST \
             -H "Authorization: Bearer ${CRON_SECRET}" \
-            "${BACKEND_DIGEST_CRON_URL}"
+            "${BACKEND_DIGEST_CRON_URL}")
+          http_code=$(echo "$response" | tail -1)
+          body=$(echo "$response" | sed '$d')
+          echo "Response ($http_code): $body"
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Digest endpoint returned HTTP $http_code"
+            exit 1
+          fi
