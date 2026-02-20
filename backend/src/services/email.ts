@@ -391,6 +391,8 @@ If you didn't request a password reset, you can safely ignore this email. Your p
         showId: string;
         providers?: string | null;
         episodeSummary: string;
+        latestSeason: number;
+        latestEpisode: number;
       }>;
       newSeasons: Array<{
         showTitle: string;
@@ -439,6 +441,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
         <h3 style="color: #CC5500; margin: 0 0 15px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #CC5500; padding-bottom: 8px;">New Episodes</h3>
         ${newEpisodes.map(ep => {
           const posterImage = ep.posterPath ? `https://image.tmdb.org/t/p/w200${ep.posterPath}` : null;
+          const updateUrl = `${FRONTEND_URL}/profile?action=update&showId=${ep.showId}&season=${ep.latestSeason}&episode=${ep.latestEpisode}`;
           const viewUrl = `${FRONTEND_URL}/profile?showId=${ep.showId}`;
           const platformInfo = ep.providers ? `<p style="margin: 0 0 8px 0; font-size: 12px; color: #888;">Available on: ${ep.providers}</p>` : '';
 
@@ -455,7 +458,8 @@ If you didn't request a password reset, you can safely ignore this email. Your p
                   <p style="margin: 0 0 4px 0; font-size: 14px; color: #666;">${ep.episodeSummary}</p>
                   ${platformInfo}
                   <div>
-                    <a href="${viewUrl}" style="background: #CC5500; color: white; padding: 6px 16px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: 500; display: inline-block; margin-right: 8px;">View Show</a>
+                    <a href="${updateUrl}" style="background: #CC5500; color: white; padding: 6px 16px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: 500; display: inline-block; margin-right: 8px;">Update Status</a>
+                    <a href="${viewUrl}" style="color: #CC5500; text-decoration: none; font-size: 13px; font-weight: 500;">View Show</a>
                   </div>
                 </td>
               </tr>
