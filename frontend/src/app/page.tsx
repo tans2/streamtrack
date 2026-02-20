@@ -71,8 +71,13 @@ export default function HomePage() {
             initial="hidden"
             animate="show"
           >
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight">
-              <span className="text-foreground">Welcome to </span>
+            <img
+              src="/logo.png"
+              alt=""
+              className="w-24 h-24 sm:w-28 sm:h-28 mb-4 sm:mb-5"
+            />
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight">
+              <span className="text-foreground">Meet </span>
               <span className="text-primary">Scout</span>
               <br />
               <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -167,7 +172,7 @@ export default function HomePage() {
             {streamingPlatforms.map((platform) => (
               <motion.div
                 key={platform.name}
-                className="flex items-center justify-center bg-card px-4 py-2 rounded-lg shadow-sm border border-border"
+                className="flex items-center justify-center px-4 py-2"
                 title={platform.name}
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400, damping: 17 }}
@@ -182,6 +187,15 @@ export default function HomePage() {
             ))}
           </div>
         </motion.div>
+
+        {/* Footer */}
+        <footer className="mt-16 sm:mt-24 pt-8 border-t border-border text-center pb-4">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <img src="/logo.png" alt="Scout" className="w-6 h-6" />
+            <span className="text-sm font-semibold text-foreground">Scout</span>
+          </div>
+          <p className="text-xs text-muted-foreground">Track Your Shows</p>
+        </footer>
       </div>
     </div>
   );
