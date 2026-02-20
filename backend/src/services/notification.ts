@@ -482,18 +482,96 @@ export class NotificationService {
           const events = await DatabaseService.getPendingEventsForUser((user as any).id);
           if (events.length === 0) continue;
 
-          // Group events by type
-          const newEpisodes = events
+          // Collect raw episode events (new_episode + aired upcoming_release)
+          const now = new Date();
+          now.setHours(0, 0, 0, 0);
+
+          const rawEpisodes = events
             .filter(e => e.event_type === 'new_episode')
             .map(e => ({
               showTitle: e.show_title,
               posterPath: e.poster_path,
               seasonNumber: e.season_number,
               episodeNumber: e.episode_number,
-              episodeTitle: e.episode_title,
               showId: e.show_id,
               providers: e.providers
             }));
+
+          // Move already-aired upcoming_release events into episodes
+          for (const e of events.filter(e => e.event_type === 'upcoming_release')) {
+            const airDate = e.air_date ? new Date(e.air_date) : null;
+            if (airDate && airDate <= now) {
+              rawEpisodes.push({
+                showTitle: e.show_title,
+                posterPath: e.poster_path,
+                seasonNumber: e.season_number,
+                episodeNumber: e.episode_number,
+                showId: e.show_id,
+                providers: e.providers
+              });
+            }
+          }
+
+          // Group episodes by show and build summary (e.g. "S2 E7-9")
+          const showMap = new Map<string, {
+            showTitle: string;
+            posterPath: string | null;
+            showId: string;
+            providers?: string | null;
+            episodes: Array<{ seasonNumber: number; episodeNumber: number }>;
+          }>();
+
+          for (const ep of rawEpisodes) {
+            if (!showMap.has(ep.showId)) {
+              showMap.set(ep.showId, {
+                showTitle: ep.showTitle,
+                posterPath: ep.posterPath,
+                showId: ep.showId,
+                providers: ep.providers,
+                episodes: []
+              });
+            }
+            showMap.get(ep.showId)!.episodes.push({
+              seasonNumber: ep.seasonNumber,
+              episodeNumber: ep.episodeNumber
+            });
+          }
+
+          const newEpisodes = Array.from(showMap.values()).map(show => {
+            show.episodes.sort((a, b) => a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber);
+
+            // Group by season, then find consecutive ranges
+            const seasonGroups = new Map<number, number[]>();
+            for (const ep of show.episodes) {
+              if (!seasonGroups.has(ep.seasonNumber)) seasonGroups.set(ep.seasonNumber, []);
+              seasonGroups.get(ep.seasonNumber)!.push(ep.episodeNumber);
+            }
+
+            const parts: string[] = [];
+            for (const [season, eps] of seasonGroups) {
+              eps.sort((a, b) => a - b);
+              const ranges: string[] = [];
+              let start = eps[0], end = eps[0];
+              for (let i = 1; i < eps.length; i++) {
+                if (eps[i] === end + 1) {
+                  end = eps[i];
+                } else {
+                  ranges.push(start === end ? `E${start}` : `E${start}-${end}`);
+                  start = end = eps[i];
+                }
+              }
+              ranges.push(start === end ? `E${start}` : `E${start}-${end}`);
+              parts.push(`S${season} ${ranges.join(', ')}`);
+            }
+
+            return {
+              showTitle: show.showTitle,
+              posterPath: show.posterPath,
+              showId: show.showId,
+              providers: show.providers,
+              episodeSummary: parts.join(', ')
+            };
+          });
 
           const newSeasons = events
             .filter(e => e.event_type === 'season_premiere' || e.event_type === 'show_premiere')
@@ -507,7 +585,11 @@ export class NotificationService {
             }));
 
           const upcomingReleases = events
-            .filter(e => e.event_type === 'upcoming_release')
+            .filter(e => {
+              if (e.event_type !== 'upcoming_release') return false;
+              const airDate = e.air_date ? new Date(e.air_date) : null;
+              return airDate && airDate > now;
+            })
             .map(e => ({
               showTitle: e.show_title,
               posterPath: e.poster_path,
