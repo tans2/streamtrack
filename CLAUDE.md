@@ -83,6 +83,26 @@ EMAIL_FROM=Scout <onboarding@resend.dev>
 - Shows up to 3 platforms (e.g., "Netflix, Hulu, Max")
 - Stored in `pending_notification_events.providers` column
 
+**Episode Grouping:**
+- Multiple episodes of the same show are consolidated into a single entry per show
+- Uses range notation for consecutive episodes (e.g., "S2 E7-9" instead of listing each separately)
+- Non-consecutive episodes shown individually (e.g., "S2 E1, E3, E5")
+- Deduplication: same episode from both `new_episode` and moved `upcoming_release` events is deduplicated before building ranges
+
+**"Update Status" Deep Link:**
+- Each show in the digest has an "Update Status" button linking to `/profile?action=update&showId=X&season=S&episode=E`
+- ProfilePage.tsx reads these params and auto-updates the user's watch progress via `watchlistService.updateShowStatus()`
+- Only updates if the linked episode is ahead of the user's current progress (prevents downgrading)
+- Query params are cleared after update to prevent re-triggering
+
+**Upcoming Release Air Date Check:**
+- `sendDailyDigests()` checks if `upcoming_release` events have already aired (air_date <= today)
+- Aired events are moved to the New Episodes section instead of Coming Up
+
+**Digest Email Branding:**
+- Email titled "Watchlist Digest" (not "Daily")
+- Scout logo displayed inline with "Scout" text in the email header (loaded from `${FRONTEND_URL}/logo.png`)
+
 **Bug Fix: Future Episode Caching (Feb 2025)**
 - **Issue**: Future episodes were cached on first poll, so when they aired they were already in cache and not detected as "new"
 - **Root cause**: Initial polling cached ALL episodes from TMDB regardless of air date
@@ -235,9 +255,11 @@ npx ts-node src/scripts/cleanup-cache.ts
 
 **Layout:**
 - NavBar (landing variant) with Explore Shows, My Watchlist, Sign In/Out
-- Two-column hero: bold gradient headline on left ("Welcome to Scout, your TV sidekick"), stacked feature cards on right
+- Hero logo (96px mobile, 112px desktop) above headline in left column
+- Two-column hero: "Meet Scout, your TV sidekick" headline on left (gradient text), stacked feature cards on right
 - Stacks vertically on mobile
-- Animated streaming platforms section with hover scale effects
+- Streaming platforms section with clean logos (no card/button styling), hover scale effects
+- Footer with Scout logo (24px) + "Scout" text + "Track Your Shows" tagline
 - CTA buttons only shown for unauthenticated users (nav handles authenticated navigation)
 
 **Animations Used:**
@@ -500,7 +522,7 @@ RESEND_API_KEY=re_xxxxxxxxxx
 CRON_SECRET=<random-secret>
 EMAIL_FROM=Scout <onboarding@resend.dev>
 
-# URLs
+# URLs (FRONTEND_URL must be set in Vercel for digest email links)
 FRONTEND_URL=http://localhost:3000
 CORS_ORIGIN=http://localhost:3000
 ```
