@@ -1075,6 +1075,334 @@ export class DatabaseService {
       return [];
     }
   }
+
+  // ===== WATCH GROUPS METHODS =====
+
+  // Create a new watch group and add creator as admin
+  static async createWatchGroup(params: {
+    showId: string;
+    name: string;
+    createdBy: string;
+    inviteCode: string;
+  }) {
+    try {
+      const { data: group, error: groupError } = await supabase
+        .from('watch_groups')
+        .insert({
+          show_id: params.showId,
+          name: params.name,
+          created_by: params.createdBy,
+          invite_code: params.inviteCode,
+        })
+        .select()
+        .single();
+
+      if (groupError) throw groupError;
+
+      // Add creator as admin member
+      const { error: memberError } = await supabase
+        .from('watch_group_members')
+        .insert({
+          group_id: group.id,
+          user_id: params.createdBy,
+          role: 'admin',
+        });
+
+      if (memberError) throw memberError;
+
+      return group;
+    } catch (error) {
+      console.error('Error creating watch group:', error);
+      return null;
+    }
+  }
+
+  // Get all groups for a user with show info and member count
+  static async getUserGroups(userId: string) {
+    try {
+      // Get group IDs the user belongs to
+      const { data: memberships, error: memberError } = await supabase
+        .from('watch_group_members')
+        .select('group_id')
+        .eq('user_id', userId);
+
+      if (memberError) throw memberError;
+      if (!memberships || memberships.length === 0) return [];
+
+      const groupIds = memberships.map((m: any) => m.group_id);
+
+      // Get groups with show info
+      const { data: groups, error: groupError } = await supabase
+        .from('watch_groups')
+        .select(`
+          *,
+          shows (id, tmdb_id, title, poster_path)
+        `)
+        .in('id', groupIds)
+        .order('created_at', { ascending: false });
+
+      if (groupError) throw groupError;
+
+      // Get member counts per group
+      const { data: memberCounts, error: countError } = await supabase
+        .from('watch_group_members')
+        .select('group_id')
+        .in('group_id', groupIds);
+
+      if (countError) throw countError;
+
+      const countMap = new Map<string, number>();
+      for (const m of memberCounts || []) {
+        countMap.set(m.group_id, (countMap.get(m.group_id) || 0) + 1);
+      }
+
+      return (groups || []).map((g: any) => ({
+        ...g,
+        member_count: countMap.get(g.id) || 0,
+      }));
+    } catch (error) {
+      console.error('Error fetching user groups:', error);
+      return [];
+    }
+  }
+
+  // Get group details with all member progress
+  static async getGroupDetails(groupId: string) {
+    try {
+      // Get group with show info
+      const { data: group, error: groupError } = await supabase
+        .from('watch_groups')
+        .select(`
+          *,
+          shows (id, tmdb_id, title, poster_path, status, genres, rating, number_of_seasons, number_of_episodes)
+        `)
+        .eq('id', groupId)
+        .single();
+
+      if (groupError) throw groupError;
+      if (!group) return null;
+
+      // Get members with user info
+      const { data: members, error: membersError } = await supabase
+        .from('watch_group_members')
+        .select(`
+          user_id,
+          role,
+          joined_at,
+          users (id, name, email)
+        `)
+        .eq('group_id', groupId)
+        .order('joined_at', { ascending: true });
+
+      if (membersError) throw membersError;
+
+      // Get each member's progress on this show
+      const memberUserIds = (members || []).map((m: any) => m.user_id);
+      const { data: progressData, error: progressError } = await supabase
+        .from('user_shows')
+        .select('user_id, current_season, current_episode, watch_status')
+        .eq('show_id', group.show_id)
+        .in('user_id', memberUserIds);
+
+      if (progressError) throw progressError;
+
+      const progressMap = new Map(
+        (progressData || []).map((p: any) => [p.user_id, p])
+      );
+
+      const enrichedMembers = (members || []).map((m: any) => ({
+        user_id: m.user_id,
+        name: (m.users as any)?.name || 'Unknown',
+        role: m.role,
+        joined_at: m.joined_at,
+        progress: progressMap.get(m.user_id) || {
+          current_season: 1,
+          current_episode: 1,
+          watch_status: 'want_to_watch',
+        },
+      }));
+
+      return {
+        ...group,
+        show: group.shows,
+        members: enrichedMembers,
+      };
+    } catch (error) {
+      console.error('Error fetching group details:', error);
+      return null;
+    }
+  }
+
+  // Get group by invite code
+  static async getGroupByInviteCode(inviteCode: string) {
+    try {
+      const { data, error } = await supabase
+        .from('watch_groups')
+        .select(`
+          *,
+          shows (id, tmdb_id, title, poster_path)
+        `)
+        .eq('invite_code', inviteCode)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error fetching group by invite code:', error);
+      return null;
+    }
+  }
+
+  // Check if user is a member of a group
+  static async isGroupMember(groupId: string, userId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('watch_group_members')
+        .select('id')
+        .eq('group_id', groupId)
+        .eq('user_id', userId)
+        .single();
+
+      if (error) return false;
+      return !!data;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Get a member's role in a group
+  static async getGroupMemberRole(groupId: string, userId: string): Promise<string | null> {
+    try {
+      const { data, error } = await supabase
+        .from('watch_group_members')
+        .select('role')
+        .eq('group_id', groupId)
+        .eq('user_id', userId)
+        .single();
+
+      if (error) return null;
+      return data?.role || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // Add a member to a group
+  static async addGroupMember(groupId: string, userId: string, role: string = 'member') {
+    try {
+      const { data, error } = await supabase
+        .from('watch_group_members')
+        .upsert({
+          group_id: groupId,
+          user_id: userId,
+          role,
+        }, { onConflict: 'group_id,user_id', ignoreDuplicates: true })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error adding group member:', error);
+      return null;
+    }
+  }
+
+  // Remove a member from a group
+  static async removeGroupMember(groupId: string, userId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('watch_group_members')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error removing group member:', error);
+      return false;
+    }
+  }
+
+  // Delete a watch group (cascades to members)
+  static async deleteWatchGroup(groupId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('watch_groups')
+        .delete()
+        .eq('id', groupId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting watch group:', error);
+      return false;
+    }
+  }
+
+  // Get groups for a specific show that a user belongs to
+  static async getUserGroupsForShow(userId: string, showId: string) {
+    try {
+      const { data: memberships, error: memberError } = await supabase
+        .from('watch_group_members')
+        .select('group_id')
+        .eq('user_id', userId);
+
+      if (memberError) throw memberError;
+      if (!memberships || memberships.length === 0) return [];
+
+      const groupIds = memberships.map((m: any) => m.group_id);
+
+      const { data, error } = await supabase
+        .from('watch_groups')
+        .select('id, name')
+        .in('id', groupIds)
+        .eq('show_id', showId);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching user groups for show:', error);
+      return [];
+    }
+  }
+
+  // Get group members to notify (excludes the triggering user)
+  static async getGroupMembersToNotify(groupId: string, excludeUserId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('watch_group_members')
+        .select(`
+          user_id,
+          users (id, name, email)
+        `)
+        .eq('group_id', groupId)
+        .neq('user_id', excludeUserId);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching group members to notify:', error);
+      return [];
+    }
+  }
+
+  // Get member count for a group
+  static async getGroupMemberCount(groupId: string): Promise<number> {
+    try {
+      const { count, error } = await supabase
+        .from('watch_group_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('group_id', groupId);
+
+      if (error) throw error;
+      return count || 0;
+    } catch (error) {
+      console.error('Error fetching group member count:', error);
+      return 0;
+    }
+  }
 }
 
 

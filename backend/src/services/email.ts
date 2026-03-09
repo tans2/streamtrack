@@ -410,6 +410,12 @@ If you didn't request a password reset, you can safely ignore this email. Your p
         showId: string;
         providers?: string | null;
       }>;
+      groupActivity?: Array<{
+        showTitle: string;
+        posterPath: string | null;
+        memberUpdate: string;
+        showId: string;
+      }>;
     }
   ): Promise<EmailResult> {
     if (!resend) {
@@ -417,8 +423,8 @@ If you didn't request a password reset, you can safely ignore this email. Your p
       return { success: false, error: 'Email service not configured' };
     }
 
-    const { newEpisodes, newSeasons, upcomingReleases } = digestData;
-    const totalUpdates = newEpisodes.length + newSeasons.length + upcomingReleases.length;
+    const { newEpisodes, newSeasons, upcomingReleases, groupActivity = [] } = digestData;
+    const totalUpdates = newEpisodes.length + newSeasons.length + upcomingReleases.length + groupActivity.length;
 
     if (totalUpdates === 0) {
       return { success: false, error: 'No events to include in digest' };
@@ -536,6 +542,35 @@ If you didn't request a password reset, you can safely ignore this email. Your p
       </div>
     ` : '';
 
+    // Build group activity section
+    const groupActivityHtml = groupActivity.length > 0 ? `
+      <div style="margin-bottom: 30px;">
+        <h3 style="color: #CC5500; margin: 0 0 15px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #CC5500; padding-bottom: 8px;">Watch Group Activity</h3>
+        ${groupActivity.map(activity => {
+          const posterImage = activity.posterPath ? `https://image.tmdb.org/t/p/w200${activity.posterPath}` : null;
+          const viewUrl = `${FRONTEND_URL}/profile?showId=${activity.showId}`;
+
+          return `
+            <table style="width: 100%; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 12px;">
+              <tr>
+                ${posterImage ? `
+                <td style="width: 40px; vertical-align: top; padding-right: 12px;">
+                  <img src="${posterImage}" alt="${activity.showTitle}" style="width: 40px; border-radius: 4px;">
+                </td>
+                ` : ''}
+                <td style="vertical-align: top;">
+                  <p style="margin: 0; font-size: 14px;">
+                    <a href="${viewUrl}" style="color: #333; text-decoration: none; font-weight: 600;">${activity.showTitle}</a>
+                  </p>
+                  <p style="margin: 2px 0 0 0; font-size: 13px; color: #666;">${activity.memberUpdate}</p>
+                </td>
+              </tr>
+            </table>
+          `;
+        }).join('')}
+      </div>
+    ` : '';
+
     // Build plaintext version
     const plaintext = [
       `Hey ${name}! Here's your watchlist update for ${today}.`,
@@ -563,6 +598,11 @@ If you didn't request a password reset, you can safely ignore this email. Your p
           const platform = u.providers ? ` on ${u.providers}` : '';
           return `${u.showTitle} - ${u.episodeInfo} (${dateStr}${platform})`;
         }),
+        ''
+      ] : []),
+      ...(groupActivity && groupActivity.length > 0 ? [
+        '--- WATCH GROUP ACTIVITY ---',
+        ...groupActivity.map(a => `${a.showTitle} - ${a.memberUpdate}`),
         ''
       ] : []),
       `View your watchlist: ${FRONTEND_URL}/profile`,
@@ -602,6 +642,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
               ${newEpisodesHtml}
               ${newSeasonsHtml}
               ${upcomingHtml}
+              ${groupActivityHtml}
 
               <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
                 <a href="${FRONTEND_URL}/profile" style="background: #CC5500; color: white; padding: 10px 28px; border-radius: 6px; text-decoration: none; font-weight: 500; display: inline-block; font-size: 14px;">

@@ -6,7 +6,7 @@ import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { Skeleton } from "./ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Settings, Search, Star, Play, Calendar, Loader2, Bell, BellOff, LogOut } from "lucide-react";
+import { Settings, Search, Star, Play, Calendar, Loader2, Bell, BellOff, LogOut, Users } from "lucide-react";
 import { staggerContainer, fadeInUp, cardHover } from '@/lib/animations';
 import { SkeletonGrid } from './ui/skeleton-card';
 import { NavBar } from './ui/nav-bar';
@@ -16,8 +16,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { watchlistService, WatchlistItem } from '@/services/watchlistService';
 import { showService, Show } from '@/services/showService';
 import { notificationService } from '@/services/notificationService';
+import { watchGroupService, WatchGroup } from '@/services/watchGroupService';
 import { toast } from 'sonner';
 import ShowDetailsModal from './ShowDetailsModal';
+import CreateGroupDialog from './CreateGroupDialog';
 import { Switch } from "./ui/switch";
 
 interface ProfilePageProps {
@@ -45,6 +47,8 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [notificationToggles, setNotificationToggles] = useState<Record<string, boolean>>({});
   const [togglingNotification, setTogglingNotification] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'watching' | 'completed' | 'want_to_watch'>('all');
+  const [myGroups, setMyGroups] = useState<WatchGroup[]>([]);
+  const [createGroupShow, setCreateGroupShow] = useState<WatchlistItem | null>(null);
 
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -52,6 +56,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
 
   useEffect(() => {
     loadWatchlist();
+    loadGroups();
   }, []);
 
   // Handle deep links from digest email CTAs
@@ -117,6 +122,15 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
       toast.error(error.message || 'Failed to load watchlist');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadGroups = async () => {
+    try {
+      const groups = await watchGroupService.getMyGroups();
+      setMyGroups(groups);
+    } catch (error) {
+      console.error('Error loading groups:', error);
     }
   };
 
@@ -554,6 +568,51 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
           </div>
         </div>
 
+        {/* My Watch Groups */}
+        {myGroups.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-xl sm:text-2xl mb-4 text-foreground">Watch Groups</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {myGroups.map(group => {
+                const posterUrl = group.shows?.poster_path
+                  ? `https://image.tmdb.org/t/p/w200${group.shows.poster_path}`
+                  : null;
+                return (
+                  <Card
+                    key={group.id}
+                    className="cursor-pointer hover:border-primary transition-colors"
+                    onClick={() => router.push(`/groups/${group.id}`)}
+                  >
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-center gap-3">
+                        {posterUrl && (
+                          <div className="w-10 flex-shrink-0">
+                            <ImageWithFallback
+                              src={posterUrl}
+                              alt={group.shows?.title || ''}
+                              width={40}
+                              height={60}
+                              className="rounded w-full"
+                            />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{group.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{group.shows?.title}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            <Users className="w-3 h-3 inline mr-1" />
+                            {group.member_count} member{group.member_count !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Currently Watching */}
         {(activeFilter === 'all' || activeFilter === 'watching') && watchingShows.length > 0 && (
           <div className="mb-8">
@@ -732,7 +791,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                               Remove
                             </Button>
                           </div>
-                          {/* Notification Toggle */}
+                          {/* Notification Toggle & Create Group */}
                           <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
                             <div className="flex items-center gap-2">
                               {notificationToggles[item.show_id] ? (
@@ -742,12 +801,23 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                               )}
                               <span className="text-xs text-muted-foreground">Notifications</span>
                             </div>
-                            <Switch
-                              checked={notificationToggles[item.show_id] ?? true}
-                              onCheckedChange={(checked) => handleNotificationToggle(item.show_id, checked)}
-                              disabled={togglingNotification === item.show_id}
-                              className=""
-                            />
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
+                                title="Create Watch Group"
+                                onClick={(e) => { e.stopPropagation(); setCreateGroupShow(item); }}
+                              >
+                                <Users className="w-4 h-4" />
+                              </Button>
+                              <Switch
+                                checked={notificationToggles[item.show_id] ?? true}
+                                onCheckedChange={(checked) => handleNotificationToggle(item.show_id, checked)}
+                                disabled={togglingNotification === item.show_id}
+                                className=""
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -874,6 +944,18 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
         hideOverview={!showModalOverview}  // Show overview for "All Shows", hide for "Currently Watching"
         hideWatchlistButton={true}  // Hide watchlist button since already in watchlist
       />
+
+      {/* Create Group Dialog */}
+      {createGroupShow && (
+        <CreateGroupDialog
+          open={!!createGroupShow}
+          onOpenChange={(open) => { if (!open) setCreateGroupShow(null); }}
+          showId={createGroupShow.show_id}
+          showTitle={createGroupShow.shows.title}
+          showPosterPath={createGroupShow.shows.poster_path}
+          onCreated={() => loadGroups()}
+        />
+      )}
     </div>
   );
 }

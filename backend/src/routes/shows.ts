@@ -55,6 +55,30 @@ router.put('/watchlist/:showId/status', authenticateToken, async (req: any, res)
       return res.status(404).json({ success: false, error: 'Show not found in watchlist' });
     }
 
+    // Queue watch group progress events (non-blocking)
+    if (currentSeason && currentEpisode) {
+      try {
+        const userGroups = await DatabaseService.getUserGroupsForShow(userId, showId);
+        for (const group of userGroups) {
+          const membersToNotify = await DatabaseService.getGroupMembersToNotify(group.id, userId);
+          const events = membersToNotify.map((member: any) => ({
+            user_id: member.user_id,
+            show_id: showId,
+            event_type: 'group_progress_update',
+            season_number: currentSeason,
+            episode_number: currentEpisode,
+            show_title: updated.shows?.title || 'Unknown Show',
+            episode_title: `${req.user.name || 'Someone'} updated to S${currentSeason}E${currentEpisode}`,
+          }));
+          if (events.length > 0) {
+            await DatabaseService.bulkInsertPendingEvents(events);
+          }
+        }
+      } catch (groupError) {
+        console.error('Error queueing group progress events:', groupError);
+      }
+    }
+
     res.json({
       success: true,
       data: updated

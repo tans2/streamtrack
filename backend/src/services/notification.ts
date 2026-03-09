@@ -617,11 +617,21 @@ export class NotificationService {
               providers: e.providers
             }));
 
+          // Build group activity section
+          const groupActivity = events
+            .filter(e => e.event_type === 'group_progress_update')
+            .map(e => ({
+              showTitle: e.show_title,
+              posterPath: e.poster_path,
+              memberUpdate: e.episode_title || '',
+              showId: e.show_id,
+            }));
+
           // Send digest email
           const emailResult = await EmailService.sendDailyDigest(
             (user as any).email,
             (user as any).name || 'there',
-            { newEpisodes, newSeasons, upcomingReleases }
+            { newEpisodes, newSeasons, upcomingReleases, groupActivity }
           );
 
           if (emailResult.success) {
