@@ -230,11 +230,13 @@ router.post('/:groupId/add-member', authenticateToken, async (req: any, res) => 
   try {
     const adminId = req.user.id;
     const { groupId } = req.params;
-    const { email } = req.body;
+    const { email: rawEmail } = req.body;
 
-    if (!email) {
+    if (!rawEmail) {
       return res.status(400).json({ success: false, error: 'Email is required' });
     }
+
+    const email = rawEmail.trim().toLowerCase();
 
     // Verify admin
     const role = await DatabaseService.getGroupMemberRole(groupId, adminId);
