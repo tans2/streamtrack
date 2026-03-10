@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
-import { Bell, LogOut, ScanSearch, ListChecks, Star } from "lucide-react";
+import { Bell, LogOut, ScanSearch, ListChecks, Star, Users } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { NavBar } from '@/components/ui/nav-bar';
@@ -152,6 +152,20 @@ export default function HomePage() {
                   <h3 className="font-semibold text-card-foreground">Smart Alerts</h3>
                   <p className="text-sm text-muted-foreground mt-1">
                     Daily digest emails when new episodes drop for your shows.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div variants={fadeInUp}>
+              <div className="flex items-start gap-4 p-4 sm:p-5 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-card-foreground">Watch Groups</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Watch and track status with friends to enjoy together.
                   </p>
                 </div>
               </div>

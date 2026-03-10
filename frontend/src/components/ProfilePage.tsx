@@ -48,7 +48,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [togglingNotification, setTogglingNotification] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'watching' | 'completed' | 'want_to_watch'>('all');
   const [myGroups, setMyGroups] = useState<WatchGroup[]>([]);
-  const [createGroupShow, setCreateGroupShow] = useState<WatchlistItem | null>(null);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
 
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -450,7 +450,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen text-foreground">
+      <div className="min-h-screen text-foreground pb-20 md:pb-0">
         <NavBar
           variant="authenticated"
           pageTitle="My Watchlist"
@@ -488,7 +488,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   }
 
   return (
-    <div className="min-h-screen text-foreground">
+    <div className="min-h-screen text-foreground pb-20 md:pb-0">
       <NavBar
         variant="authenticated"
         pageTitle="My Watchlist"
@@ -616,7 +616,18 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
         {/* Currently Watching */}
         {(activeFilter === 'all' || activeFilter === 'watching') && watchingShows.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-xl sm:text-2xl mb-4 text-foreground">Currently Watching</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl sm:text-2xl text-foreground">Currently Watching</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-sm"
+                onClick={() => setShowCreateGroup(true)}
+              >
+                <Users className="w-4 h-4 mr-1" />
+                Create Watch Group
+              </Button>
+            </div>
             <motion.div
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6"
               variants={staggerContainer}
@@ -802,15 +813,6 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                               <span className="text-xs text-muted-foreground">Notifications</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
-                                title="Create Watch Group"
-                                onClick={(e) => { e.stopPropagation(); setCreateGroupShow(item); }}
-                              >
-                                <Users className="w-4 h-4" />
-                              </Button>
                               <Switch
                                 checked={notificationToggles[item.show_id] ?? true}
                                 onCheckedChange={(checked) => handleNotificationToggle(item.show_id, checked)}
@@ -946,16 +948,12 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
       />
 
       {/* Create Group Dialog */}
-      {createGroupShow && (
-        <CreateGroupDialog
-          open={!!createGroupShow}
-          onOpenChange={(open) => { if (!open) setCreateGroupShow(null); }}
-          showId={createGroupShow.show_id}
-          showTitle={createGroupShow.shows.title}
-          showPosterPath={createGroupShow.shows.poster_path}
-          onCreated={() => loadGroups()}
-        />
-      )}
+      <CreateGroupDialog
+        open={showCreateGroup}
+        onOpenChange={setShowCreateGroup}
+        watchlist={watchingShows}
+        onCreated={() => loadGroups()}
+      />
     </div>
   );
 }

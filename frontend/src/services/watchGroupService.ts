@@ -42,8 +42,6 @@ export interface GroupDetail {
     status: string;
     genres: any[];
     rating: number;
-    number_of_seasons?: number;
-    number_of_episodes?: number;
   };
   members: GroupMember[];
 }
@@ -121,6 +119,15 @@ class WatchGroupService {
   async removeMember(groupId: string, userId: string): Promise<void> {
     try {
       await apiClient.delete(buildApiUrl(`groups/${groupId}/members/${userId}`));
+    } catch (error) {
+      throw new Error(handleApiError(error as AxiosError));
+    }
+  }
+
+  async addMemberByEmail(groupId: string, email: string): Promise<{ user_id: string; name: string; email: string }> {
+    try {
+      const response = await apiClient.post(buildApiUrl(`groups/${groupId}/add-member`), { email });
+      return handleApiResponse<{ user_id: string; name: string; email: string }>(response);
     } catch (error) {
       throw new Error(handleApiError(error as AxiosError));
     }

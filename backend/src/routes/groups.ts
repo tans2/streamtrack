@@ -1,6 +1,6 @@
 import express from 'express';
 import crypto from 'crypto';
-import { DatabaseService } from '../services/database';
+import { DatabaseService, supabase } from '../services/database';
 import { authenticateToken } from './auth';
 
 const router = express.Router();
@@ -222,6 +222,62 @@ router.delete('/:groupId/members/:userId', authenticateToken, async (req: any, r
   } catch (error: any) {
     console.error('Error removing member:', error);
     res.status(500).json({ success: false, error: 'Failed to remove member' });
+  }
+});
+
+// Add a member by email (admin only)
+router.post('/:groupId/add-member', authenticateToken, async (req: any, res) => {
+  try {
+    const adminId = req.user.id;
+    const { groupId } = req.params;
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email is required' });
+    }
+
+    // Verify admin
+    const role = await DatabaseService.getGroupMemberRole(groupId, adminId);
+    if (role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Only the group admin can add members' });
+    }
+
+    // Look up user by email
+    const targetUser = await DatabaseService.getUserByEmail(email);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, error: 'No Scout user found with that email' });
+    }
+
+    // Check if already a member
+    const alreadyMember = await DatabaseService.isGroupMember(groupId, targetUser.id);
+    if (alreadyMember) {
+      return res.status(400).json({ success: false, error: 'User is already a member of this group' });
+    }
+
+    // Add member
+    const member = await DatabaseService.addGroupMember(groupId, targetUser.id);
+    if (!member) {
+      return res.status(500).json({ success: false, error: 'Failed to add member' });
+    }
+
+    // Auto-follow the show
+    const { data: groupInfo } = await supabase
+      .from('watch_groups')
+      .select('show_id')
+      .eq('id', groupId)
+      .single();
+
+    if (groupInfo?.show_id) {
+      await DatabaseService.followShow(targetUser.id, groupInfo.show_id);
+    }
+
+    res.json({
+      success: true,
+      data: { user_id: targetUser.id, name: targetUser.name, email: targetUser.email },
+    });
+  } catch (error: any) {
+    console.error('Error adding member:', error);
+    res.status(500).json({ success: false, error: 'Failed to add member' });
   }
 });
 

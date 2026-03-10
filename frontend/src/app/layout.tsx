@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ToastProvider } from '@/components/ui/toast-provider';
+import { BottomTabBar } from '@/components/ui/bottom-tab-bar';
 
 export const metadata: Metadata = {
   title: 'Scout - Track Your Favorite Shows',
@@ -27,7 +28,8 @@ export default function RootLayout({
         >
           <AuthProvider>
             {children}
-            <div className="fixed bottom-6 right-6 z-50">
+            <BottomTabBar />
+            <div className="fixed bottom-20 right-6 md:bottom-6 z-50">
               <ThemeToggle />
             </div>
             <ToastProvider />

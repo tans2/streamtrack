@@ -209,7 +209,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
 
 
   return (
-    <div className="min-h-screen text-foreground">
+    <div className="min-h-screen text-foreground pb-20 md:pb-0">
       <NavBar
         variant="authenticated"
         pageTitle="Settings"

@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { Progress } from "./ui/progress";
+import { Input } from "./ui/input";
 import { staggerContainer, fadeInUp, fadeIn } from '@/lib/animations';
 import { NavBar } from './ui/nav-bar';
 import { ImageWithFallback } from "./figma/ImageWithFallback";
@@ -13,7 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { watchGroupService, GroupDetail, GroupMember } from '@/services/watchGroupService';
 import { toast } from 'sonner';
-import { Copy, Check, Trash2, LogOut, UserMinus, Crown, Users, ArrowLeft } from 'lucide-react';
+import { Copy, Check, Trash2, LogOut, UserMinus, Crown, Users, ArrowLeft, UserPlus, Loader2 } from 'lucide-react';
 
 interface GroupDetailPageProps {
   groupId: string;
@@ -27,6 +27,8 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [removingMember, setRemovingMember] = useState<string | null>(null);
+  const [addEmail, setAddEmail] = useState('');
+  const [addingMember, setAddingMember] = useState(false);
 
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -95,9 +97,24 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
     }
   };
 
+  const handleAddMember = async () => {
+    if (!group || !addEmail.trim()) return;
+    setAddingMember(true);
+    try {
+      const result = await watchGroupService.addMemberByEmail(group.id, addEmail.trim());
+      toast.success(`${result.name} added to the group`);
+      setAddEmail('');
+      loadGroup();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to add member');
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
   const isAdmin = group?.created_by === user?.id;
 
-  // Sort members by progress (descending) for spoiler line
+  // Sort members by progress (descending)
   const sortedMembers = group?.members
     ? [...group.members].sort((a, b) => {
         const progressA = (a.progress.current_season || 1) * 1000 + (a.progress.current_episode || 1);
@@ -106,25 +123,45 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
       })
     : [];
 
-  // Find current user's position for spoiler line
+  // Current user's progress for relative comparison
   const myProgress = sortedMembers.find(m => m.user_id === user?.id);
   const myProgressValue = myProgress
     ? (myProgress.progress.current_season || 1) * 1000 + (myProgress.progress.current_episode || 1)
     : 0;
 
-  // Calculate total episodes for progress bar
-  const totalEpisodes = group?.show?.number_of_episodes || 0;
+  const getRelativeLabel = (member: GroupMember) => {
+    const memberValue = (member.progress.current_season || 1) * 1000 + (member.progress.current_episode || 1);
+    if (member.user_id === user?.id) return null;
 
-  const getProgressPercent = (member: GroupMember) => {
-    if (totalEpisodes <= 0) return 0;
-    // Rough estimate: sum episodes across seasons up to current
-    const watched = ((member.progress.current_season || 1) - 1) * (totalEpisodes / (group?.show?.number_of_seasons || 1)) + (member.progress.current_episode || 1);
-    return Math.min(100, Math.round((watched / totalEpisodes) * 100));
+    const mySeason = myProgress?.progress.current_season || 1;
+    const myEpisode = myProgress?.progress.current_episode || 1;
+    const theirSeason = member.progress.current_season || 1;
+    const theirEpisode = member.progress.current_episode || 1;
+
+    if (memberValue === myProgressValue) {
+      return { text: 'Same place', color: 'text-blue-600 border-blue-500/50' };
+    }
+
+    if (theirSeason === mySeason) {
+      const diff = Math.abs(theirEpisode - myEpisode);
+      if (memberValue > myProgressValue) {
+        return { text: `${diff} ep ahead`, color: 'text-green-600 border-green-500/50' };
+      } else {
+        return { text: `${diff} ep behind`, color: 'text-orange-600 border-orange-500/50' };
+      }
+    }
+
+    const seasonDiff = Math.abs(theirSeason - mySeason);
+    if (memberValue > myProgressValue) {
+      return { text: seasonDiff === 1 ? '1 season ahead' : `${seasonDiff} seasons ahead`, color: 'text-green-600 border-green-500/50' };
+    } else {
+      return { text: seasonDiff === 1 ? '1 season behind' : `${seasonDiff} seasons behind`, color: 'text-orange-600 border-orange-500/50' };
+    }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen text-foreground">
+      <div className="min-h-screen text-foreground pb-20 md:pb-0">
         <NavBar
           variant="authenticated"
           pageTitle="Watch Group"
@@ -149,7 +186,7 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
 
   if (!group) {
     return (
-      <div className="min-h-screen text-foreground">
+      <div className="min-h-screen text-foreground pb-20 md:pb-0">
         <NavBar variant="authenticated" pageTitle="Watch Group" />
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 text-center">
           <p className="text-muted-foreground">Group not found.</p>
@@ -164,7 +201,7 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
     : null;
 
   return (
-    <div className="min-h-screen text-foreground">
+    <div className="min-h-screen text-foreground pb-20 md:pb-0">
       <NavBar
         variant="authenticated"
         pageTitle={group.name}
@@ -232,6 +269,41 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
           </CardContent>
         </Card>
 
+        {/* Add Member by Email (admin only) */}
+        {isAdmin && (
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                Add Friend
+              </h3>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={addEmail}
+                  onChange={(e) => setAddEmail(e.target.value)}
+                  placeholder="Enter their email..."
+                  className="text-sm"
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddMember(); }}
+                />
+                <Button
+                  size="sm"
+                  onClick={handleAddMember}
+                  disabled={addingMember || !addEmail.trim()}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  {addingMember ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <UserPlus className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Add an existing Scout user by their email address.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Member Progress */}
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
           Member Progress
@@ -247,7 +319,6 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
             const memberProgressValue = (member.progress.current_season || 1) * 1000 + (member.progress.current_episode || 1);
             const isCurrentUser = member.user_id === user?.id;
             const isBehind = memberProgressValue < myProgressValue;
-            const isAhead = memberProgressValue > myProgressValue;
 
             // Insert spoiler line before the first member who is behind you
             const prevMember = index > 0 ? sortedMembers[index - 1] : null;
@@ -255,6 +326,8 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
               ? (prevMember.progress.current_season || 1) * 1000 + (prevMember.progress.current_episode || 1)
               : Infinity;
             const showSpoilerLine = isBehind && prevProgressValue >= myProgressValue && !isCurrentUser;
+
+            const relativeLabel = getRelativeLabel(member);
 
             return (
               <motion.div key={member.user_id} variants={fadeInUp}>
@@ -277,28 +350,22 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium text-sm truncate">
                             {member.name}{isCurrentUser ? ' (you)' : ''}
                           </span>
                           {member.role === 'admin' && (
                             <Crown className="w-3 h-3 text-amber-500 flex-shrink-0" />
                           )}
-                          {isAhead && !isCurrentUser && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-green-500/50 text-green-600">Ahead</Badge>
-                          )}
-                          {isBehind && !isCurrentUser && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-orange-500/50 text-orange-600">Behind</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-muted-foreground">
-                            S{member.progress.current_season || 1} E{member.progress.current_episode || 1}
-                          </span>
-                          {totalEpisodes > 0 && (
-                            <Progress value={getProgressPercent(member)} className="h-1.5 flex-1" />
+                          {relativeLabel && (
+                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${relativeLabel.color}`}>
+                              {relativeLabel.text}
+                            </Badge>
                           )}
                         </div>
+                        <span className="text-xs text-muted-foreground">
+                          S{member.progress.current_season || 1} E{member.progress.current_episode || 1}
+                        </span>
                       </div>
 
                       {/* Admin remove button */}
