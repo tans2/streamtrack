@@ -1174,7 +1174,7 @@ export class DatabaseService {
         .from('watch_groups')
         .select(`
           *,
-          shows (id, tmdb_id, title, poster_path, status, genres, rating)
+          shows (id, tmdb_id, title, poster_path, overview, status, genres, rating)
         `)
         .eq('id', groupId)
         .single();

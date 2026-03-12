@@ -50,6 +50,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [myGroups, setMyGroups] = useState<WatchGroup[]>([]);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [removeConfirm, setRemoveConfirm] = useState<{ showId: string; title: string } | null>(null);
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
 
   const { user } = useAuth();
   const router = useRouter();
@@ -58,7 +59,17 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   useEffect(() => {
     loadWatchlist();
     loadGroups();
+    loadEmailVerification();
   }, []);
+
+  const loadEmailVerification = async () => {
+    try {
+      const prefs = await notificationService.getPreferences();
+      setEmailVerified(prefs.emailVerified);
+    } catch {
+      // silently fail
+    }
+  };
 
   // Handle deep links from digest email CTAs
   useEffect(() => {
@@ -366,7 +377,9 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     }
   };
 
-  const watchingShows = watchlist.filter(item => item.watch_status === 'watching');
+  const watchingShows = watchlist
+    .filter(item => item.watch_status === 'watching')
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   const completedShows = watchlist.filter(item => item.watch_status === 'completed');
   const planToWatchShows = watchlist.filter(item => item.watch_status === 'want_to_watch');
   const droppedShows = watchlist.filter(item => item.watch_status === 'dropped');
@@ -454,10 +467,13 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
           </div>
           <button
             onClick={() => router.push('/settings')}
-            className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            className="relative p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
             aria-label="Settings"
           >
             <Settings className="w-5 h-5" />
+            {emailVerified === false && (
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-background" />
+            )}
           </button>
         </div>
 
@@ -467,6 +483,22 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
             <Play className="w-5 h-5 text-primary fill-primary" />
             Currently Watching
           </h2>
+
+          {watchingShows.length === 0 && (
+            <div className="flex items-center gap-4 py-6 px-4 rounded-2xl bg-card/50 border border-dashed border-border/60 mb-2">
+              <img src="/logo.png" alt="Scout" className="w-12 h-12 opacity-40 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-foreground">Nothing playing yet</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Add a show and mark it as watching to see it here.</p>
+              </div>
+              <button
+                onClick={() => router.push('/search')}
+                className="ml-auto text-xs text-primary hover:text-primary/80 font-medium flex-shrink-0"
+              >
+                Browse Shows →
+              </button>
+            </div>
+          )}
 
           <div className="-mx-3 sm:mx-0 px-3 sm:px-0 flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {watchingShows.map(item => (

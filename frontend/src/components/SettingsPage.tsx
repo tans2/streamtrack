@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent } from "./ui/card";
 import { Switch } from "./ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Badge } from "./ui/badge";
-import { Crown, Loader2, Mail, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  Crown, Loader2, Mail, CheckCircle2, AlertCircle,
+  Play, PauseCircle, Lock, ChevronRight, User, KeyRound, Globe, BarChart2, Tv, Users, Calendar
+} from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 import { NavBar } from './ui/nav-bar';
 import { SignOutButton } from './ui/sign-out-button';
@@ -19,11 +21,29 @@ interface SettingsPageProps {
 }
 
 const availablePlatforms = [
-  'Netflix', 'Hulu', 'Disney+', 'Prime Video', 'Paramount+', 
+  'Netflix', 'Hulu', 'Disney+', 'Prime Video', 'Paramount+',
   'Peacock', 'HBO Max', 'Apple TV+', 'YouTube TV', 'Fubo TV'
-].filter((platform, index, self) => self.indexOf(platform) === index); // Remove duplicates
+].filter((platform, index, self) => self.indexOf(platform) === index);
 
 const countries = ['US', 'UK', 'Canada', 'Australia', 'Germany', 'France', 'Japan', 'Brazil'];
+
+// Reusable section label
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-primary text-xs font-semibold uppercase tracking-widest mb-3 px-1">
+      {children}
+    </p>
+  );
+}
+
+// Reusable icon pill
+function IconPill({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+      {children}
+    </div>
+  );
+}
 
 export default function SettingsPage({ onNavigate }: SettingsPageProps) {
   const [settings, setSettings] = useState({
@@ -57,7 +77,6 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
 
   useEffect(() => {
     if (user) {
-      // Deduplicate platforms from user data
       const uniquePlatforms = Array.from(new Set(user.connected_platforms || []));
       setSettings(prev => ({
         ...prev,
@@ -75,12 +94,10 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
         },
         privacy: {
           publicWatchlist: user.privacy_settings?.data_export_enabled ?? false,
-          allowFriendRequests: true, // Default value
+          allowFriendRequests: true,
           shareWatchingStatus: user.privacy_settings?.data_delete_enabled ?? true
         }
       }));
-
-      // Fetch email verification status
       loadNotificationPreferences();
     }
   }, [user]);
@@ -89,7 +106,6 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
     try {
       const prefs = await notificationService.getPreferences();
       setEmailVerified(prefs.emailVerified);
-      // Update notification settings from backend
       setSettings(prev => ({
         ...prev,
         notifications: {
@@ -102,7 +118,6 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
         }
       }));
     } catch (error) {
-      // Silently fail - user might not have notifications enabled yet
       console.log('Could not load notification preferences');
     }
   };
@@ -120,10 +135,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
   };
 
   const handleNotificationChange = async (field: string, value: boolean) => {
-    // Update local state immediately for responsiveness
     handleNestedChange('notifications', field, value);
-
-    // Map local field names to API field names
     const fieldMap: Record<string, string> = {
       newEpisodes: 'newEpisodes',
       seasonStart: 'seasonPremieres',
@@ -132,15 +144,12 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
       upcomingReleases: 'upcomingReleases',
       pauseAll: 'pauseAll'
     };
-
     const apiField = fieldMap[field];
     if (!apiField) return;
-
     setSavingNotifications(true);
     try {
       await notificationService.updatePreferences({ [apiField]: value });
     } catch (error: any) {
-      // Revert on error
       handleNestedChange('notifications', field, !value);
       toast.error('Failed to update notification preference');
     } finally {
@@ -149,10 +158,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
   };
 
   const handleInputChange = (field: string, value: any) => {
-    setSettings(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setSettings(prev => ({ ...prev, [field]: value }));
   };
 
   const handleNestedChange = (category: string, field: string, value: any) => {
@@ -167,22 +173,17 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
 
   const togglePlatform = (platform: string) => {
     setSettings(prev => {
-      // Deduplicate and toggle platform
       const current = Array.from(new Set(prev.selectedPlatforms));
       const updated = current.includes(platform)
         ? current.filter(p => p !== platform)
         : [...current, platform];
-      return {
-        ...prev,
-        selectedPlatforms: updated
-      };
+      return { ...prev, selectedPlatforms: updated };
     });
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Deduplicate platforms before saving
       const uniquePlatforms = Array.from(new Set(settings.selectedPlatforms));
       await updatePreferences({
         region: settings.country,
@@ -202,346 +203,340 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
       });
     } catch (error: any) {
       console.error('Save error:', error);
-      // Error is already handled by AuthContext with toast
     } finally {
       setSaving(false);
     }
   };
-
 
   return (
     <div className="min-h-screen text-foreground pb-20 md:pb-0">
       <NavBar
         variant="authenticated"
         pageTitle="Settings"
-        actions={
-          <SignOutButton />
-        }
+        actions={<SignOutButton />}
       />
 
-      <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8 max-w-4xl">
+      <div className="container mx-auto px-3 sm:px-6 py-6 sm:py-10 max-w-2xl">
         <div className="space-y-8">
-          {/* Account Settings */}
-          <Card className="bg-card border-border shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-card-foreground">Account Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-card-foreground">Full Name</Label>
-                  <Input
-                    id="name"
-                    value={settings.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-card-foreground">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={settings.email}
-                    disabled
-                    className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary opacity-50"
-                  />
-                  <p className="text-xs text-muted-foreground">Email cannot be changed</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-card-foreground">New Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Leave blank to keep current password"
-                    value={settings.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
-                    className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-card-foreground">Confirm New Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Confirm new password"
-                    value={settings.confirmPassword}
-                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                    className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="text-card-foreground">Country</Label>
-                <Select value={settings.country} onValueChange={(value) => handleInputChange('country', value)}>
-                  <SelectTrigger className="bg-input-background border-border text-foreground">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {countries.map(country => (
-                      <SelectItem key={country} value={country}>
-                        {country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Premium Upgrade */}
-          <Card className="bg-gradient-to-r from-secondary/20 to-primary/20 border-secondary shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-card-foreground flex items-center">
-                <Crown className="w-5 h-5 mr-2 text-secondary" />
-                Premium
-                <Badge variant="secondary" className="ml-2 text-xs">Coming Soon</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-muted-foreground">
-                  Premium features like advanced notifications, group tracking, and priority support
-                  are still in development.
-                </p>
-                <div className="flex items-center space-x-4">
-                  <Button
-                    className="bg-secondary/70 text-foreground cursor-not-allowed"
-                    disabled={true}
-                  >
-                    Coming Soon
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* ACCOUNT */}
+          <div>
+            <SectionLabel>Account</SectionLabel>
+            <Card>
+              <CardContent className="p-0 divide-y divide-border">
 
-          {/* Streaming Platforms */}
-          <Card className="bg-card border-border shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-card-foreground">Streaming Platforms</CardTitle>
-              <p className="text-muted-foreground">Select the platforms you have access to</p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                {availablePlatforms.map(platform => (
-                  <div
-                    key={platform}
-                    onClick={() => togglePlatform(platform)}
-                    className={`relative cursor-pointer p-3 rounded-lg border-2 transition-all ${
-                      settings.selectedPlatforms.includes(platform)
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border bg-muted hover:border-primary/50'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-foreground text-sm">{platform}</div>
-                    </div>
-                    {settings.selectedPlatforms.includes(platform) && (
-                      <div className="absolute -top-1 -right-1 bg-primary rounded-full p-1">
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                      </div>
-                    )}
+                {/* Email Verification */}
+                <div className="flex items-center gap-3 p-4">
+                  <IconPill><Mail className="w-4 h-4 text-primary" /></IconPill>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">Email Verification</p>
+                    <p className="text-xs text-muted-foreground truncate">{settings.email}</p>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Notification Settings */}
-          <Card className="bg-card border-border shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-card-foreground">Notification Preferences</CardTitle>
-              <p className="text-muted-foreground text-sm mt-2">
-                Get notified about new episodes and season premieres via email.
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Email Verification Banner */}
-              {!emailVerified && (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:justify-between p-3 sm:p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium text-card-foreground">Verify your email</p>
-                      <p className="text-xs text-muted-foreground">Verify your email to receive notifications</p>
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleSendVerificationEmail}
-                    disabled={sendingVerification}
-                    className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
-                  >
-                    {sendingVerification ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                  <div className="flex-shrink-0">
+                    {emailVerified ? (
+                      <span className="flex items-center gap-1 text-xs text-green-600 bg-green-500/10 border border-green-500/30 px-2.5 py-1 rounded-full font-medium">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Verified
+                      </span>
                     ) : (
-                      <>
-                        <Mail className="w-4 h-4 mr-2" />
-                        Send Verification
-                      </>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleSendVerificationEmail}
+                        disabled={sendingVerification}
+                        className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10 text-xs h-7 rounded-full"
+                      >
+                        {sendingVerification ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <>
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            Verify Email
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Full Name */}
+                <div className="flex items-center gap-3 p-4">
+                  <IconPill><User className="w-4 h-4 text-primary" /></IconPill>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground mb-1">Full Name</p>
+                    <Input
+                      value={settings.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      className="h-8 text-sm bg-input-background border-border"
+                    />
+                  </div>
+                </div>
+
+                {/* Change Password */}
+                <div className="flex items-start gap-3 p-4">
+                  <IconPill><KeyRound className="w-4 h-4 text-primary" /></IconPill>
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Change Password</p>
+                      <p className="text-xs text-muted-foreground">Leave blank to keep current</p>
+                    </div>
+                    <Input
+                      type="password"
+                      placeholder="New password"
+                      value={settings.password}
+                      onChange={(e) => handleInputChange('password', e.target.value)}
+                      className="h-8 text-sm bg-input-background border-border"
+                    />
+                    <Input
+                      type="password"
+                      placeholder="Confirm new password"
+                      value={settings.confirmPassword}
+                      onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                      className="h-8 text-sm bg-input-background border-border"
+                    />
+                  </div>
+                </div>
+
+                {/* Region */}
+                <div className="flex items-center gap-3 p-4">
+                  <IconPill><Globe className="w-4 h-4 text-primary" /></IconPill>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground mb-1">Region</p>
+                    <Select value={settings.country} onValueChange={(value) => handleInputChange('country', value)}>
+                      <SelectTrigger className="h-8 text-sm bg-input-background border-border">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countries.map(country => (
+                          <SelectItem key={country} value={country}>{country}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Save account changes */}
+                <div className="flex justify-end p-4">
+                  <Button
+                    onClick={handleSave}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6"
+                    size="sm"
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Saving...</>
+                    ) : (
+                      'Save Changes'
                     )}
                   </Button>
                 </div>
-              )}
-
-              {emailVerified && (
-                <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                  <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  <p className="text-sm text-green-600">Email verified - notifications enabled</p>
-                </div>
-              )}
-
-              {/* Pause All Toggle */}
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                <div>
-                  <Label className="text-card-foreground">Pause All Notifications</Label>
-                  <p className="text-muted-foreground text-sm">Temporarily pause all email notifications</p>
-                </div>
-                <Switch
-                  checked={settings.notifications.pauseAll}
-                  onCheckedChange={(checked: boolean) => handleNotificationChange('pauseAll', checked)}
-                  disabled={!emailVerified || savingNotifications}
-                />
-              </div>
-
-              <div className={settings.notifications.pauseAll ? 'opacity-50 pointer-events-none' : ''}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-card-foreground">New Episode Releases</Label>
-                    <p className="text-muted-foreground text-sm">Get notified when new episodes are available</p>
-                  </div>
-                  <Switch
-                    checked={settings.notifications.newEpisodes}
-                    onCheckedChange={(checked: boolean) => handleNotificationChange('newEpisodes', checked)}
-                    disabled={!emailVerified || savingNotifications || settings.notifications.pauseAll}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-card-foreground">Season Premieres</Label>
-                    <p className="text-muted-foreground text-sm">Be the first to know when new seasons start</p>
-                  </div>
-                  <Switch
-                    checked={settings.notifications.seasonStart}
-                    onCheckedChange={(checked: boolean) => handleNotificationChange('seasonStart', checked)}
-                    disabled={!emailVerified || savingNotifications || settings.notifications.pauseAll}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-card-foreground">Upcoming Releases</Label>
-                    <p className="text-muted-foreground text-sm">Get a heads-up about new episodes and seasons coming in the next 2 weeks</p>
-                  </div>
-                  <Switch
-                    checked={settings.notifications.upcomingReleases}
-                    onCheckedChange={(checked: boolean) => handleNotificationChange('upcomingReleases', checked)}
-                    disabled={!emailVerified || savingNotifications || settings.notifications.pauseAll}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between opacity-50">
-                  <div>
-                    <Label className="text-card-foreground">Friend Activity</Label>
-                    <p className="text-muted-foreground text-sm">See what your friends are watching (Coming Soon)</p>
-                  </div>
-                  <Switch
-                    checked={settings.notifications.friendActivity}
-                    onCheckedChange={(checked: boolean) => handleNotificationChange('friendActivity', checked)}
-                    disabled={true}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between opacity-50">
-                  <div>
-                    <Label className="text-card-foreground">Weekly Digest</Label>
-                    <p className="text-muted-foreground text-sm">Weekly summary of your watching activity (Coming Soon)</p>
-                  </div>
-                  <Switch
-                    checked={settings.notifications.weeklyDigest}
-                    onCheckedChange={(checked: boolean) => handleNotificationChange('weeklyDigest', checked)}
-                    disabled={true}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Privacy Controls */}
-          <Card className="bg-card border-border shadow-lg opacity-75">
-            <CardHeader>
-              <CardTitle className="text-card-foreground flex items-center gap-2">
-                Privacy & Sharing
-                <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
-              </CardTitle>
-              <p className="text-muted-foreground text-sm mt-2">
-                Privacy and sharing settings will be available in a future update.
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-card-foreground">Public Watchlist</Label>
-                  <p className="text-muted-foreground text-sm">Allow others to see your watchlist</p>
-                </div>
-                <Switch
-                  checked={settings.privacy.publicWatchlist}
-                  onCheckedChange={(checked: boolean) => handleNestedChange('privacy', 'publicWatchlist', checked)}
-                  disabled={true}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-card-foreground">Friend Requests</Label>
-                  <p className="text-muted-foreground text-sm">Allow people to send you friend requests</p>
-                </div>
-                <Switch
-                  checked={settings.privacy.allowFriendRequests}
-                  onCheckedChange={(checked: boolean) => handleNestedChange('privacy', 'allowFriendRequests', checked)}
-                  disabled={true}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-card-foreground">Share Watching Status</Label>
-                  <p className="text-muted-foreground text-sm">Let friends see what you're currently watching</p>
-                </div>
-                <Switch
-                  checked={settings.privacy.shareWatchingStatus}
-                  onCheckedChange={(checked: boolean) => handleNestedChange('privacy', 'shareWatchingStatus', checked)}
-                  disabled={true}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Save Button */}
-          <div className="flex justify-end">
-            <Button 
-              onClick={handleSave}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-2"
-              size="lg"
-              disabled={saving}
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
-            </Button>
+              </CardContent>
+            </Card>
           </div>
+
+          {/* PREFERENCES */}
+          <div>
+            <SectionLabel>Preferences</SectionLabel>
+            <Card>
+              <CardContent className="p-0 divide-y divide-border">
+                {/* Pause All */}
+                <div className="flex items-center gap-3 p-4">
+                  <IconPill><PauseCircle className="w-4 h-4 text-primary" /></IconPill>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">Pause All</p>
+                    <p className="text-xs text-muted-foreground">Temporarily pause all notifications</p>
+                  </div>
+                  <Switch
+                    checked={settings.notifications.pauseAll}
+                    onCheckedChange={(checked: boolean) => handleNotificationChange('pauseAll', checked)}
+                    disabled={!emailVerified || savingNotifications}
+                  />
+                </div>
+
+                <div className={settings.notifications.pauseAll ? 'opacity-50 pointer-events-none' : ''}>
+                  {/* New Episodes */}
+                  <div className="flex items-center gap-3 p-4 border-b border-border">
+                    <IconPill><Play className="w-4 h-4 text-primary" /></IconPill>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">New Episodes</p>
+                      <p className="text-xs text-muted-foreground">Alerts for your followed shows</p>
+                    </div>
+                    <Switch
+                      checked={settings.notifications.newEpisodes}
+                      onCheckedChange={(checked: boolean) => handleNotificationChange('newEpisodes', checked)}
+                      disabled={!emailVerified || savingNotifications || settings.notifications.pauseAll}
+                    />
+                  </div>
+
+                  {/* Upcoming Releases */}
+                  <div className="flex items-center gap-3 p-4 border-b border-border">
+                    <IconPill><Calendar className="w-4 h-4 text-primary" /></IconPill>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">Upcoming Releases</p>
+                      <p className="text-xs text-muted-foreground">Stay ahead of the trend</p>
+                    </div>
+                    <Switch
+                      checked={settings.notifications.upcomingReleases}
+                      onCheckedChange={(checked: boolean) => handleNotificationChange('upcomingReleases', checked)}
+                      disabled={!emailVerified || savingNotifications || settings.notifications.pauseAll}
+                    />
+                  </div>
+
+                  {/* Season Premieres */}
+                  <div className="flex items-center gap-3 p-4 border-b border-border">
+                    <IconPill><Tv className="w-4 h-4 text-primary" /></IconPill>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">Season Premieres</p>
+                      <p className="text-xs text-muted-foreground">Be first when new seasons start</p>
+                    </div>
+                    <Switch
+                      checked={settings.notifications.seasonStart}
+                      onCheckedChange={(checked: boolean) => handleNotificationChange('seasonStart', checked)}
+                      disabled={!emailVerified || savingNotifications || settings.notifications.pauseAll}
+                    />
+                  </div>
+
+                  {/* Friend Activity — Coming Soon */}
+                  <div className="flex items-center gap-3 p-4 border-b border-border opacity-50">
+                    <IconPill><Users className="w-4 h-4 text-primary" /></IconPill>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">Friend Activity</p>
+                      <p className="text-xs text-muted-foreground">Coming soon</p>
+                    </div>
+                    <Switch checked={false} disabled />
+                  </div>
+
+                  {/* Weekly Digest — Coming Soon */}
+                  <div className="flex items-center gap-3 p-4 opacity-50">
+                    <IconPill><BarChart2 className="w-4 h-4 text-primary" /></IconPill>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">Weekly Digest</p>
+                      <p className="text-xs text-muted-foreground">Coming soon</p>
+                    </div>
+                    <Switch checked={false} disabled />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* STREAMING PLATFORMS */}
+          <div>
+            <SectionLabel>Streaming Platforms</SectionLabel>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground mb-3">Select the platforms you have access to</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                  {availablePlatforms.map(platform => (
+                    <div
+                      key={platform}
+                      onClick={() => togglePlatform(platform)}
+                      className={`relative cursor-pointer p-3 rounded-xl border-2 transition-all text-center text-sm ${
+                        settings.selectedPlatforms.includes(platform)
+                          ? 'border-primary bg-primary/10 text-foreground'
+                          : 'border-border bg-muted hover:border-primary/50 text-muted-foreground'
+                      }`}
+                    >
+                      {platform}
+                      {settings.selectedPlatforms.includes(platform) && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-end mt-4">
+                  <Button
+                    onClick={handleSave}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6"
+                    size="sm"
+                    disabled={saving}
+                  >
+                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* PREMIUM */}
+          <div>
+            <SectionLabel>Premium</SectionLabel>
+            <Card className="bg-gradient-to-r from-secondary/10 to-primary/10 border-primary/20">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <IconPill><Crown className="w-4 h-4 text-primary" /></IconPill>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-semibold text-foreground">Premium</p>
+                      <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Advanced notifications, group tracking, and priority support are in development.
+                    </p>
+                    <Button size="sm" className="rounded-full" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* PRIVACY & SECURITY */}
+          <div>
+            <SectionLabel>Privacy &amp; Security</SectionLabel>
+            <Card>
+              <CardContent className="p-0 divide-y divide-border">
+                {/* Privacy Policy row */}
+                <div className="flex items-center gap-3 p-4">
+                  <IconPill><Lock className="w-4 h-4 text-primary" /></IconPill>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">Privacy Policy</p>
+                    <p className="text-xs text-muted-foreground">Manage your data</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </div>
+
+                {/* Existing switches — disabled, coming soon */}
+                <div className="opacity-75">
+                  <div className="flex items-center justify-between p-4 border-b border-border">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Public Watchlist</p>
+                      <p className="text-xs text-muted-foreground">Allow others to see your watchlist</p>
+                    </div>
+                    <Switch
+                      checked={settings.privacy.publicWatchlist}
+                      onCheckedChange={(checked: boolean) => handleNestedChange('privacy', 'publicWatchlist', checked)}
+                      disabled
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-4 border-b border-border">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Friend Requests</p>
+                      <p className="text-xs text-muted-foreground">Allow people to send you friend requests</p>
+                    </div>
+                    <Switch
+                      checked={settings.privacy.allowFriendRequests}
+                      onCheckedChange={(checked: boolean) => handleNestedChange('privacy', 'allowFriendRequests', checked)}
+                      disabled
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-4">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Share Watching Status</p>
+                      <p className="text-xs text-muted-foreground">Let friends see what you're currently watching</p>
+                    </div>
+                    <Switch
+                      checked={settings.privacy.shareWatchingStatus}
+                      onCheckedChange={(checked: boolean) => handleNestedChange('privacy', 'shareWatchingStatus', checked)}
+                      disabled
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
         </div>
       </div>
     </div>

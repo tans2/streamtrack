@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { watchGroupService, GroupDetail, GroupMember } from '@/services/watchGroupService';
 import { toast } from 'sonner';
-import { Copy, Check, Trash2, LogOut, UserMinus, Crown, Users, ArrowLeft, UserPlus, Loader2 } from 'lucide-react';
+import { Copy, Check, Trash2, LogOut, UserMinus, Crown, Users, ArrowLeft, UserPlus, Loader2, BarChart2, Mail } from 'lucide-react';
 
 interface GroupDetailPageProps {
   groupId: string;
@@ -30,6 +30,7 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
   const [removingMember, setRemovingMember] = useState<string | null>(null);
   const [addEmail, setAddEmail] = useState('');
   const [addingMember, setAddingMember] = useState(false);
+  const [showAllMembers, setShowAllMembers] = useState(false);
 
   const { user } = useAuth();
   const router = useRouter();
@@ -140,32 +141,40 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
     const theirEpisode = member.progress.current_episode || 1;
 
     if (memberValue === myProgressValue) {
-      return { text: 'Same place', color: 'text-blue-600 border-blue-500/50' };
+      return { text: 'SAME PLACE', color: 'text-blue-500 bg-blue-500/10 border-blue-500/30' };
     }
 
     if (theirSeason === mySeason) {
       const diff = Math.abs(theirEpisode - myEpisode);
       if (memberValue > myProgressValue) {
-        return { text: `${diff} ep ahead`, color: 'text-green-600 border-green-500/50' };
+        return { text: 'LEADING THE PACK', color: 'text-green-500 bg-green-500/10 border-green-500/30' };
       } else {
-        return { text: `${diff} ep behind`, color: 'text-orange-600 border-orange-500/50' };
+        return { text: `${diff} EP BEHIND`, color: 'text-orange-500 bg-orange-500/10 border-orange-500/30' };
       }
     }
 
-    const seasonDiff = Math.abs(theirSeason - mySeason);
     if (memberValue > myProgressValue) {
-      return { text: seasonDiff === 1 ? '1 season ahead' : `${seasonDiff} seasons ahead`, color: 'text-green-600 border-green-500/50' };
+      return { text: 'LEADING THE PACK', color: 'text-green-500 bg-green-500/10 border-green-500/30' };
     } else {
-      return { text: seasonDiff === 1 ? '1 season behind' : `${seasonDiff} seasons behind`, color: 'text-orange-600 border-orange-500/50' };
+      return { text: 'CATCHING UP', color: 'text-muted-foreground bg-muted border-border' };
     }
   };
+
+  const visibleMembers = showAllMembers ? sortedMembers : sortedMembers.slice(0, 4);
+
+  const firstProgressValue = sortedMembers.length > 0
+    ? (sortedMembers[0].progress.current_season || 1) * 1000 + (sortedMembers[0].progress.current_episode || 1)
+    : 0;
+  const allSynced = sortedMembers.length > 1 && sortedMembers.every(m => {
+    const v = (m.progress.current_season || 1) * 1000 + (m.progress.current_episode || 1);
+    return v === firstProgressValue;
+  });
 
   if (loading) {
     return (
       <div className="min-h-screen text-foreground pb-20 md:pb-0">
         <NavBar
           variant="authenticated"
-          pageTitle="Watch Group"
           actions={
             <Button variant="ghost" onClick={() => router.push('/profile')}>
               <ArrowLeft className="w-4 h-4" />
@@ -173,12 +182,11 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
             </Button>
           }
         />
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
           <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-muted rounded w-1/3" />
-            <div className="h-32 bg-muted rounded" />
-            <div className="h-20 bg-muted rounded" />
-            <div className="h-20 bg-muted rounded" />
+            <div className="h-48 bg-muted rounded-2xl" />
+            <div className="h-32 bg-muted rounded-2xl" />
+            <div className="h-20 bg-muted rounded-2xl" />
           </div>
         </div>
       </div>
@@ -188,8 +196,8 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
   if (!group) {
     return (
       <div className="min-h-screen text-foreground pb-20 md:pb-0">
-        <NavBar variant="authenticated" pageTitle="Watch Group" />
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 text-center">
+        <NavBar variant="authenticated" />
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 text-center">
           <p className="text-muted-foreground">Group not found.</p>
           <Button className="mt-4" onClick={() => router.push('/profile')}>Back to Watchlist</Button>
         </div>
@@ -198,14 +206,15 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
   }
 
   const posterUrl = group.show.poster_path
-    ? `https://image.tmdb.org/t/p/w200${group.show.poster_path}`
+    ? `https://image.tmdb.org/t/p/w342${group.show.poster_path}`
     : null;
+
+  const genres: string[] = Array.isArray(group.show.genres) ? group.show.genres : [];
 
   return (
     <div className="min-h-screen text-foreground pb-20 md:pb-0">
       <NavBar
         variant="authenticated"
-        pageTitle={group.name}
         actions={
           <>
             <Button
@@ -222,40 +231,45 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
       />
 
       <motion.div
-        className="max-w-2xl mx-auto px-4 sm:px-6 py-8"
+        className="max-w-5xl mx-auto px-4 sm:px-6 py-8"
         variants={fadeIn}
         initial="hidden"
         animate="show"
       >
-        {/* Group Header */}
-        <Card className="mb-6">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex gap-4">
+        {/* Hero Card */}
+        <Card className="mb-6 overflow-hidden">
+          <CardContent className="p-0">
+            <div className="flex gap-0">
+              {/* Poster */}
               {posterUrl && (
-                <div className="w-16 sm:w-20 flex-shrink-0">
+                <div className="w-32 sm:w-48 flex-shrink-0">
                   <ImageWithFallback
                     src={posterUrl}
                     alt={group.show.title}
-                    width={80}
-                    height={120}
-                    className="rounded-lg w-full"
+                    width={192}
+                    height={288}
+                    className="w-full h-full object-cover"
                   />
                 </div>
               )}
-              <div className="flex-1 min-w-0">
-                <h2 className="text-lg sm:text-xl font-bold text-foreground truncate">{group.show.title}</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  <Users className="w-4 h-4 inline mr-1" />
-                  {group.members.length} member{group.members.length !== 1 ? 's' : ''}
+              {/* Info */}
+              <div className="flex-1 p-5 sm:p-8 flex flex-col justify-center">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Users className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-primary text-xs font-semibold uppercase tracking-widest">Active Watch Party</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1">{group.name}</h1>
+                <p className="text-sm text-muted-foreground mb-5">
+                  Currently bingeing: <span className="text-foreground font-medium">{group.show.title}</span>
+                  {' '}•{' '}{group.members.length} member{group.members.length !== 1 ? 's' : ''}
                 </p>
-                <div className="mt-3">
+                <div className="flex flex-wrap gap-3">
                   <Button
-                    variant="outline"
-                    size="sm"
                     onClick={handleCopyInvite}
-                    className="text-xs"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-5"
+                    size="sm"
                   >
-                    {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
+                    {copied ? <Check className="w-4 h-4 mr-1.5" /> : <Copy className="w-4 h-4 mr-1.5" />}
                     {copied ? 'Copied!' : 'Copy Invite Link'}
                   </Button>
                 </div>
@@ -264,183 +278,235 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
           </CardContent>
         </Card>
 
-        {/* Add Member by Email (admin only) */}
-        {isAdmin && (
-          <Card className="mb-6">
-            <CardContent className="p-4">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                Add Friend
-              </h3>
-              <div className="flex items-center gap-2">
-                <Input
-                  value={addEmail}
-                  onChange={(e) => setAddEmail(e.target.value)}
-                  placeholder="Enter their email..."
-                  className="text-sm"
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddMember(); }}
-                />
-                <Button
-                  size="sm"
-                  onClick={handleAddMember}
-                  disabled={addingMember || !addEmail.trim()}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  {addingMember ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <UserPlus className="w-4 h-4" />
-                  )}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Add an existing Scout user by their email address.
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        {/* Two-column layout */}
+        <div className="grid md:grid-cols-[1fr_2fr] gap-6">
+          {/* Left Column */}
+          <div className="space-y-4">
+            {/* Add New Scouts (admin only) */}
+            {isAdmin && (
+              <Card>
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <Users className="w-4 h-4 text-primary" />
+                    </div>
+                    <h3 className="font-semibold text-foreground">Add New Scouts</h3>
+                  </div>
+                  <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                    Friend's Email Address
+                  </label>
+                  <div className="relative mb-3">
+                    <Input
+                      value={addEmail}
+                      onChange={(e) => setAddEmail(e.target.value)}
+                      placeholder="scout@example.com"
+                      className="pr-9 text-sm"
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleAddMember(); }}
+                    />
+                    <Mail className="w-4 h-4 text-muted-foreground absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                  <Button
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
+                    onClick={handleAddMember}
+                    disabled={addingMember || !addEmail.trim()}
+                  >
+                    {addingMember ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      'Add'
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
-        {/* Member Progress */}
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-          Member Progress
-        </h3>
-
-        <motion.div
-          className="space-y-3"
-          variants={staggerContainer}
-          initial="hidden"
-          animate="show"
-        >
-          {sortedMembers.map((member, index) => {
-            const memberProgressValue = (member.progress.current_season || 1) * 1000 + (member.progress.current_episode || 1);
-            const isCurrentUser = member.user_id === user?.id;
-            const isBehind = memberProgressValue < myProgressValue;
-
-            // Insert spoiler line before the first member who is behind you
-            const prevMember = index > 0 ? sortedMembers[index - 1] : null;
-            const prevProgressValue = prevMember
-              ? (prevMember.progress.current_season || 1) * 1000 + (prevMember.progress.current_episode || 1)
-              : Infinity;
-            const showSpoilerLine = isBehind && prevProgressValue >= myProgressValue && !isCurrentUser;
-
-            const relativeLabel = getRelativeLabel(member);
-
-            return (
-              <motion.div key={member.user_id} variants={fadeInUp}>
-                {showSpoilerLine && (
-                  <div className="flex items-center gap-2 my-3">
-                    <div className="flex-1 border-t-2 border-dashed border-orange-400/50" />
-                    <span className="text-xs text-orange-400 font-medium px-2">spoiler line</span>
-                    <div className="flex-1 border-t-2 border-dashed border-orange-400/50" />
+            {/* About the Show */}
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+                  About the Show
+                </p>
+                {group.show.overview && (
+                  <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+                    {group.show.overview}
+                  </p>
+                )}
+                {genres.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {genres.map((genre) => (
+                      <Badge key={genre} variant="secondary" className="text-xs rounded-full px-2.5 py-0.5">
+                        {genre}
+                      </Badge>
+                    ))}
                   </div>
                 )}
-                <Card className={`${isCurrentUser ? 'ring-1 ring-primary/50 bg-primary/5' : ''}`}>
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex items-center gap-3">
-                      {/* Avatar */}
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${
-                        isCurrentUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {member.name.charAt(0).toUpperCase()}
-                      </div>
+              </CardContent>
+            </Card>
 
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-sm truncate">
-                            {member.name}{isCurrentUser ? ' (you)' : ''}
+            {/* Delete / Leave Group */}
+            <div className="pt-1">
+              {isAdmin ? (
+                confirmDelete ? (
+                  <div className="flex gap-2">
+                    <Button variant="destructive" className="flex-1" onClick={handleDeleteGroup}>
+                      Confirm Delete
+                    </Button>
+                    <Button variant="outline" className="flex-1" onClick={() => setConfirmDelete(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1.5" />
+                    Delete Group
+                  </Button>
+                )
+              ) : (
+                confirmLeave ? (
+                  <div className="flex gap-2">
+                    <Button variant="destructive" className="flex-1" onClick={handleLeaveGroup}>
+                      Confirm Leave
+                    </Button>
+                    <Button variant="outline" className="flex-1" onClick={() => setConfirmLeave(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => setConfirmLeave(true)}
+                  >
+                    <LogOut className="w-4 h-4 mr-1.5" />
+                    Leave Group
+                  </Button>
+                )
+              )}
+            </div>
+          </div>
+
+          {/* Right Column — Sync Progress */}
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <BarChart2 className="w-5 h-5 text-primary" />
+                  <h3 className="font-semibold text-foreground">Sync Progress</h3>
+                </div>
+                <span className="text-xs text-muted-foreground">Sorted by Progress</span>
+              </div>
+
+              {allSynced && (
+                <div className="mb-4 px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center gap-3">
+                  <span className="text-xl">🎉</span>
+                  <div>
+                    <p className="text-sm font-semibold text-green-600">Everyone's in sync!</p>
+                    <p className="text-xs text-muted-foreground">Your whole group is watching at the same place.</p>
+                  </div>
+                </div>
+              )}
+
+              <motion.div
+                className="space-y-1"
+                variants={staggerContainer}
+                initial="hidden"
+                animate="show"
+              >
+                {visibleMembers.map((member, index) => {
+                  const memberProgressValue = (member.progress.current_season || 1) * 1000 + (member.progress.current_episode || 1);
+                  const isCurrentUser = member.user_id === user?.id;
+                  const isBehind = memberProgressValue < myProgressValue;
+
+                  const prevMember = index > 0 ? sortedMembers[index - 1] : null;
+                  const prevProgressValue = prevMember
+                    ? (prevMember.progress.current_season || 1) * 1000 + (prevMember.progress.current_episode || 1)
+                    : Infinity;
+                  const showSpoilerLine = isBehind && prevProgressValue >= myProgressValue && !isCurrentUser;
+
+                  const relativeLabel = getRelativeLabel(member);
+
+                  return (
+                    <motion.div key={member.user_id} variants={fadeInUp}>
+                      {showSpoilerLine && (
+                        <div className="flex items-center gap-2 my-4">
+                          <div className="flex-1 border-t border-dashed border-orange-400/50" />
+                          <span className="text-[10px] text-orange-400 font-semibold uppercase tracking-widest px-2 flex items-center gap-1">
+                            ⚠ Spoiler Line
                           </span>
-                          {member.role === 'admin' && (
-                            <Crown className="w-3 h-3 text-amber-500 flex-shrink-0" />
-                          )}
+                          <div className="flex-1 border-t border-dashed border-orange-400/50" />
+                        </div>
+                      )}
+                      <div className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
+                        isCurrentUser ? 'bg-primary/5 border border-primary/20' : 'hover:bg-muted/40'
+                      }`}>
+                        {/* Avatar */}
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${
+                          isCurrentUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {member.name.charAt(0).toUpperCase()}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-sm text-foreground truncate">
+                              {member.name}
+                            </span>
+                            {isCurrentUser && (
+                              <span className="text-xs text-muted-foreground">(You)</span>
+                            )}
+                            {member.role === 'admin' && (
+                              <Crown className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            S{member.progress.current_season || 1} • Ep {member.progress.current_episode || 1}
+                          </span>
+                        </div>
+
+                        {/* Badge + admin remove */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
                           {relativeLabel && (
-                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${relativeLabel.color}`}>
+                            <span className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border ${relativeLabel.color}`}>
                               {relativeLabel.text}
-                            </Badge>
+                            </span>
+                          )}
+                          {isAdmin && !isCurrentUser && (
+                            <button
+                              className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                              onClick={() => handleRemoveMember(member.user_id, member.name)}
+                              disabled={removingMember === member.user_id}
+                            >
+                              {removingMember === member.user_id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <UserMinus className="w-4 h-4" />
+                              )}
+                            </button>
                           )}
                         </div>
-                        <span className="text-xs text-muted-foreground">
-                          S{member.progress.current_season || 1} E{member.progress.current_episode || 1}
-                        </span>
                       </div>
-
-                      {/* Admin remove button */}
-                      {isAdmin && !isCurrentUser && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
-                          onClick={() => handleRemoveMember(member.user_id, member.name)}
-                          disabled={removingMember === member.user_id}
-                        >
-                          <UserMinus className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                    </motion.div>
+                  );
+                })}
               </motion.div>
-            );
-          })}
-        </motion.div>
 
-        {/* Group Actions */}
-        <div className="mt-8 pt-6 border-t border-border flex gap-3">
-          {isAdmin ? (
-            confirmDelete ? (
-              <div className="flex gap-2 w-full">
-                <Button
-                  variant="destructive"
-                  className="flex-1"
-                  onClick={handleDeleteGroup}
+              {sortedMembers.length > 4 && (
+                <button
+                  className="w-full text-center text-sm text-primary hover:text-primary/80 mt-4 pt-3 border-t border-border transition-colors"
+                  onClick={() => setShowAllMembers(!showAllMembers)}
                 >
-                  Confirm Delete
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setConfirmDelete(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                className="text-destructive hover:text-destructive"
-                onClick={() => setConfirmDelete(true)}
-              >
-                <Trash2 className="w-4 h-4 mr-1" />
-                Delete Group
-              </Button>
-            )
-          ) : (
-            confirmLeave ? (
-              <div className="flex gap-2 w-full">
-                <Button
-                  variant="destructive"
-                  className="flex-1"
-                  onClick={handleLeaveGroup}
-                >
-                  Confirm Leave
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setConfirmLeave(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={() => setConfirmLeave(true)}
-              >
-                <LogOut className="w-4 h-4 mr-1" />
-                Leave Group
-              </Button>
-            )
-          )}
+                  {showAllMembers
+                    ? 'Show less'
+                    : `View all ${sortedMembers.length} members`}
+                </button>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </motion.div>
     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -54,6 +54,7 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
   // Track watchlist tmdb_ids for O(1) lookup
   const [watchlistTmdbIds, setWatchlistTmdbIds] = useState<Set<number>>(new Set());
   const [watchlistLoading, setWatchlistLoading] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { user } = useAuth();
   const router = useRouter();
@@ -88,9 +89,11 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
     return watchlistTmdbIds.has(tmdbId) || recentlyAddedShows.has(tmdbId);
   }, [watchlistTmdbIds, recentlyAddedShows]);
 
-  const handleSearch = useCallback(async () => {
-    if (!searchQuery.trim()) {
-      toast.error('Please enter a search query');
+  const handleSearch = useCallback(async (overrideQuery?: string) => {
+    const q = (overrideQuery ?? searchQuery).trim();
+    if (!q) {
+      setShows([]);
+      setHasSearched(false);
       return;
     }
 
@@ -104,18 +107,13 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
         seasonMode: 'compact' as const,
       };
 
-      const result = await showService.searchShows(searchQuery, filters);
-      // The service now returns Show[] directly
+      const result = await showService.searchShows(q, filters);
       const showsData = Array.isArray(result) ? result : [];
       setShows(showsData);
-
-      if (showsData.length === 0) {
-        toast.info('No shows found. Try a different search term.');
-      }
     } catch (error: any) {
       console.error('Search error:', error);
       toast.error(error.message || 'Search failed');
-      setShows([]); // Reset shows to empty array on error
+      setShows([]);
     } finally {
       setLoading(false);
     }
@@ -259,12 +257,27 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
             <Input
               placeholder="Search for a show..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSearchQuery(val);
+                if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+                if (val.trim().length >= 2) {
+                  searchTimeoutRef.current = setTimeout(() => handleSearch(val.trim()), 500);
+                } else {
+                  setShows([]);
+                  setHasSearched(false);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+                  handleSearch();
+                }
+              }}
               className="pl-12 pr-28 h-12 rounded-full bg-card border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
             />
             <Button
-              onClick={handleSearch}
+              onClick={() => handleSearch()}
               disabled={loading}
               className="absolute right-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-5 h-9"
             >
@@ -342,18 +355,44 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
                     className="group cursor-pointer"
                     onClick={() => setSelectedShow(show)}
                   >
-                    {/* Poster with rating overlay */}
-                    <div className="relative aspect-[2/3] mb-3 rounded-2xl overflow-hidden bg-muted">
+                    {/* Poster with hover overlay */}
+                    <div className="relative aspect-[2/3] mb-3 rounded-2xl overflow-hidden bg-muted group/card">
                       <ImageWithFallback
                         src={getPosterUrl(show.poster_path)}
                         alt={show.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform group-hover/card:scale-105"
                       />
                       {/* Star rating badge */}
                       {show.rating && (
                         <div className="absolute top-2 right-2 flex items-center gap-0.5 bg-background/80 backdrop-blur-sm rounded-full px-2 py-0.5">
                           <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
                           <span className="text-xs font-semibold text-foreground">{show.rating.toFixed(1)}</span>
+                        </div>
+                      )}
+                      {/* In Watchlist badge */}
+                      {isInWatchlist(show.tmdb_id) && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-green-600/90 backdrop-blur-sm py-1.5 flex items-center justify-center gap-1.5 text-xs text-white font-medium">
+                          <Check className="w-3.5 h-3.5" />
+                          In Watchlist
+                        </div>
+                      )}
+                      {/* Quick-add hover overlay */}
+                      {!isInWatchlist(show.tmdb_id) && (
+                        <div
+                          className="absolute inset-0 bg-black/50 opacity-0 group-hover/card:opacity-100 transition-opacity flex items-center justify-center"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            className="bg-primary hover:bg-primary/90 text-white rounded-full p-3 scale-90 group-hover/card:scale-100 transition-transform disabled:opacity-60"
+                            onClick={() => handleQuickAdd(show.tmdb_id, show.title)}
+                            disabled={addingToWatchlist === show.tmdb_id}
+                            title="Quick add to watchlist"
+                          >
+                            {addingToWatchlist === show.tmdb_id
+                              ? <Loader2 className="w-5 h-5 animate-spin" />
+                              : <Plus className="w-5 h-5" />
+                            }
+                          </button>
                         </div>
                       )}
                     </div>
@@ -363,7 +402,7 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
 
                     {/* Platform badges */}
                     {show.providers && show.providers.length > 0 && (
-                      <div className="flex gap-1 flex-wrap mb-2">
+                      <div className="flex gap-1 flex-wrap">
                         {show.providers.slice(0, 2).map((provider, idx) => (
                           <Badge key={idx} variant="outline" className="text-[10px] px-1.5 py-0 rounded-full">
                             {provider.provider_name}
@@ -376,59 +415,21 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
                         )}
                       </div>
                     )}
-
-                    {/* Action buttons */}
-                    {isInWatchlist(show.tmdb_id) ? (
-                      <Button
-                        className="w-full bg-green-600 hover:bg-green-600 text-white rounded-full cursor-default"
-                        size="sm"
-                        disabled
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Check className="w-3.5 h-3.5 mr-1.5" />
-                        In Watchlist
-                      </Button>
-                    ) : (
-                      <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="shrink-0 h-8 w-8 rounded-full"
-                          onClick={() => handleQuickAdd(show.tmdb_id, show.title)}
-                          disabled={addingToWatchlist === show.tmdb_id}
-                          title="Quick add (Plan to Watch)"
-                        >
-                          {addingToWatchlist === show.tmdb_id ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <Plus className="w-3.5 h-3.5" />
-                          )}
-                        </Button>
-                        <Button
-                          className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-xs"
-                          size="sm"
-                          onClick={() => openAddModal(show)}
-                          disabled={addingToWatchlist === show.tmdb_id}
-                        >
-                          Add to Watchlist
-                        </Button>
-                      </div>
-                    )}
                   </div>
                 </motion.div>
               ))}
             </motion.div>
           ) : !loading && hasSearched && shows.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground text-lg">
-                No shows found. Try a different search term.
-              </p>
+            <div className="text-center py-16">
+              <img src="/logo.png" alt="Scout" className="w-16 h-16 mx-auto mb-4 opacity-40" />
+              <p className="text-lg font-medium text-foreground mb-1">No shows found</p>
+              <p className="text-muted-foreground text-sm">Try a different search term or adjust your filters.</p>
             </div>
           ) : !loading && !hasSearched ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground text-lg">
-                Search for your favorite shows above.
-              </p>
+            <div className="text-center py-16">
+              <img src="/logo.png" alt="Scout" className="w-16 h-16 mx-auto mb-4 opacity-40" />
+              <p className="text-lg font-medium text-foreground mb-1">Find your next binge</p>
+              <p className="text-muted-foreground text-sm">Type a show name and Scout will find it for you.</p>
             </div>
           ) : null}
         </div>

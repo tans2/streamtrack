@@ -39,6 +39,7 @@ export interface GroupDetail {
     tmdb_id: number;
     title: string;
     poster_path?: string;
+    overview?: string;
     status: string;
     genres: any[];
     rating: number;
