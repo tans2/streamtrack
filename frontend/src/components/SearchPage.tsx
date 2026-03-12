@@ -398,11 +398,11 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
                     </div>
 
                     {/* Title */}
-                    <h3 className="font-semibold text-sm text-foreground line-clamp-1 mb-1">{show.title}</h3>
+                    <h3 className="font-semibold text-sm text-foreground line-clamp-1 mb-1.5">{show.title}</h3>
 
                     {/* Platform badges */}
                     {show.providers && show.providers.length > 0 && (
-                      <div className="flex gap-1 flex-wrap">
+                      <div className="flex gap-1 flex-wrap mb-2">
                         {show.providers.slice(0, 2).map((provider, idx) => (
                           <Badge key={idx} variant="outline" className="text-[10px] px-1.5 py-0 rounded-full">
                             {provider.provider_name}
@@ -413,6 +413,23 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
                             +{show.providers.length - 2}
                           </Badge>
                         )}
+                      </div>
+                    )}
+
+                    {/* Add to Watchlist button */}
+                    {!isInWatchlist(show.tmdb_id) ? (
+                      <Button
+                        size="sm"
+                        className="w-full h-8 text-xs rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                        onClick={(e) => { e.stopPropagation(); openAddModal(show); }}
+                      >
+                        <Plus className="w-3.5 h-3.5 mr-1" />
+                        Add to Watchlist
+                      </Button>
+                    ) : (
+                      <div className="flex items-center justify-center gap-1.5 h-8 text-xs text-green-600 font-medium">
+                        <Check className="w-3.5 h-3.5" />
+                        In Watchlist
                       </div>
                     )}
                   </div>

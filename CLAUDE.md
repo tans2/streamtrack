@@ -218,9 +218,8 @@ npx ts-node src/scripts/cleanup-cache.ts
 - `SearchPage.tsx` - staggerContainer + fadeInUp for search results, cardHover on cards
 - `page.tsx` (Landing) - fadeIn for hero, staggerContainer for features, viewport animations for platforms
 
-**Geist Font Integration:**
-- `frontend/src/app/layout.tsx` - GeistSans applied to `<html>` via className
-- `frontend/tailwind.config.js` - `var(--font-geist-sans)` as primary sans-serif
+**Geist Font Integration (since replaced):**
+- Originally GeistSans; replaced by Be Vietnam Pro in Section 8 UI Overhaul
 
 ### 6. Shared NavBar Component (Completed)
 **Purpose**: Consistent Scout logo and branding across all pages via a shared navigation component.
@@ -267,6 +266,120 @@ npx ts-node src/scripts/cleanup-cache.ts
 - `staggerContainer` + `fadeInUp` for feature cards
 - `fadeIn` with viewport trigger for platforms section
 - `whileHover` scale on platform logos
+
+### 8. UI Design Overhaul — Scout Design System (Completed)
+**Purpose**: Unified visual language across all pages: dark card backgrounds, orange primary accents, Be Vietnam Pro typography.
+
+**Font Change:**
+- Replaced Geist Sans with **Be Vietnam Pro** (weights 400/500/600/700) via `next/font/google`
+- Applied in `frontend/src/app/layout.tsx` and `frontend/tailwind.config.js`
+
+**Color Tokens (`frontend/src/app/globals.css`):**
+- `--primary: 24 91% 55%` (Scout orange)
+- `--secondary: 102 36% 55%` (muted green)
+- `--accent: 40 88% 60%` (warm yellow)
+- Cleaner border, background, and card tokens
+
+**Auth Pages Redesigned:**
+- Scout fox logo above the auth card
+- Login: "Ready to jump back in?" subheading, "Forgot Password?" inline with password label, "New to Scout? Create an Account" toggle
+- Sign Up: "Join Scout" title, consistent rounded-full button
+- Files: `frontend/src/app/auth/page.tsx`, `frontend/src/components/SignUpPage.tsx`
+
+**NavBar (Authenticated variant) — Updated:**
+- Added centered nav links: Home (`/`), Search (`/search`), Watchlist (`/profile`)
+- Active link indicator: dot below active route (via `usePathname()`)
+- Removed `pageTitle` prop slash-separator; group name now in page hero
+- `frontend/src/components/ui/nav-bar.tsx`
+
+**SignOutButton Component (New):**
+- `frontend/src/components/ui/sign-out-button.tsx`
+- Wraps logout in `AlertDialog` confirmation modal
+- Accepts `variant` and `className` props for flexible styling
+- Used in NavBar actions for all authenticated pages; removed all direct `logout()` calls
+
+### 9. GroupDetailPage Redesign (Completed)
+**Purpose**: Match Scout design system with hero banner + two-column layout.
+
+**Hero Card:**
+- Full-width, horizontal layout: show poster (w-48) + right column
+- Right: "ACTIVE WATCH PARTY" label (orange, uppercase, small), group name `h1`, subtitle showing show title + member count
+- Copy Invite Link button (rounded-full, primary) — keeps existing `handleCopyInvite`
+- Group name moved here from NavBar (NavBar `pageTitle` removed)
+
+**Two-column grid (`md:grid-cols-[1fr_2fr]`):**
+
+Left column:
+- **"Add New Scouts" card** (admin only): email input with Mail icon, full-width "Add" button (previously "Invite New Scouts" / "Send Invitation")
+- **"About the Show" card**: show `overview` description + genre Badge pills (status removed)
+  - Backend: added `overview` to `getGroupDetails` Supabase select query in `backend/src/services/database.ts`
+  - Service: added `overview?: string` to `GroupDetail.show` interface in `watchGroupService.ts`
+- **Delete/Leave group actions** at bottom (destructive, existing confirm pattern)
+
+Right column:
+- **"Sync Progress" card**: BarChart2 header, member avatar initials, `S{n} • Ep {n}` format, status badge spans
+- Updated `getRelativeLabel` badge labels:
+  - Ahead → `LEADING THE PACK` (green)
+  - Same → `SAME PLACE` (blue)
+  - N ep behind → `N EP BEHIND` (orange)
+  - Season behind → `CATCHING UP` (muted)
+- `showAllMembers` state: shows first 4, "View all N members" expands to all
+- **Group Sync Banner**: 🎉 "Everyone's in sync!" banner when all members at same progress
+  - `allSynced = sortedMembers.length > 1 && sortedMembers.every(m => progressValue === firstProgressValue)`
+
+**File:** `frontend/src/components/GroupDetailPage.tsx`
+
+### 10. SettingsPage Redesign (Completed)
+**Purpose**: Section-label + icon-row card layout while preserving all existing functionality.
+
+**Pattern:**
+- `SectionLabel` helper: orange uppercase tracking-widest text
+- `IconPill` helper: `bg-muted rounded-xl p-2` wrapping a lucide icon
+- Card rows separated by `border-t border-border`
+
+**Sections:**
+1. **ACCOUNT**: Email Verification (Verified badge or Verify button), Full Name input, Change Password inputs, Region select, Save Changes button
+2. **PREFERENCES**: Play/Calendar/Tv/PauseCircle/Users/BarChart2 icon rows for all notification toggles; non-pause rows wrapped in `opacity-50 pointer-events-none` when `pauseAll` is on; Friend Activity + Weekly Digest disabled (Coming Soon)
+3. **STREAMING PLATFORMS**: Existing grid with `rounded-xl border` tiles, selected = `border-primary bg-primary/10`; Save button
+4. **PREMIUM**: Icon pill + "Coming Soon" badge (preserved)
+5. **PRIVACY & SECURITY**: Privacy Policy row (Lock icon + ChevronRight, non-functional) + existing 3 disabled switches
+
+**No sign-out button at bottom** — `SignOutButton` in NavBar actions only.
+
+**File:** `frontend/src/components/SettingsPage.tsx`
+
+### 11. UX Improvements — Round 1 (Completed)
+**Purpose**: Polish empty states, search UX, hover interactions, and progress feedback.
+
+**Empty States (fox mascot):**
+- SearchPage: pre-search state ("What are you looking for?") and no-results state ("No shows found for '...'") — fox logo at opacity-40, friendly copy, Browse link
+- ProfilePage Currently Watching: "Nothing playing yet" + "Browse Shows →" link when watchlist is empty
+- Files: `frontend/src/components/SearchPage.tsx`, `frontend/src/components/ProfilePage.tsx`
+
+**Show Card Hover Quick-Add (SearchPage):**
+- Poster div uses `group/card` Tailwind named group class
+- On hover: dark overlay (`group-hover/card:opacity-100`) with centered `+` quick-add button (scale-90 → scale-100 transition)
+- "In Watchlist" green badge overlaid on poster bottom edge when already added
+- Removed always-visible action buttons below cards
+
+**Debounced Search Autocomplete (SearchPage):**
+- `useRef<NodeJS.Timeout>` debounce — 500ms delay, minimum 2 characters
+- Input `onChange` clears timeout, sets new debounce if ≥2 chars, clears results if <2 chars
+- Enter key clears timeout and fires search immediately
+- Uses existing `/api/shows/search` endpoint (no new API needed)
+
+**Notification Dot on Settings Gear (ProfilePage):**
+- `emailVerified` state loaded via `notificationService.getPreferences()` on mount
+- Red dot `<span>` rendered on gear icon when `emailVerified === false`
+- Settings gear added to top-right of profile header (`router.push('/settings')`)
+
+**Currently Watching Sort (ProfilePage):**
+- Sorted by `updated_at` descending: `.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())`
+- Most recently updated shows appear first
+
+**Group Watch Status Banner (GroupDetailPage):**
+- `allSynced` computed from `sortedMembers` — all members share the same progress value
+- 🎉 banner displayed above Sync Progress card when synced, only when `sortedMembers.length > 1`
 
 ---
 
