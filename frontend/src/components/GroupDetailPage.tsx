@@ -8,6 +8,7 @@ import { Badge } from "./ui/badge";
 import { Input } from "./ui/input";
 import { staggerContainer, fadeInUp, fadeIn } from '@/lib/animations';
 import { NavBar } from './ui/nav-bar';
+import { SignOutButton } from './ui/sign-out-button';
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -30,7 +31,7 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
   const [addEmail, setAddEmail] = useState('');
   const [addingMember, setAddingMember] = useState(false);
 
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
 
   const FRONTEND_URL = typeof window !== 'undefined' ? window.location.origin : '';
@@ -215,13 +216,7 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Back</span>
             </Button>
-            <Button
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-              onClick={() => logout()}
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </Button>
+            <SignOutButton />
           </>
         }
       />

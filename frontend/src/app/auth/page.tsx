@@ -17,7 +17,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const { login, register } = useAuth();
   const router = useRouter();
 
@@ -34,7 +34,6 @@ export default function AuthPage() {
       router.push('/');
     } catch (err: any) {
       console.error('Authentication error:', err);
-      // Error is already handled by AuthContext with toast
     } finally {
       setLoading(false);
     }
@@ -52,13 +51,18 @@ export default function AuthPage() {
       <NavBar variant="auth" backHref="/" backLabel="Back" />
       <div className="flex items-center justify-center p-6" style={{ minHeight: 'calc(100vh - 72px)' }}>
       <div className="w-full max-w-md">
-        <Card className="bg-card border-border shadow-lg">
+        {/* Scout Logo */}
+        <div className="flex justify-center mb-6">
+          <img src="/logo.png" alt="Scout" className="w-20 h-20" />
+        </div>
+
+        <Card className="bg-card border-border shadow-lg rounded-2xl">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-card-foreground">
               {isLogin ? 'Welcome Back' : 'Join Scout'}
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              {isLogin ? 'Sign in to your account to continue tracking shows' : 'Create your account to start tracking shows across all streaming platforms'}
+              {isLogin ? 'Ready to jump back in?' : 'Create your account to start tracking shows across all streaming platforms'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -72,7 +76,7 @@ export default function AuthPage() {
                     placeholder="Enter your full name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                  onKeyDown={handleKeyDown}
+                    onKeyDown={handleKeyDown}
                     className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
                     required
                   />
@@ -94,7 +98,18 @@ export default function AuthPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-card-foreground">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-card-foreground">Password</Label>
+                  {isLogin && (
+                    <button
+                      type="button"
+                      onClick={() => router.push('/forgot-password')}
+                      className="text-sm text-primary hover:text-primary/80 underline"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
                 <Input
                   id="password"
                   type="password"
@@ -109,22 +124,11 @@ export default function AuthPage() {
                 {!isLogin && (
                   <p className="text-xs text-muted-foreground">Password must be at least 8 characters</p>
                 )}
-                {isLogin && (
-                  <div className="text-right">
-                    <button
-                      type="button"
-                      onClick={() => router.push('/forgot-password')}
-                      className="text-sm text-primary hover:text-primary/80 underline"
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
-                )}
               </div>
 
               <Button
                 type="submit"
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground mt-6"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground mt-6 rounded-full"
                 size="lg"
                 disabled={loading}
               >
@@ -141,13 +145,13 @@ export default function AuthPage() {
 
             <div className="text-center mt-6">
               <p className="text-muted-foreground">
-                {isLogin ? "Don't have an account? " : "Already have an account? "}
+                {isLogin ? 'New to Scout? ' : 'Already have an account? '}
                 <button
                   type="button"
                   onClick={() => setIsLogin(!isLogin)}
-                  className="text-primary hover:text-primary/80 underline"
+                  className="text-primary hover:text-primary/80 underline font-medium"
                 >
-                  {isLogin ? 'Sign up' : 'Sign in'}
+                  {isLogin ? 'Create an Account' : 'Sign in'}
                 </button>
               </p>
             </div>
@@ -158,4 +162,3 @@ export default function AuthPage() {
     </div>
   );
 }
-

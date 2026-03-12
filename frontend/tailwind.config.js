@@ -9,7 +9,7 @@ module.exports = {
     theme: {
       extend: {
         fontFamily: {
-          sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
+          sans: ['var(--font-be-vietnam-pro)', 'system-ui', 'sans-serif'],
         },
         colors: {
           border: 'hsl(var(--border))',

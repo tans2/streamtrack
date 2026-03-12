@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
-import { Search, Star, Plus, Loader2, Check, LogOut } from "lucide-react";
+import { Search, Star, Plus, Loader2, Check } from "lucide-react";
+import { SignOutButton } from './ui/sign-out-button';
 import { staggerContainer, fadeInUp, cardHover } from '@/lib/animations';
 import { SkeletonGrid } from './ui/skeleton-card';
 import { NavBar } from './ui/nav-bar';
@@ -49,12 +50,12 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
   const [addModalEpisodeCounts, setAddModalEpisodeCounts] = useState<Record<number, number>>({});
   const [addModalLoadingSeasons, setAddModalLoadingSeasons] = useState(false);
   const [addModalLoadingEpisodes, setAddModalLoadingEpisodes] = useState(false);
-  
+
   // Track watchlist tmdb_ids for O(1) lookup
   const [watchlistTmdbIds, setWatchlistTmdbIds] = useState<Set<number>>(new Set());
   const [watchlistLoading, setWatchlistLoading] = useState(false);
 
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
 
   // Load user's watchlist on mount (for "In Watchlist" checking)
@@ -64,7 +65,7 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
         setWatchlistTmdbIds(new Set());
         return;
       }
-      
+
       setWatchlistLoading(true);
       try {
         const watchlist = await watchlistService.getWatchlist();
@@ -107,7 +108,7 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
       // The service now returns Show[] directly
       const showsData = Array.isArray(result) ? result : [];
       setShows(showsData);
-      
+
       if (showsData.length === 0) {
         toast.info('No shows found. Try a different search term.');
       }
@@ -238,201 +239,182 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
     <div className="min-h-screen text-foreground pb-20 md:pb-0">
       <NavBar
         variant="authenticated"
-        pageTitle="Search Shows"
         actions={
-          <>
-            <Button variant="ghost" className="hidden sm:inline-flex text-primary hover:text-primary hover:bg-primary/10" onClick={() => router.push('/profile')}>
-              My Watchlist
-            </Button>
-            <Button variant="ghost" className="hidden sm:inline-flex text-primary hover:text-primary hover:bg-primary/10" onClick={() => router.push('/settings')}>
-              Settings
-            </Button>
-            <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => logout()}>
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </Button>
-          </>
+          <SignOutButton className="text-muted-foreground hover:text-foreground hover:bg-muted/50" />
         }
       />
 
-      <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
-        {/* Search Form */}
-        <Card className="bg-card border-border shadow-lg mb-6 sm:mb-8">
-          <CardContent className="p-4 sm:p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-              <div className="space-y-2">
-                <Label htmlFor="search" className="text-card-foreground">Search by Title</Label>
-                <Input
-                  id="search"
-                  placeholder="Enter show title..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="text-card-foreground">Platform</Label>
-                <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-                  <SelectTrigger className="bg-input-background border-border text-foreground">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {platforms.map(platform => (
-                      <SelectItem key={platform} value={platform}>
-                        {platform}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="text-card-foreground">Country</Label>
-                <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-                  <SelectTrigger className="bg-input-background border-border text-foreground">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {countries.map(country => (
-                      <SelectItem key={country} value={country}>
-                        {country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="text-card-foreground">Subscription Tier</Label>
-                <Select value={selectedTier} onValueChange={setSelectedTier}>
-                  <SelectTrigger className="bg-input-background border-border text-foreground">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tiers.map(tier => (
-                      <SelectItem key={tier} value={tier}>
-                        {tier}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <Button 
-                onClick={handleSearch}
-                disabled={loading}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Search className="w-4 h-4 mr-2" />
-                )}
-                Search
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="max-w-[1400px] mx-auto px-6 sm:px-10 py-8 sm:py-12">
+        {/* Hero heading */}
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-8">
+          <span className="text-foreground">What are you </span>
+          <span className="text-primary">watching</span>
+          <span className="text-foreground">?</span>
+        </h1>
+
+        {/* Search bar */}
+        <div className="max-w-2xl mx-auto mb-4">
+          <div className="relative flex items-center">
+            <Search className="absolute left-4 w-5 h-5 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Search for a show..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              className="pl-12 pr-28 h-12 rounded-full bg-card border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
+            />
+            <Button
+              onClick={handleSearch}
+              disabled={loading}
+              className="absolute right-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-5 h-9"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                'Search'
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Filter pills */}
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-10">
+          <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+            <SelectTrigger className="w-auto min-w-[130px] h-8 rounded-full text-xs bg-card border-border">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {platforms.map(platform => (
+                <SelectItem key={platform} value={platform}>
+                  {platform}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+            <SelectTrigger className="w-auto min-w-[80px] h-8 rounded-full text-xs bg-card border-border">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {countries.map(country => (
+                <SelectItem key={country} value={country}>
+                  {country}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedTier} onValueChange={setSelectedTier}>
+            <SelectTrigger className="w-auto min-w-[100px] h-8 rounded-full text-xs bg-card border-border">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {tiers.map(tier => (
+                <SelectItem key={tier} value={tier}>
+                  {tier}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Results */}
         <div>
-          <h2 className="text-xl mb-6 text-foreground">
-            Search Results {shows && shows.length > 0 && `(${shows.length} shows found)`}
-          </h2>
-          
+          {hasSearched && (
+            <h2 className="text-lg font-semibold mb-6 text-foreground">
+              {shows.length > 0 ? `Search Results (${shows.length} shows found)` : 'Search Results'}
+            </h2>
+          )}
+
           {loading ? (
-            <SkeletonGrid count={8} />
+            <SkeletonGrid count={10} />
           ) : shows && shows.length > 0 ? (
             <motion.div
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5"
               variants={staggerContainer}
               initial="hidden"
               animate="show"
             >
               {shows.map(show => (
                 <motion.div key={show.tmdb_id} variants={fadeInUp} {...cardHover}>
-                <Card
-                  className="bg-card border-border hover:border-primary transition-colors shadow-lg cursor-pointer hover:shadow-lg"
-                  onClick={() => setSelectedShow(show)}
-                >
-                  <CardContent className="p-4">
-                    <div className="aspect-[2/3] mb-4 rounded-lg overflow-hidden bg-muted">
-                      <ImageWithFallback 
+                  <div
+                    className="group cursor-pointer"
+                    onClick={() => setSelectedShow(show)}
+                  >
+                    {/* Poster with rating overlay */}
+                    <div className="relative aspect-[2/3] mb-3 rounded-2xl overflow-hidden bg-muted">
+                      <ImageWithFallback
                         src={getPosterUrl(show.poster_path)}
                         alt={show.title}
                         className="w-full h-full object-cover"
                       />
+                      {/* Star rating badge */}
+                      {show.rating && (
+                        <div className="absolute top-2 right-2 flex items-center gap-0.5 bg-background/80 backdrop-blur-sm rounded-full px-2 py-0.5">
+                          <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                          <span className="text-xs font-semibold text-foreground">{show.rating.toFixed(1)}</span>
+                        </div>
+                      )}
                     </div>
-                    <h3 className="text-card-foreground mb-2 line-clamp-2">{show.title}</h3>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center">
-                        <Star className="w-4 h-4 text-yellow-600 mr-1" />
-                        <span className="text-muted-foreground">{show.rating?.toFixed(1) || 'N/A'}</span>
-                      </div>
-                    </div>
-                    
+
+                    {/* Title */}
+                    <h3 className="font-semibold text-sm text-foreground line-clamp-1 mb-1">{show.title}</h3>
+
                     {/* Platform badges */}
                     {show.providers && show.providers.length > 0 && (
-                      <div className="flex gap-1 flex-wrap justify-end mb-3">
-                        {show.providers.slice(0, 3).map((provider, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs">
+                      <div className="flex gap-1 flex-wrap mb-2">
+                        {show.providers.slice(0, 2).map((provider, idx) => (
+                          <Badge key={idx} variant="outline" className="text-[10px] px-1.5 py-0 rounded-full">
                             {provider.provider_name}
                           </Badge>
                         ))}
-                        {show.providers.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{show.providers.length - 3}
+                        {show.providers.length > 2 && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full">
+                            +{show.providers.length - 2}
                           </Badge>
                         )}
                       </div>
                     )}
-                    
+
+                    {/* Action buttons */}
                     {isInWatchlist(show.tmdb_id) ? (
-                      <Button 
-                        className="w-full bg-muted text-muted-foreground cursor-default"
+                      <Button
+                        className="w-full bg-green-600 hover:bg-green-600 text-white rounded-full cursor-default"
                         size="sm"
                         disabled
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Check className="w-4 h-4 mr-2" />
+                        <Check className="w-3.5 h-3.5 mr-1.5" />
                         In Watchlist
                       </Button>
                     ) : (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="outline"
                           size="icon"
-                          className="shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleQuickAdd(show.tmdb_id, show.title);
-                          }}
+                          className="shrink-0 h-8 w-8 rounded-full"
+                          onClick={() => handleQuickAdd(show.tmdb_id, show.title)}
                           disabled={addingToWatchlist === show.tmdb_id}
                           title="Quick add (Plan to Watch)"
                         >
                           {addingToWatchlist === show.tmdb_id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            <Plus className="w-4 h-4" />
+                            <Plus className="w-3.5 h-3.5" />
                           )}
                         </Button>
-                        <Button 
-                          className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                        <Button
+                          className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-xs"
                           size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent card click
-                            openAddModal(show);
-                          }}
+                          onClick={() => openAddModal(show)}
                           disabled={addingToWatchlist === show.tmdb_id}
                         >
                           Add to Watchlist
                         </Button>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
                 </motion.div>
               ))}
             </motion.div>
@@ -445,13 +427,13 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
           ) : !loading && !hasSearched ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground text-lg">
-                Enter a search term to find shows.
+                Search for your favorite shows above.
               </p>
             </div>
           ) : null}
         </div>
       </div>
-      
+
       {/* Show Details Modal */}
       <ShowDetailsModal
         show={selectedShow}

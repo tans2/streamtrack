@@ -2,27 +2,38 @@
 
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
-import { Bell, LogOut, ScanSearch, ListChecks, Star, Users } from "lucide-react";
+import { TrendingUp, Bell, Users, Calendar, ArrowRight } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { NavBar } from '@/components/ui/nav-bar';
+import { SignOutButton } from '@/components/ui/sign-out-button';
 import { staggerContainer, fadeInUp, fadeIn } from '@/lib/animations';
 
 export default function HomePage() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
-  const streamingPlatforms = [
-    { name: "Netflix", icon: "/platforms/netflix.png" },
-    { name: "Hulu", icon: "/platforms/hulu.svg" },
-    { name: "Disney+", icon: "/platforms/disneyplus.svg" },
-    { name: "Prime Video", icon: "/platforms/primevideo.svg" },
-    { name: "Paramount+", icon: "/platforms/paramountplus.svg" },
-    { name: "Peacock", icon: "/platforms/peacock.svg" },
-    { name: "HBO Max", icon: "/platforms/hbomax.svg" },
-    { name: "Apple TV+", icon: "/platforms/appletv.svg" },
-    { name: "YouTube TV", icon: "/platforms/youtubetv.svg" },
-    { name: "Fubo TV", icon: "/platforms/fubo.svg" },
+  const features = [
+    {
+      icon: TrendingUp,
+      title: "Track Progress",
+      description: "Keep tabs on every episode across all platforms in one central hub.",
+    },
+    {
+      icon: Bell,
+      title: "Smart Notifications",
+      description: "Get alerted the moment new episodes drop or when friends start watching.",
+    },
+    {
+      icon: Users,
+      title: "Watch Groups",
+      description: "Sync your viewing experience and chat in real-time with your squad.",
+    },
+    {
+      icon: Calendar,
+      title: "Never Miss Out",
+      description: "Personalized calendars and reminders for your must-watch series.",
+    },
   ];
 
   return (
@@ -45,27 +56,24 @@ export default function HomePage() {
             >
               My Watchlist
             </Button>
-            <Button
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-              onClick={() => user ? logout() : router.push('/auth')}
-            >
-              {user ? (
-                <>
-                  <LogOut className="w-4 h-4" />
-                  Sign Out
-                </>
-              ) : (
-                'Sign In'
-              )}
-            </Button>
+            {user ? (
+              <SignOutButton variant="default" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6" />
+            ) : (
+              <Button
+                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6"
+                onClick={() => router.push('/auth')}
+              >
+                Sign In
+              </Button>
+            )}
           </>
         }
       />
 
-      {/* Hero Section */}
+      {/* Hero + Features Section — 2-column on desktop, stacked on mobile */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
-        <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center mb-16 sm:mb-24">
-          {/* Left column - Headline */}
+        <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start mb-16 sm:mb-24">
+          {/* Left column — Logo, headline, subtitle, CTA */}
           <motion.div
             variants={fadeIn}
             initial="hidden"
@@ -73,142 +81,106 @@ export default function HomePage() {
           >
             <img
               src="/logo.png"
-              alt=""
-              className="w-24 h-24 sm:w-28 sm:h-28 mb-4 sm:mb-5"
+              alt="Scout mascot"
+              className="w-36 h-36 sm:w-44 sm:h-44 mb-5"
             />
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight">
               <span className="text-foreground">Meet </span>
               <span className="text-primary">Scout</span>
               <br />
-              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                your TV sidekick
-              </span>
+              <span className="text-foreground">your TV sidekick</span>
             </h1>
-            <p className="text-lg sm:text-xl text-muted-foreground mt-4 sm:mt-6 max-w-lg">
-              Track your favorite shows across every streaming platform. Never miss a new episode again.
+            <p className="text-base sm:text-lg text-muted-foreground mt-4 sm:mt-6 max-w-md">
+              Track your favorite shows across streaming platforms with friends.
             </p>
             {!user && (
-              <div className="flex flex-col sm:flex-row gap-3 mt-6 sm:mt-8">
+              <div className="mt-6 sm:mt-8">
                 <Button
                   size="lg"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8"
                   onClick={() => router.push('/signup')}
                 >
-                  <Star className="w-5 h-5" />
-                  Get Started Free
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={() => router.push('/search')}
-                >
-                  Explore Shows
+                  Get Started
+                  <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
             )}
           </motion.div>
 
-          {/* Right column - Feature cards stacked */}
+          {/* Right column — Feature heading + stacked feature cards */}
           <motion.div
             className="space-y-4"
             variants={staggerContainer}
             initial="hidden"
             animate="show"
           >
-            <motion.div variants={fadeInUp}>
-              <div className="flex items-start gap-4 p-4 sm:p-5 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <ScanSearch className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-card-foreground">Universal Search</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Search any show and instantly see where it's streaming.
-                  </p>
-                </div>
-              </div>
-            </motion.div>
+            <motion.h2
+              variants={fadeInUp}
+              className="text-xl sm:text-2xl font-bold text-foreground mb-2"
+            >
+              Never miss a new episode again
+            </motion.h2>
 
-            <motion.div variants={fadeInUp}>
-              <div className="flex items-start gap-4 p-4 sm:p-5 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-accent/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <ListChecks className="w-5 h-5 sm:w-6 sm:h-6 text-accent" />
+            {features.map((feature) => (
+              <motion.div key={feature.title} variants={fadeInUp}>
+                <div className="flex items-start gap-4 p-4 sm:p-5 rounded-2xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <feature.icon className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-card-foreground">{feature.title}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {feature.description}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-card-foreground">Single Watchlist</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    One list across all platforms. Track progress, status, and more.
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div variants={fadeInUp}>
-              <div className="flex items-start gap-4 p-4 sm:p-5 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-secondary/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-secondary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-card-foreground">Smart Alerts</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Daily digest emails when new episodes drop for your shows.
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div variants={fadeInUp}>
-              <div className="flex items-start gap-4 p-4 sm:p-5 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-card-foreground">Watch Groups</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Watch and track status with friends to enjoy together.
-                  </p>
-                </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            ))}
           </motion.div>
         </div>
 
-        {/* Streaming Platforms */}
+        {/* CTA Section */}
         <motion.div
-          className="text-center"
+          className="bg-card/60 backdrop-blur-[12px] border border-border/50 rounded-3xl p-8 sm:p-12 text-center mb-16 sm:mb-24"
           variants={fadeIn}
           initial="hidden"
           whileInView="show"
           viewport={{ once: true }}
         >
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8">Supported Platforms</h2>
-          <div className="flex flex-wrap justify-center gap-3 sm:gap-6">
-            {streamingPlatforms.map((platform) => (
-              <motion.div
-                key={platform.name}
-                className="flex items-center justify-center px-4 py-2"
-                title={platform.name}
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              >
-                <img
-                  src={platform.icon}
-                  alt={`${platform.name} logo`}
-                  className="h-5 max-w-[80px] sm:h-6 w-auto sm:max-w-[112px] object-contain"
-                />
-                <span className="sr-only">{platform.name}</span>
-              </motion.div>
-            ))}
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary mb-3">
+            Ready to start?
+          </h2>
+          <p className="text-muted-foreground mb-8">
+            Start keeping up with your friends today.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              size="lg"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8"
+              onClick={() => router.push('/signup')}
+            >
+              Get Started Now
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="rounded-full px-8"
+              onClick={() => router.push('/search')}
+            >
+              Explore Shows
+            </Button>
           </div>
         </motion.div>
 
         {/* Footer */}
-        <footer className="mt-16 sm:mt-24 pt-8 border-t border-border text-center pb-4">
+        <footer className="pt-8 border-t border-border text-center pb-4">
           <div className="flex items-center justify-center gap-2 mb-2">
             <img src="/logo.png" alt="Scout" className="w-6 h-6" />
             <span className="text-sm font-semibold text-foreground">Scout</span>
           </div>
-          <p className="text-xs text-muted-foreground">Track Your Shows</p>
+          <p className="text-xs text-muted-foreground">
+            &copy; 2026 Scout TV Tracking. All rights reserved.
+          </p>
         </footer>
       </div>
     </div>

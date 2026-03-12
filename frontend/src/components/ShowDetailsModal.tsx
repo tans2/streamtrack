@@ -243,7 +243,7 @@ export default function ShowDetailsModal({
                         <SelectTrigger className="bg-input-background border-border text-foreground">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="!max-h-[300px]">
                           {getAvailableSeasons().map((seasonNum) => (
                             <SelectItem key={seasonNum} value={seasonNum.toString()}>
                               Season {seasonNum}

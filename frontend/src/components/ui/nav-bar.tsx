@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Button } from './button';
 import { ArrowLeft } from 'lucide-react';
 import React from 'react';
@@ -26,8 +26,15 @@ function ScoutBrand() {
   );
 }
 
+const navLinks = [
+  { label: 'Home', href: '/' },
+  { label: 'Search', href: '/search' },
+  { label: 'Watchlist', href: '/profile' },
+];
+
 export function NavBar({ variant, backHref, backLabel, pageTitle, actions }: NavBarProps) {
   const router = useRouter();
+  const pathname = usePathname();
 
   if (variant === 'landing') {
     return (
@@ -68,15 +75,31 @@ export function NavBar({ variant, backHref, backLabel, pageTitle, actions }: Nav
     <div className="border-b border-border bg-card/50">
       <div className="container mx-auto px-3 sm:px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <ScoutBrand />
-            {pageTitle && (
-              <>
-                <span className="mx-2 sm:mx-4 text-muted-foreground/50">/</span>
-                <h1 className="text-lg sm:text-xl text-foreground">{pageTitle}</h1>
-              </>
-            )}
-          </div>
+          <ScoutBrand />
+
+          {/* Center nav links — hidden on mobile (bottom tab bar handles it) */}
+          <nav className="hidden md:flex items-center gap-1">
+            {navLinks.map(({ label, href }) => {
+              const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
+              return (
+                <button
+                  key={href}
+                  onClick={() => router.push(href)}
+                  className={`relative px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    isActive
+                      ? 'text-primary'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  }`}
+                >
+                  {label}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
           {actions && (
             <div className="flex items-center space-x-2 sm:space-x-4">
               {actions}

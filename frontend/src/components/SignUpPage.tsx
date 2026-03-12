@@ -95,7 +95,12 @@ export default function SignUpPage({ onNavigate }: SignUpPageProps) {
       <NavBar variant="auth" backHref="/" backLabel="Back" />
       <div className="flex items-center justify-center p-6" style={{ minHeight: 'calc(100vh - 72px)' }}>
       <div className="w-full max-w-md">
-        <Card className="bg-card border-border shadow-lg">
+        {/* Scout Logo */}
+        <div className="flex justify-center mb-6">
+          <img src="/logo.png" alt="Scout" className="w-20 h-20" />
+        </div>
+
+        <Card className="bg-card border-border shadow-lg rounded-2xl">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-card-foreground">Join Scout</CardTitle>
             <CardDescription className="text-muted-foreground">
@@ -174,7 +179,7 @@ export default function SignUpPage({ onNavigate }: SignUpPageProps) {
               
               <Button 
                 type="submit" 
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground mt-6"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground mt-6 rounded-full"
                 size="lg"
                 disabled={loading}
               >

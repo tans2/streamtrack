@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Switch } from "./ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Badge } from "./ui/badge";
-import { Crown, Loader2, Mail, CheckCircle2, AlertCircle, LogOut } from "lucide-react";
+import { Crown, Loader2, Mail, CheckCircle2, AlertCircle } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 import { NavBar } from './ui/nav-bar';
+import { SignOutButton } from './ui/sign-out-button';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { notificationService } from '@/services/notificationService';
@@ -51,7 +52,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
   const [sendingVerification, setSendingVerification] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
 
-  const { user, updatePreferences, logout } = useAuth();
+  const { user, updatePreferences } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -214,10 +215,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
         variant="authenticated"
         pageTitle="Settings"
         actions={
-          <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" onClick={() => logout()}>
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Sign Out</span>
-          </Button>
+          <SignOutButton />
         }
       />
 
