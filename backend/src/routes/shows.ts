@@ -67,8 +67,8 @@ router.put('/watchlist/:showId/status', authenticateToken, async (req: any, res)
             event_type: 'group_progress_update',
             season_number: currentSeason,
             episode_number: currentEpisode,
-            show_title: updated.shows?.title || 'Unknown Show',
-            episode_title: `${req.user.name || 'Someone'} updated to S${currentSeason}E${currentEpisode}`,
+            show_title: group.name,
+            episode_title: `${req.user.name || 'Someone'} updated to S${currentSeason}E${currentEpisode} on ${updated.shows?.title || 'a show'}`,
           }));
           if (events.length > 0) {
             await DatabaseService.bulkInsertPendingEvents(events);

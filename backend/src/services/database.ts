@@ -266,7 +266,7 @@ export class DatabaseService {
         .update(updateFields)
         .eq('user_id', userId)
         .eq('show_id', showId)
-        .select()
+        .select('*, shows(title)')
         .single();
 
       if (error) {
