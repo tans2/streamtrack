@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Bell, Users, Calendar, ArrowRight } from "lucide-react";
+import { List, Search, Bell, Users, ArrowRight } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { NavBar } from '@/components/ui/nav-bar';
@@ -15,24 +15,24 @@ export default function HomePage() {
 
   const features = [
     {
-      icon: TrendingUp,
-      title: "Track Progress",
-      description: "Keep tabs on every episode across all platforms in one central hub.",
+      icon: List,
+      title: "My Watchlist",
+      description: "Save shows you love, track where you left off, and pick back up anytime across every platform.",
+    },
+    {
+      icon: Search,
+      title: "Universal Search",
+      description: "Find any show and see exactly where to watch it, which seasons are available, and on what platform.",
     },
     {
       icon: Bell,
-      title: "Smart Notifications",
-      description: "Get alerted the moment new episodes drop or when friends start watching.",
+      title: "Drop Alerts",
+      description: "Get notified when new episodes and seasons drop so you're never the last to know.",
     },
     {
       icon: Users,
       title: "Watch Groups",
-      description: "Sync your viewing experience and chat in real-time with your squad.",
-    },
-    {
-      icon: Calendar,
-      title: "Never Miss Out",
-      description: "Personalized calendars and reminders for your must-watch series.",
+      description: "Track shows with friends and know exactly where everyone's at, even from miles apart.",
     },
   ];
 
