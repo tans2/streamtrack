@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle, Loader2, List, Bell, Users, Play } from 'lucide-react';
+import { CheckCircle, Loader2, List, Search, Bell, Users } from 'lucide-react';
 
 export default function BetaLandingPage() {
   const [name, setName] = useState('');
@@ -39,23 +39,23 @@ export default function BetaLandingPage() {
   const features = [
     {
       icon: <List className="w-6 h-6" />,
-      title: 'Unified Watchlist',
-      description: 'One place for all your shows across Netflix, Hulu, Disney+, Prime, and more. Track exactly which season and episode you\'re on.',
+      title: 'My Watchlist',
+      description: 'Save shows you love, track where you left off, and pick back up anytime across every platform.',
+    },
+    {
+      icon: <Search className="w-6 h-6" />,
+      title: 'Universal Search',
+      description: 'Find any show and see exactly where to watch it, which seasons are available, and on what platform.',
     },
     {
       icon: <Bell className="w-6 h-6" />,
-      title: 'New Episode Alerts',
-      description: 'Get a daily digest when new episodes drop for shows you\'re following. Never fall behind again.',
+      title: 'Drop Alerts',
+      description: 'Get notified when new episodes and seasons drop so you\'re never the last to know.',
     },
     {
       icon: <Users className="w-6 h-6" />,
       title: 'Watch Groups',
-      description: 'Watch shows together with friends. See everyone\'s progress, avoid spoilers, and stay in sync.',
-    },
-    {
-      icon: <Play className="w-6 h-6" />,
-      title: 'Pick Up Right Where You Left Off',
-      description: 'Your progress syncs across all your devices. Jump back in without hunting for your spot.',
+      description: 'Track shows with friends and know exactly where everyone\'s at, even from miles apart.',
     },
   ];
 
@@ -91,8 +91,8 @@ export default function BetaLandingPage() {
 
             {/* Centered hero text */}
             <div className="text-center max-w-2xl mx-auto mb-14">
-              <img src="/logo.png" alt="Scout fox" className="w-20 h-20 mx-auto mb-6" />
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mb-5 leading-tight">
+              <img src="/logo.png" alt="Scout fox" className="w-24 h-24 mx-auto mb-6" />
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-5 leading-tight">
                 Meet Scout,{' '}
                 <span className="text-primary">your TV sidekick</span>
               </h1>
@@ -199,10 +199,6 @@ export default function BetaLandingPage() {
                   )}
                 </div>
 
-                {/* Social proof nudge */}
-                <p className="text-center text-xs text-muted-foreground mt-4">
-                  Already tracking shows on Netflix, Disney+, Prime &amp; more.
-                </p>
               </div>
             </div>
 
@@ -234,7 +230,7 @@ export default function BetaLandingPage() {
               <span className="text-sm text-muted-foreground">· Track Your Shows</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              © {new Date().getFullYear()} Scout
+              © 2025 Scout
             </p>
           </div>
         </footer>
