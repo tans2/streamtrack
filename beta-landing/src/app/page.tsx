@@ -91,7 +91,7 @@ export default function BetaLandingPage() {
 
             {/* Centered hero text */}
             <div className="text-center max-w-2xl mx-auto mb-14">
-              <img src="/logo.png" alt="Scout fox" className="w-24 h-24 mx-auto mb-6" />
+              <img src="/logo.png" alt="Scout fox" className="w-32 h-32 mx-auto mb-6" />
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-5 leading-tight">
                 Meet Scout,{' '}
                 <span className="text-primary">your TV sidekick</span>
