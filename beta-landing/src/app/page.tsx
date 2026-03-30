@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CheckCircle, Loader2, List, Search, Bell, Users } from 'lucide-react';
 
 export default function BetaLandingPage() {
@@ -9,6 +9,14 @@ export default function BetaLandingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [signupCount, setSignupCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch('/api/signup-count')
+      .then(r => r.json())
+      .then(d => { if (d.count > 0) setSignupCount(d.count); })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +109,7 @@ export default function BetaLandingPage() {
                 and watch together with friends — all in one place.
               </p>
               <p className="text-sm text-muted-foreground">
-                Currently in private beta. Sign up below to get early access.
+                Spots are limited. Sign up for early access and we'll reach out when you're in.
               </p>
             </div>
 
@@ -140,7 +148,11 @@ export default function BetaLandingPage() {
                     <>
                       <div className="mb-6">
                         <h2 className="text-xl font-bold text-foreground mb-1">Get Early Access</h2>
-                        <p className="text-sm text-muted-foreground">Join the waitlist — no spam, ever.</p>
+                        <p className="text-sm text-muted-foreground">
+                          {signupCount !== null
+                            ? `Join ${signupCount} others on the waitlist`
+                            : 'No spam, ever.'}
+                        </p>
                       </div>
 
                       <form onSubmit={handleSubmit} className="space-y-4">
