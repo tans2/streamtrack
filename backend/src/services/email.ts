@@ -380,6 +380,122 @@ If you didn't request a password reset, you can safely ignore this email. Your p
     }
   }
 
+  // Send private beta invite email
+  static async sendBetaInvite(
+    to: string,
+    name: string,
+    referralCode: string | null,
+    bodyHtml: string,
+    bodyText: string
+  ): Promise<EmailResult> {
+    if (!resend) {
+      console.warn('Email service not configured - RESEND_API_KEY missing');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const referralBlockHtml = referralCode ? `
+      <div style="margin: 32px 0; padding: 20px 24px; background: #fff7f0; border: 1.5px dashed #CC5500; border-radius: 10px; text-align: center;">
+        <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #CC5500; text-transform: uppercase;">Your Referral Code</p>
+        <p style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: 6px; color: #1a1a1a; font-family: 'Courier New', Courier, monospace;">${referralCode}</p>
+        <p style="margin: 0; font-size: 12px; color: #888;">Share this with friends to give them early access to Scout.</p>
+      </div>
+    ` : '';
+
+    const referralBlockText = referralCode ? `
+Your Referral Code: ${referralCode}
+Share this with friends to give them early access to Scout.
+` : '';
+
+    try {
+      const { data, error } = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: [to],
+        subject: `You're in — Scout Private Beta`,
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background: #fafafa;">
+
+            <!-- Header -->
+            <div style="text-align: center; padding: 28px 0 20px 0;">
+              <table style="margin: 0 auto;"><tr>
+                <td style="vertical-align: middle; padding-right: 10px;">
+                  <img src="${FRONTEND_URL}/logo.png" alt="Scout" width="36" height="36" style="display: block; border-radius: 8px;">
+                </td>
+                <td style="vertical-align: middle;">
+                  <span style="color: #CC5500; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">Scout</span>
+                </td>
+              </tr></table>
+            </div>
+
+            <!-- Hero -->
+            <div style="background: linear-gradient(135deg, #1a1a1a 0%, #2d1200 100%); border-radius: 12px; padding: 36px 32px; margin-bottom: 20px; text-align: center;">
+              <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; letter-spacing: 3px; color: #CC5500; text-transform: uppercase;">Private Beta</p>
+              <h1 style="margin: 0 0 12px 0; font-size: 28px; font-weight: 700; color: #ffffff; line-height: 1.2;">Your TV sidekick is ready.</h1>
+              <p style="margin: 0; font-size: 15px; color: #aaa; line-height: 1.6;">Track every show, never miss a drop, and watch in sync with friends.</p>
+            </div>
+
+            <!-- Body -->
+            <div style="background: #ffffff; border-radius: 12px; padding: 32px; margin-bottom: 20px; border: 1px solid #eee;">
+              <p style="margin: 0 0 4px 0; font-size: 16px; color: #333;">Hey ${name || 'there'},</p>
+
+              ${bodyHtml}
+
+              ${referralBlockHtml}
+
+              <!-- CTA -->
+              <div style="text-align: center; margin-top: 32px;">
+                <a href="${FRONTEND_URL}" style="background: #CC5500; color: white; padding: 14px 40px; border-radius: 100px; text-decoration: none; font-weight: 600; font-size: 15px; display: inline-block; letter-spacing: 0.2px;">
+                  Open Scout →
+                </a>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="text-align: center; padding: 8px 0 20px 0;">
+              <p style="margin: 0 0 6px 0; font-size: 12px; color: #bbb;">
+                Stephanie Tan &nbsp;·&nbsp;
+                <a href="${FRONTEND_URL}" style="color: #bbb; text-decoration: none;">scout.stephaniet.dev</a>
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #ccc;">
+                You're receiving this because you signed up for Scout's private beta.<br>
+                No longer interested? Just reply to this email and I'll remove you.
+              </p>
+            </div>
+
+          </body>
+          </html>
+        `,
+        text: `
+Hey ${name || 'there'},
+
+${bodyText}
+${referralBlockText}
+Open Scout: ${FRONTEND_URL}
+
+---
+Stephanie Tan · scout.stephaniet.dev
+You're receiving this because you signed up for Scout's private beta.
+No longer interested? Just reply to this email and I'll remove you.
+        `.trim()
+      });
+
+      if (error) {
+        console.error('Resend error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, messageId: data?.id };
+    } catch (error: any) {
+      console.error('Error sending beta invite:', error);
+      return { success: false, error: error.message || 'Failed to send email' };
+    }
+  }
+
   // Send daily digest notification email
   static async sendDailyDigest(
     to: string,
