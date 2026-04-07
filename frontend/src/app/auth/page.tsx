@@ -145,17 +145,17 @@ export default function AuthPage() {
 
               {!isLogin && (
                 <div className="space-y-2">
-                  <Label htmlFor="inviteCode" className="text-card-foreground">Invite Code</Label>
+                  <Label htmlFor="inviteCode" className="text-card-foreground">Referral Code</Label>
                   <Input
                     id="inviteCode"
                     type="text"
-                    placeholder="Enter your beta invite code"
+                    placeholder="Enter your referral code (optional)"
                     value={inviteCode}
                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                     onKeyDown={handleKeyDown}
                     className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary uppercase"
                   />
-                  <p className="text-xs text-muted-foreground">Required during private beta.</p>
+                  <p className="text-xs text-muted-foreground">Have a referral code? Enter it here.</p>
                 </div>
               )}
 

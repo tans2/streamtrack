@@ -4,8 +4,10 @@ import * as React from "react";
 import { Bug, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import apiClient, { buildApiUrl } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function BugReportButton() {
+  const { user } = useAuth();
   const [open, setOpen] = React.useState(false);
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
@@ -73,7 +75,12 @@ export function BugReportButton() {
               </Button>
             </div>
 
-            {success ? (
+            {!user ? (
+              <div className="py-4 text-center space-y-3">
+                <p className="text-sm text-muted-foreground">You need to be signed in to submit a bug report.</p>
+                <Button variant="ghost" onClick={handleClose} className="w-full">Close</Button>
+              </div>
+            ) : success ? (
               <p className="text-sm text-green-500 font-medium py-4 text-center">
                 Bug report filed! Thanks for the feedback.
               </p>

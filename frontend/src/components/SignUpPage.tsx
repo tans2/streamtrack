@@ -192,17 +192,17 @@ export default function SignUpPage({ onNavigate }: SignUpPageProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="inviteCode" className="text-card-foreground">Invite Code</Label>
+                <Label htmlFor="inviteCode" className="text-card-foreground">Referral Code</Label>
                 <Input
                   id="inviteCode"
                   name="inviteCode"
                   type="text"
-                  placeholder="Enter your beta invite code"
+                  placeholder="Enter your referral code (optional)"
                   value={formData.inviteCode}
                   onChange={handleInputChange}
                   className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary uppercase"
                 />
-                <p className="text-xs text-muted-foreground">Required during private beta. Leave blank if you don't have one.</p>
+                <p className="text-xs text-muted-foreground">Have a referral code? Enter it here.</p>
               </div>
 
               <Button
