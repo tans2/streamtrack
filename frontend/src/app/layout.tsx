@@ -3,6 +3,7 @@ import { Be_Vietnam_Pro } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { BugReportButton } from '@/components/ui/bug-report-button';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ToastProvider } from '@/components/ui/toast-provider';
 import { BottomTabBar } from '@/components/ui/bottom-tab-bar';
@@ -35,7 +36,8 @@ export default function RootLayout({
           <AuthProvider>
             {children}
             <BottomTabBar />
-            <div className="fixed bottom-20 right-6 md:bottom-6 z-50">
+            <div className="fixed bottom-20 right-6 md:bottom-6 z-50 flex flex-col gap-2 items-center">
+              <BugReportButton />
               <ThemeToggle />
             </div>
             <ToastProvider />
