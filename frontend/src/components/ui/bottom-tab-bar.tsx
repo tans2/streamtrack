@@ -1,14 +1,14 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Search, Bookmark, Settings } from 'lucide-react';
+import { Home, Search, Bookmark, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const tabs = [
   { label: 'Home', icon: Home, href: '/' },
   { label: 'Search', icon: Search, href: '/search' },
   { label: 'Watchlist', icon: Bookmark, href: '/profile' },
-  { label: 'Settings', icon: Settings, href: '/settings' },
+  { label: 'Groups', icon: Users, href: '/groups' },
 ];
 
 export function BottomTabBar() {

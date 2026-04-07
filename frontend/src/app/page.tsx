@@ -1,17 +1,23 @@
 "use client";
 
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { List, Search, Bell, Users, ArrowRight } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { NavBar } from '@/components/ui/nav-bar';
-import { SignOutButton } from '@/components/ui/sign-out-button';
 import { staggerContainer, fadeInUp, fadeIn } from '@/lib/animations';
 
 export default function HomePage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && user) router.replace('/search');
+  }, [user, loading]);
+
+  if (loading || user) return null;
 
   const features = [
     {
@@ -56,16 +62,12 @@ export default function HomePage() {
             >
               My Watchlist
             </Button>
-            {user ? (
-              <SignOutButton variant="default" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6" />
-            ) : (
-              <Button
-                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6"
-                onClick={() => router.push('/auth')}
-              >
-                Sign In
-              </Button>
-            )}
+            <Button
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6"
+              onClick={() => router.push('/auth')}
+            >
+              Sign In
+            </Button>
           </>
         }
       />
@@ -78,11 +80,12 @@ export default function HomePage() {
             variants={fadeIn}
             initial="hidden"
             animate="show"
+            className="flex flex-col items-center sm:items-start text-center sm:text-left"
           >
             <img
               src="/logo.png"
               alt="Scout mascot"
-              className="w-36 h-36 sm:w-44 sm:h-44 mb-5"
+              className="w-36 h-36 sm:w-44 sm:h-44 mb-5 mx-auto sm:mx-0"
             />
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight">
               <span className="text-foreground">Meet </span>
@@ -93,18 +96,16 @@ export default function HomePage() {
             <p className="text-base sm:text-lg text-muted-foreground mt-4 sm:mt-6 max-w-md">
               Track your favorite shows across streaming platforms with friends.
             </p>
-            {!user && (
-              <div className="mt-6 sm:mt-8">
-                <Button
-                  size="lg"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8"
-                  onClick={() => router.push('/signup')}
-                >
-                  Get Started
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            )}
+            <div className="mt-6 sm:mt-8">
+              <Button
+                size="lg"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8"
+                onClick={() => router.push('/signup')}
+              >
+                Get Started
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
           </motion.div>
 
           {/* Right column — Feature heading + stacked feature cards */}

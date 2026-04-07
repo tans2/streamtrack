@@ -8,7 +8,6 @@ import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
 import { Search, Star, Plus, Loader2, Check } from "lucide-react";
-import { SignOutButton } from './ui/sign-out-button';
 import { staggerContainer, fadeInUp, cardHover } from '@/lib/animations';
 import { SkeletonGrid } from './ui/skeleton-card';
 import { NavBar } from './ui/nav-bar';
@@ -235,12 +234,7 @@ export default function SearchPage({ onNavigate }: SearchPageProps) {
 
   return (
     <div className="min-h-screen text-foreground pb-20 md:pb-0">
-      <NavBar
-        variant="authenticated"
-        actions={
-          <SignOutButton className="text-muted-foreground hover:text-foreground hover:bg-muted/50" />
-        }
-      />
+      <NavBar variant="authenticated" />
 
       <div className="max-w-[1400px] mx-auto px-6 sm:px-10 py-8 sm:py-12">
         {/* Hero heading */}

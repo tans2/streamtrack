@@ -213,7 +213,6 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
       <NavBar
         variant="authenticated"
         pageTitle="Settings"
-        actions={<SignOutButton />}
       />
 
       <div className="container mx-auto px-3 sm:px-6 py-6 sm:py-10 max-w-2xl">
@@ -535,6 +534,15 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* SIGN OUT */}
+          <div>
+            <SectionLabel>Account Actions</SectionLabel>
+            <SignOutButton
+              variant="outline"
+              className="w-full border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-xl h-11"
+            />
           </div>
 
         </div>

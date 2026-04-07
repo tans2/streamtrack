@@ -8,7 +8,6 @@ import { Badge } from "./ui/badge";
 import { Input } from "./ui/input";
 import { staggerContainer, fadeInUp, fadeIn } from '@/lib/animations';
 import { NavBar } from './ui/nav-bar';
-import { SignOutButton } from './ui/sign-out-button';
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -216,17 +215,14 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
       <NavBar
         variant="authenticated"
         actions={
-          <>
-            <Button
-              variant="ghost"
-              className="text-foreground hover:text-primary hover:bg-primary/10"
-              onClick={() => router.push('/profile')}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Back</span>
-            </Button>
-            <SignOutButton />
-          </>
+          <Button
+            variant="ghost"
+            className="text-foreground hover:text-primary hover:bg-primary/10"
+            onClick={() => router.push('/profile')}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Back</span>
+          </Button>
         }
       />
 
@@ -278,8 +274,8 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
           </CardContent>
         </Card>
 
-        {/* Two-column layout */}
-        <div className="grid md:grid-cols-[1fr_2fr] gap-6">
+        {/* Two-column layout — on mobile Sync Progress comes first */}
+        <div className="flex flex-col-reverse md:grid md:grid-cols-[1fr_2fr] gap-6">
           {/* Left Column */}
           <div className="space-y-4">
             {/* Add New Scouts (admin only) */}
