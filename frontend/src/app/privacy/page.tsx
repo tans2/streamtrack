@@ -90,7 +90,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-semibold mb-2">9. Contact</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Questions about your data? Email us at <a href="mailto:privacy@scoutapp.co" className="text-primary hover:underline">privacy@scoutapp.co</a>.
+              Questions about your data? Email us at <a href="mailto:stephanietan616@gmail.com" className="text-primary hover:underline">stephanietan616@gmail.com</a>.
             </p>
           </section>
 

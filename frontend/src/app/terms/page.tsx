@@ -29,7 +29,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-semibold mb-2">3. Your Account</h2>
             <p className="text-muted-foreground leading-relaxed">
-              You are responsible for maintaining the confidentiality of your password and for all activity under your account. Notify us immediately at <a href="mailto:hello@scoutapp.co" className="text-primary hover:underline">hello@scoutapp.co</a> if you suspect unauthorised access.
+              You are responsible for maintaining the confidentiality of your password and for all activity under your account. Notify us immediately at <a href="mailto:stephanietan616@gmail.com" className="text-primary hover:underline">stephanietan616@gmail.com</a> if you suspect unauthorised access.
             </p>
           </section>
 
@@ -84,7 +84,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-semibold mb-2">10. Contact</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Questions? Reach us at <a href="mailto:hello@scoutapp.co" className="text-primary hover:underline">hello@scoutapp.co</a>.
+              Questions? Reach us at <a href="mailto:stephanietan616@gmail.com" className="text-primary hover:underline">stephanietan616@gmail.com</a>.
             </p>
           </section>
 
