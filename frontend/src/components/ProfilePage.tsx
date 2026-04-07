@@ -397,6 +397,14 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     return Math.round(((item.current_episode || 1) / episodeCount) * 100);
   };
 
+  const getCountdownLabel = (nextAirDate?: string | null): string | null => {
+    if (!nextAirDate) return null;
+    const days = Math.round((new Date(nextAirDate).getTime() - Date.now()) / 86400000);
+    if (days === 0) return "Airing today!";
+    if (days > 0) return `Next ep in ${days}d`;
+    return null;
+  };
+
   const getPosterUrl = (posterPath?: string) => {
     if (!posterPath) return '';
     return `https://image.tmdb.org/t/p/w300${posterPath}`;
@@ -652,6 +660,20 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
 
                 {/* Progress bar */}
                 <Progress value={getProgressPercent(item)} className="h-1.5" />
+                {/* Next episode countdown badge */}
+                {(() => {
+                  const label = getCountdownLabel(item.shows.next_air_date);
+                  if (!label) return null;
+                  const days = item.shows.next_air_date
+                    ? Math.round((new Date(item.shows.next_air_date).getTime() - Date.now()) / 86400000)
+                    : null;
+                  const isClose = days !== null && days <= 7;
+                  return (
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${isClose ? 'bg-green-500/15 text-green-600' : 'bg-muted text-muted-foreground'}`}>
+                      {label}
+                    </span>
+                  );
+                })()}
               </div>
             ))}
 

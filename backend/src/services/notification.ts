@@ -97,6 +97,14 @@ export class NotificationService {
             results.eventsQueued += upcomingQueued;
           }
 
+          // Persist next air date to shows table for frontend countdown display
+          await DatabaseService.updateShowNextAirDate(
+            show.id,
+            detection?.nextEpisodeToAir?.air_date ?? null,
+            detection?.nextEpisodeToAir?.season_number ?? null,
+            detection?.nextEpisodeToAir?.episode_number ?? null
+          );
+
           // Update poll status with latest known episode
           const latestEpisode = detection?.newEpisodes[detection.newEpisodes.length - 1];
           await DatabaseService.updatePollStatus(

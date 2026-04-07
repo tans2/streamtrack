@@ -85,6 +85,18 @@ export class DatabaseService {
     }
   }
 
+  // Update next air date for a show (called during episode polling)
+  static async updateShowNextAirDate(showId: string, nextAirDate: string | null, season: number | null, episode: number | null) {
+    try {
+      await supabase
+        .from('shows')
+        .update({ next_air_date: nextAirDate, next_episode_season: season, next_episode_number: episode })
+        .eq('id', showId);
+    } catch (error) {
+      console.error('Error updating show next air date:', error);
+    }
+  }
+
   // Insert or update show
   static async upsertShow(showData: any) {
     try {

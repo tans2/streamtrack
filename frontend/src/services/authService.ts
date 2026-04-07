@@ -56,13 +56,14 @@ class AuthService {
   }
 
   // Register new user
-  async register(email: string, password: string, name?: string, initialShows?: number[]): Promise<LoginResponse> {
+  async register(email: string, password: string, name?: string, initialShows?: number[], inviteCode?: string): Promise<LoginResponse> {
     try {
       const response = await apiClient.post(buildApiUrl('auth/register'), {
         email,
         password,
         name,
         initialShows,
+        ...(inviteCode ? { inviteCode } : {}),
       });
       return handleApiResponse<LoginResponse>(response);
     } catch (error) {
@@ -127,6 +128,16 @@ class AuthService {
     try {
       const response = await apiClient.post(buildApiUrl('auth/forgot-password'), { email });
       return handleApiResponse<{ message: string }>(response);
+    } catch (error) {
+      throw new Error(handleApiError(error as AxiosError));
+    }
+  }
+
+  // Permanently delete the authenticated user's account
+  async deleteAccount(): Promise<void> {
+    try {
+      const response = await apiClient.delete(buildApiUrl('auth/account'));
+      handleApiResponse<void>(response);
     } catch (error) {
       throw new Error(handleApiError(error as AxiosError));
     }

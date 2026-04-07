@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { NavBar } from '@/components/ui/nav-bar';
+import { OnboardingModal } from '@/components/OnboardingModal';
 
 interface SignUpPageProps {
   onNavigate: (page: string) => void;
@@ -17,12 +18,14 @@ export default function SignUpPage({ onNavigate }: SignUpPageProps) {
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    inviteCode: '',
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
-  const { register } = useAuth();
+  const { register, user } = useAuth();
   const router = useRouter();
 
   const validateForm = () => {
@@ -63,15 +66,26 @@ export default function SignUpPage({ onNavigate }: SignUpPageProps) {
 
     setLoading(true);
     try {
-      await register(formData.email, formData.password, formData.name);
-      toast.success('Account created successfully!');
-      router.push('/search');
+      const result = await register(formData.email, formData.password, formData.name, undefined, formData.inviteCode || undefined);
+      const userId = (result as any)?.id ?? formData.email;
+      const onboarded = localStorage.getItem(`scout_onboarded_${userId}`);
+      if (!onboarded) {
+        setShowOnboarding(true);
+      } else {
+        router.push('/search');
+      }
     } catch (error: any) {
       console.error('Registration error:', error);
-      // Error is already handled by AuthContext with toast
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOnboardingComplete = () => {
+    const userId = user?.id ?? formData.email;
+    localStorage.setItem(`scout_onboarded_${userId}`, '1');
+    setShowOnboarding(false);
+    router.push('/search');
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -176,8 +190,22 @@ export default function SignUpPage({ onNavigate }: SignUpPageProps) {
                 />
                 {errors.confirmPassword && <p className="text-red-500 text-sm">{errors.confirmPassword}</p>}
               </div>
-              
-              <Button 
+
+              <div className="space-y-2">
+                <Label htmlFor="inviteCode" className="text-card-foreground">Invite Code</Label>
+                <Input
+                  id="inviteCode"
+                  name="inviteCode"
+                  type="text"
+                  placeholder="Enter your beta invite code"
+                  value={formData.inviteCode}
+                  onChange={handleInputChange}
+                  className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary uppercase"
+                />
+                <p className="text-xs text-muted-foreground">Required during private beta. Leave blank if you don't have one.</p>
+              </div>
+
+              <Button
                 type="submit" 
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground mt-6 rounded-full"
                 size="lg"
@@ -202,6 +230,8 @@ export default function SignUpPage({ onNavigate }: SignUpPageProps) {
         </Card>
       </div>
       </div>
+
+      <OnboardingModal open={showOnboarding} onComplete={handleOnboardingComplete} />
     </div>
   );
 }

@@ -179,9 +179,13 @@ export default function HomePage() {
             <img src="/logo.png" alt="Scout" className="w-6 h-6" />
             <span className="text-sm font-semibold text-foreground">Scout</span>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground mb-2">
             &copy; 2026 Scout TV Tracking. All rights reserved.
           </p>
+          <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+            <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
+            <a href="/terms" className="hover:text-foreground transition-colors">Terms of Service</a>
+          </div>
         </footer>
       </div>
     </div>

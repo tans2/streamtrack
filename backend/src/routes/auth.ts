@@ -28,7 +28,7 @@ export const authenticateToken = async (req: any, res: any, next: any) => {
 // Register new user
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, name, initialShows } = req.body;
+    const { email, password, name, initialShows, inviteCode } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
@@ -42,6 +42,26 @@ router.post('/register', async (req, res) => {
         success: false,
         error: 'Password must be at least 8 characters long for security.'
       });
+    }
+
+    // Invite code gate — only enforced when REQUIRE_INVITE_CODE=true
+    if (process.env.REQUIRE_INVITE_CODE === 'true') {
+      if (!inviteCode) {
+        return res.status(400).json({ success: false, error: 'An invite code is required to join the beta.' });
+      }
+      const { supabase } = await import('../services/database');
+      const { data: invite } = await supabase
+        .from('beta_invites')
+        .select('id, used_at')
+        .eq('code', inviteCode.toUpperCase().trim())
+        .single();
+      if (!invite || invite.used_at) {
+        return res.status(400).json({ success: false, error: 'Invalid or already-used invite code.' });
+      }
+      // Mark as used after successful registration (done below)
+      const result = await AuthService.register(email, password, name, initialShows);
+      await supabase.from('beta_invites').update({ used_at: new Date().toISOString() }).eq('id', invite.id);
+      return res.status(201).json({ success: true, data: result });
     }
 
     const result = await AuthService.register(email, password, name, initialShows);
@@ -275,6 +295,46 @@ router.post('/reset-password', async (req, res) => {
       success: false,
       error: 'Failed to reset password. Please try again.'
     });
+  }
+});
+
+// Delete account — permanently removes all user data
+router.delete('/account', authenticateToken, async (req: any, res) => {
+  const userId = req.user.id;
+  try {
+    const { supabase } = await import('../services/database');
+
+    // Delete in FK-safe order
+    await supabase.from('pending_notification_events').delete().eq('user_id', userId);
+    await supabase.from('notification_log').delete().eq('user_id', userId);
+    await supabase.from('digest_log').delete().eq('user_id', userId);
+    await supabase.from('user_shows').delete().eq('user_id', userId);
+
+    // Delete groups where this user is the sole admin (no other members)
+    const { data: adminGroups } = await supabase
+      .from('watch_groups')
+      .select('id')
+      .eq('created_by', userId);
+    if (adminGroups?.length) {
+      for (const group of adminGroups) {
+        const { count } = await supabase
+          .from('watch_group_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('group_id', group.id);
+        if ((count ?? 0) <= 1) {
+          await supabase.from('watch_group_members').delete().eq('group_id', group.id);
+          await supabase.from('watch_groups').delete().eq('id', group.id);
+        }
+      }
+    }
+
+    await supabase.from('watch_group_members').delete().eq('user_id', userId);
+    await supabase.from('users').delete().eq('id', userId);
+
+    res.json({ success: true, message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete account' });
   }
 });
 

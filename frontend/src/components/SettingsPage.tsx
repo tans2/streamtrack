@@ -15,6 +15,11 @@ import { SignOutButton } from './ui/sign-out-button';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { notificationService } from '@/services/notificationService';
+import { authService } from '@/services/authService';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from './ui/alert-dialog';
 
 interface SettingsPageProps {
   onNavigate: (page: string) => void;
@@ -71,9 +76,23 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
   const [emailVerified, setEmailVerified] = useState(false);
   const [sendingVerification, setSendingVerification] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
-  const { user, updatePreferences } = useAuth();
+  const { user, updatePreferences, logout } = useAuth();
   const router = useRouter();
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      await authService.deleteAccount();
+      logout();
+      router.push('/');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete account');
+      setDeletingAccount(false);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -487,14 +506,30 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
             <Card>
               <CardContent className="p-0 divide-y divide-border">
                 {/* Privacy Policy row */}
-                <div className="flex items-center gap-3 p-4">
+                <button
+                  className="flex items-center gap-3 p-4 w-full text-left hover:bg-muted/40 transition-colors"
+                  onClick={() => window.open('/privacy', '_blank')}
+                >
                   <IconPill><Lock className="w-4 h-4 text-primary" /></IconPill>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">Privacy Policy</p>
                     <p className="text-xs text-muted-foreground">Manage your data</p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </div>
+                </button>
+
+                {/* Terms of Service row */}
+                <button
+                  className="flex items-center gap-3 p-4 w-full text-left hover:bg-muted/40 transition-colors"
+                  onClick={() => window.open('/terms', '_blank')}
+                >
+                  <IconPill><Lock className="w-4 h-4 text-primary" /></IconPill>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">Terms of Service</p>
+                    <p className="text-xs text-muted-foreground">Beta terms &amp; conditions</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </button>
 
                 {/* Existing switches — disabled, coming soon */}
                 <div className="opacity-75">
@@ -536,17 +571,50 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
             </Card>
           </div>
 
-          {/* SIGN OUT */}
+          {/* ACCOUNT ACTIONS */}
           <div>
             <SectionLabel>Account Actions</SectionLabel>
-            <SignOutButton
-              variant="outline"
-              className="w-full border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-xl h-11"
-            />
+            <div className="space-y-3">
+              <SignOutButton
+                variant="outline"
+                className="w-full border-border text-foreground hover:bg-muted/60 rounded-xl h-11"
+              />
+              <Button
+                variant="outline"
+                className="w-full border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-xl h-11"
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                Delete Account
+              </Button>
+            </div>
           </div>
 
         </div>
       </div>
+
+      {/* Delete Account Confirmation */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes your watchlist, groups, preferences, and all associated data.
+              This action <strong>cannot be undone</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingAccount}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteAccount}
+              disabled={deletingAccount}
+            >
+              {deletingAccount ? 'Deleting…' : 'Delete My Account'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }

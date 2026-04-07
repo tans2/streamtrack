@@ -91,6 +91,15 @@ class WatchGroupService {
     }
   }
 
+  async publicPreviewInvite(inviteCode: string): Promise<{ groupName: string; showTitle: string | null; showPosterPath: string | null; memberCount: number }> {
+    try {
+      const response = await apiClient.get(buildApiUrl(`groups/public-preview/${inviteCode}`));
+      return handleApiResponse(response);
+    } catch (error) {
+      throw new Error(handleApiError(error as AxiosError));
+    }
+  }
+
   async previewInvite(inviteCode: string): Promise<GroupPreview> {
     try {
       const response = await apiClient.get(buildApiUrl(`groups/invite/${inviteCode}`));
