@@ -440,7 +440,6 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     <div className="min-h-screen text-foreground pb-20 md:pb-0">
       <NavBar
         variant="authenticated"
-        actions={<SignOutButton />}
       />
 
       <div className="max-w-[1400px] mx-auto px-3 sm:px-6 md:px-10 py-6">
