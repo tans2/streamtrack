@@ -1415,6 +1415,111 @@ export class DatabaseService {
       return 0;
     }
   }
+
+  // ===== PICKS =====
+
+  static async addPick(userId: string, showId: string, note?: string) {
+    try {
+      const { data, error } = await supabase
+        .from('picks')
+        .upsert({ user_id: userId, show_id: showId, note: note || null }, { onConflict: 'user_id,show_id' })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error adding pick:', error);
+      return null;
+    }
+  }
+
+  static async removePick(userId: string, showId: string) {
+    try {
+      const { error } = await supabase
+        .from('picks')
+        .delete()
+        .eq('user_id', userId)
+        .eq('show_id', showId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error removing pick:', error);
+      return false;
+    }
+  }
+
+  static async getUserPicks(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('picks')
+        .select('*, shows(id, title, poster_path, tmdb_id)')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching user picks:', error);
+      return [];
+    }
+  }
+
+  static async getPicksFeed(userId: string) {
+    try {
+      // Get all user IDs who share any group with the requesting user (excluding self)
+      const { data: connections, error: connError } = await supabase
+        .from('watch_group_members')
+        .select('group_id')
+        .eq('user_id', userId);
+
+      if (connError) throw connError;
+      if (!connections || connections.length === 0) return [];
+
+      const groupIds = connections.map((c: any) => c.group_id);
+
+      const { data: peers, error: peerError } = await supabase
+        .from('watch_group_members')
+        .select('user_id')
+        .in('group_id', groupIds)
+        .neq('user_id', userId);
+
+      if (peerError) throw peerError;
+      if (!peers || peers.length === 0) return [];
+
+      const peerIds = [...new Set(peers.map((p: any) => p.user_id))];
+
+      const { data, error } = await supabase
+        .from('picks')
+        .select('*, shows(id, title, poster_path, tmdb_id), users(id, name)')
+        .in('user_id', peerIds)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching picks feed:', error);
+      return [];
+    }
+  }
+
+  static async isShowCompleted(userId: string, showId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('user_shows')
+        .select('watch_status')
+        .eq('user_id', userId)
+        .eq('show_id', showId)
+        .single();
+
+      if (error) return false;
+      return data?.watch_status === 'completed';
+    } catch {
+      return false;
+    }
+  }
 }
 
 

@@ -27,9 +27,10 @@ function ScoutBrand() {
 }
 
 const navLinks = [
-  { label: 'Home', href: '/' },
+  { label: 'Picks', href: '/picks' },
   { label: 'Search', href: '/search' },
   { label: 'Watchlist', href: '/profile' },
+  { label: 'Groups', href: '/groups' },
 ];
 
 export function NavBar({ variant, backHref, backLabel, pageTitle, actions }: NavBarProps) {

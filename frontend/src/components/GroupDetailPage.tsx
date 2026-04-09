@@ -12,8 +12,9 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { watchGroupService, GroupDetail, GroupMember } from '@/services/watchGroupService';
+import { picksService, Pick } from '@/services/picksService';
 import { toast } from 'sonner';
-import { Copy, Check, Trash2, LogOut, UserMinus, Crown, Users, ArrowLeft, UserPlus, Loader2, BarChart2, Mail } from 'lucide-react';
+import { Copy, Check, Trash2, LogOut, UserMinus, Crown, Users, ArrowLeft, UserPlus, Loader2, BarChart2, Mail, Sparkles } from 'lucide-react';
 
 interface GroupDetailPageProps {
   groupId: string;
@@ -30,6 +31,7 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
   const [addEmail, setAddEmail] = useState('');
   const [addingMember, setAddingMember] = useState(false);
   const [showAllMembers, setShowAllMembers] = useState(false);
+  const [groupPicks, setGroupPicks] = useState<Pick[]>([]);
 
   const { user } = useAuth();
   const router = useRouter();
@@ -45,11 +47,24 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
     try {
       const data = await watchGroupService.getGroupDetails(groupId);
       setGroup(data);
+      // Load picks from group members
+      loadGroupPicks(data.members.map(m => m.user_id));
     } catch (error: any) {
       console.error('Error loading group:', error);
       toast.error(error.message || 'Failed to load group');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadGroupPicks = async (memberIds: string[]) => {
+    try {
+      const feed = await picksService.getFeed();
+      // Filter feed to only members of this group
+      const filtered = feed.filter(p => memberIds.includes(p.user_id));
+      setGroupPicks(filtered);
+    } catch {
+      // silently fail — group picks are a bonus feature
     }
   };
 
@@ -503,6 +518,55 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
               )}
             </CardContent>
           </Card>
+
+          {/* Group Picks */}
+          {groupPicks.length > 0 && (
+            <Card>
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Group Picks
+                  </p>
+                </div>
+                <motion.div
+                  className="space-y-3"
+                  variants={staggerContainer}
+                  initial="hidden"
+                  animate="show"
+                >
+                  {groupPicks.map(pick => (
+                    <motion.div
+                      key={pick.id}
+                      variants={fadeInUp}
+                      className="flex items-center gap-3"
+                    >
+                      <div className="w-9 flex-shrink-0">
+                        <div className="aspect-[2/3] rounded-md overflow-hidden bg-muted">
+                          {pick.shows?.poster_path ? (
+                            <ImageWithFallback
+                              src={`https://image.tmdb.org/t/p/w200${pick.shows.poster_path}`}
+                              alt={pick.shows.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-muted" />
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{pick.shows?.title}</p>
+                        <p className="text-xs text-muted-foreground">picked by {pick.picker_name}</p>
+                        {pick.note && (
+                          <p className="text-xs text-muted-foreground italic mt-0.5 line-clamp-1">"{pick.note}"</p>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </motion.div>
     </div>
