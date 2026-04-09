@@ -93,6 +93,7 @@ import progressSyncRoutes from './routes/progress-sync';
 import notificationRoutes from './routes/notifications';
 import groupRoutes from './routes/groups';
 import feedbackRoutes from './routes/feedback';
+import picksRoutes from './routes/picks';
 
 // API routes
 app.use('/api/shows', showRoutes);
@@ -101,6 +102,7 @@ app.use('/api/progress-sync', progressSyncRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/picks', picksRoutes);
 
 app.get('/api/users', (req, res) => {
   res.json({
