@@ -392,6 +392,9 @@ If you didn't request a password reset, you can safely ignore this email. Your p
       return { success: false, error: 'Email service not configured' };
     }
 
+    // Beta invite always uses production URL since it's run locally
+    const BETA_APP_URL = 'https://tvscout.vercel.app';
+
     try {
       const { data, error } = await resend.emails.send({
         from: FROM_EMAIL,
@@ -410,7 +413,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
             <div style="text-align: center; padding: 28px 0 20px 0;">
               <table style="margin: 0 auto;"><tr>
                 <td style="vertical-align: middle; padding-right: 10px;">
-                  <img src="${FRONTEND_URL}/logo.png" alt="Scout" width="36" height="36" style="display: block; border-radius: 8px;">
+                  <img src="${BETA_APP_URL}/logo.png" alt="Scout" width="36" height="36" style="display: block; border-radius: 8px;">
                 </td>
                 <td style="vertical-align: middle;">
                   <span style="color: #CC5500; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">Scout</span>
@@ -433,7 +436,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
 
               <!-- CTA -->
               <div style="text-align: center; margin-top: 32px;">
-                <a href="${FRONTEND_URL}" style="background: #CC5500; color: white; padding: 14px 40px; border-radius: 100px; text-decoration: none; font-weight: 600; font-size: 15px; display: inline-block; letter-spacing: 0.2px;">
+                <a href="${BETA_APP_URL}" style="background: #CC5500; color: white; padding: 14px 40px; border-radius: 100px; text-decoration: none; font-weight: 600; font-size: 15px; display: inline-block; letter-spacing: 0.2px;">
                   Open Scout →
                 </a>
               </div>
@@ -443,7 +446,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
             <div style="text-align: center; padding: 8px 0 20px 0;">
               <p style="margin: 0 0 6px 0; font-size: 12px; color: #bbb;">
                 Stephanie Tan &nbsp;·&nbsp;
-                <a href="${FRONTEND_URL}" style="color: #bbb; text-decoration: none;">scout.stephaniet.dev</a>
+                <a href="${BETA_APP_URL}" style="color: #bbb; text-decoration: none;">scout.stephaniet.dev</a>
               </p>
               <p style="margin: 0; font-size: 11px; color: #ccc;">
                 You're receiving this because you signed up for Scout's private beta.<br>
@@ -459,7 +462,7 @@ Hey ${name || 'there'},
 
 ${bodyText}
 
-Open Scout: ${FRONTEND_URL}
+Open Scout: ${BETA_APP_URL}
 
 ---
 Stephanie Tan · scout.stephaniet.dev
