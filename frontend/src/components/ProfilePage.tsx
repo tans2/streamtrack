@@ -99,7 +99,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     try {
       const note = pickNoteInputs[showId] || undefined;
       await picksService.addPick(showId, note);
-      setMyPickShowIds(prev => new Set([...prev, showId]));
+      setMyPickShowIds(prev => new Set(Array.from(prev).concat(showId)));
       toast.success(`Added "${showTitle}" to your Picks!`);
       setPickPanelOpen(null);
       setPickNoteInputs(prev => { const n = { ...prev }; delete n[showId]; return n; });
