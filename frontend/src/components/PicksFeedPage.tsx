@@ -132,7 +132,7 @@ export default function PicksFeedPage() {
     setAddingId(tmdbId);
     try {
       await watchlistService.addToWatchlist(tmdbId);
-      setWatchlistTmdbIds(prev => new Set([...prev, tmdbId]));
+      setWatchlistTmdbIds(prev => new Set(Array.from(prev).concat(tmdbId)));
       toast.success('Added to your watchlist!');
     } catch (error: any) {
       toast.error(error.message || 'Failed to add to watchlist');
