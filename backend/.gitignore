@@ -36,3 +36,6 @@ Thumbs.db
 *.swo
 .vercel
 .env*.local
+
+# Scripts with personal data — keep local only
+src/scripts/send-beta-invite.ts

@@ -396,7 +396,7 @@ If you didn't request a password reset, you can safely ignore this email. Your p
       const { data, error } = await resend.emails.send({
         from: FROM_EMAIL,
         to: [to],
-        subject: `You're in — Scout Private Beta`,
+        subject: `Scout Private Beta Access`,
         html: `
           <!DOCTYPE html>
           <html>
