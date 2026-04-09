@@ -1468,7 +1468,7 @@ export class DatabaseService {
 
   static async getPicksFeed(userId: string) {
     try {
-      // Get all user IDs who share any group with the requesting user (excluding self)
+      // Get all group IDs the user belongs to
       const { data: connections, error: connError } = await supabase
         .from('watch_group_members')
         .select('group_id')
@@ -1479,6 +1479,7 @@ export class DatabaseService {
 
       const groupIds = connections.map((c: any) => c.group_id);
 
+      // Get peer user IDs (others in the same groups)
       const { data: peers, error: peerError } = await supabase
         .from('watch_group_members')
         .select('user_id')
@@ -1488,17 +1489,33 @@ export class DatabaseService {
       if (peerError) throw peerError;
       if (!peers || peers.length === 0) return [];
 
-      const peerIds = [...new Set(peers.map((p: any) => p.user_id))];
+      const peerIds = Array.from(new Set(peers.map((p: any) => p.user_id)));
 
-      const { data, error } = await supabase
+      // Fetch picks with show info (no users join — fetch names separately)
+      const { data: picks, error: picksError } = await supabase
         .from('picks')
-        .select('*, shows(id, title, poster_path, tmdb_id), users(id, name)')
+        .select('*, shows(id, title, poster_path, tmdb_id)')
         .in('user_id', peerIds)
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (error) throw error;
-      return data || [];
+      if (picksError) throw picksError;
+      if (!picks || picks.length === 0) return [];
+
+      // Fetch user names separately
+      const pickerIds = Array.from(new Set(picks.map((p: any) => p.user_id)));
+      const { data: users } = await supabase
+        .from('users')
+        .select('id, name')
+        .in('id', pickerIds);
+
+      const userMap: Record<string, string> = {};
+      (users || []).forEach((u: any) => { userMap[u.id] = u.name; });
+
+      return picks.map((p: any) => ({
+        ...p,
+        picker_name: userMap[p.user_id] || 'Someone',
+      }));
     } catch (error) {
       console.error('Error fetching picks feed:', error);
       return [];
