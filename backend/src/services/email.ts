@@ -384,7 +384,6 @@ If you didn't request a password reset, you can safely ignore this email. Your p
   static async sendBetaInvite(
     to: string,
     name: string,
-    referralCode: string | null,
     bodyHtml: string,
     bodyText: string
   ): Promise<EmailResult> {
@@ -392,19 +391,6 @@ If you didn't request a password reset, you can safely ignore this email. Your p
       console.warn('Email service not configured - RESEND_API_KEY missing');
       return { success: false, error: 'Email service not configured' };
     }
-
-    const referralBlockHtml = referralCode ? `
-      <div style="margin: 32px 0; padding: 20px 24px; background: #fff7f0; border: 1.5px dashed #CC5500; border-radius: 10px; text-align: center;">
-        <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #CC5500; text-transform: uppercase;">Your Referral Code</p>
-        <p style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: 6px; color: #1a1a1a; font-family: 'Courier New', Courier, monospace;">${referralCode}</p>
-        <p style="margin: 0; font-size: 12px; color: #888;">Share this with friends to give them early access to Scout.</p>
-      </div>
-    ` : '';
-
-    const referralBlockText = referralCode ? `
-Your Referral Code: ${referralCode}
-Share this with friends to give them early access to Scout.
-` : '';
 
     try {
       const { data, error } = await resend.emails.send({
@@ -445,8 +431,6 @@ Share this with friends to give them early access to Scout.
 
               ${bodyHtml}
 
-              ${referralBlockHtml}
-
               <!-- CTA -->
               <div style="text-align: center; margin-top: 32px;">
                 <a href="${FRONTEND_URL}" style="background: #CC5500; color: white; padding: 14px 40px; border-radius: 100px; text-decoration: none; font-weight: 600; font-size: 15px; display: inline-block; letter-spacing: 0.2px;">
@@ -474,7 +458,7 @@ Share this with friends to give them early access to Scout.
 Hey ${name || 'there'},
 
 ${bodyText}
-${referralBlockText}
+
 Open Scout: ${FRONTEND_URL}
 
 ---
