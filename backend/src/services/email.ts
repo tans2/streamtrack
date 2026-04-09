@@ -422,10 +422,10 @@ If you didn't request a password reset, you can safely ignore this email. Your p
             </div>
 
             <!-- Hero -->
-            <div style="background: linear-gradient(135deg, #1a1a1a 0%, #2d1200 100%); border-radius: 12px; padding: 36px 32px; margin-bottom: 20px; text-align: center;">
-              <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; letter-spacing: 3px; color: #CC5500; text-transform: uppercase;">Private Beta</p>
+            <div style="background: #CC5500; border-radius: 12px; padding: 36px 32px; margin-bottom: 20px; text-align: center;">
+              <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; letter-spacing: 3px; color: rgba(255,255,255,0.75); text-transform: uppercase;">Private Beta</p>
               <h1 style="margin: 0 0 12px 0; font-size: 28px; font-weight: 700; color: #ffffff; line-height: 1.2;">Your TV sidekick is ready.</h1>
-              <p style="margin: 0; font-size: 15px; color: #aaa; line-height: 1.6;">Track every show, never miss a drop, and watch in sync with friends.</p>
+              <p style="margin: 0; font-size: 15px; color: rgba(255,255,255,0.85); line-height: 1.6;">Track every show, never miss a drop, and watch in sync with friends.</p>
             </div>
 
             <!-- Body -->
