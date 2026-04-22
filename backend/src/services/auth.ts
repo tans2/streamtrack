@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { supabase } from './database';
 import { TMDBService } from './tmdb';
 
@@ -30,7 +31,11 @@ export interface User {
 
 export class AuthService {
   // Register new user with email/password
-  static async register(email: string, password: string, name?: string, initialShows?: number[]) {
+  static generateReferralCode(): string {
+    return crypto.randomBytes(4).toString('hex').toUpperCase();
+  }
+
+  static async register(email: string, password: string, name?: string, initialShows?: number[], referredByUserId?: string) {
     try {
       // Check if user already exists
       const { data: existingUser } = await supabase
@@ -48,6 +53,7 @@ export class AuthService {
       const password_hash = await bcrypt.hash(password, saltRounds);
 
       // Create user in database
+      const referralCode = this.generateReferralCode();
       const { data: user, error: userError } = await supabase
         .from('users')
         .insert({
@@ -66,7 +72,9 @@ export class AuthService {
           privacy_settings: {
             data_export_enabled: true,
             data_delete_enabled: true
-          }
+          },
+          referral_code: referralCode,
+          ...(referredByUserId ? { referred_by_user_id: referredByUserId } : {}),
         })
         .select()
         .single();

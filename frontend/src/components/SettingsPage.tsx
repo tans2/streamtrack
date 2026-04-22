@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Badge } from "./ui/badge";
 import {
   Crown, Loader2, Mail, CheckCircle2, AlertCircle,
-  Play, PauseCircle, Lock, ChevronRight, User, KeyRound, Globe, BarChart2, Tv, Users, Calendar
+  Play, PauseCircle, Lock, ChevronRight, User, KeyRound, Globe, BarChart2, Tv, Users, Calendar,
+  Copy, Check, Gift
 } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 import { NavBar } from './ui/nav-bar';
@@ -78,6 +79,8 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
   const [savingNotifications, setSavingNotifications] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [referralData, setReferralData] = useState<{ referral_code: string | null; referrals: { name: string; joined_at: string }[]; count: number } | null>(null);
+  const [copiedReferral, setCopiedReferral] = useState(false);
 
   const { user, updatePreferences, logout } = useAuth();
   const router = useRouter();
@@ -118,8 +121,25 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
         }
       }));
       loadNotificationPreferences();
+      loadReferrals();
     }
   }, [user]);
+
+  const loadReferrals = async () => {
+    try {
+      const data = await authService.getReferrals();
+      setReferralData(data);
+    } catch {
+      // silently fail
+    }
+  };
+
+  const handleCopyReferralCode = async () => {
+    if (!referralData?.referral_code) return;
+    await navigator.clipboard.writeText(referralData.referral_code);
+    setCopiedReferral(true);
+    setTimeout(() => setCopiedReferral(false), 2000);
+  };
 
   const loadNotificationPreferences = async () => {
     try {
@@ -351,6 +371,48 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
               </CardContent>
             </Card>
           </div>
+
+          {/* REFERRAL CODE */}
+          {referralData?.referral_code && (
+            <div>
+              <SectionLabel>Referral Code</SectionLabel>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <IconPill><Gift className="w-4 h-4 text-primary" /></IconPill>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">Your Code</p>
+                      <p className="text-xs text-muted-foreground">Share with friends to invite them to Scout</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 bg-muted rounded-xl px-4 py-3">
+                      <p className="text-lg font-bold tracking-widest text-foreground">{referralData.referral_code}</p>
+                    </div>
+                    <button
+                      onClick={handleCopyReferralCode}
+                      className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border text-sm font-medium hover:bg-muted/50 transition-colors flex-shrink-0"
+                    >
+                      {copiedReferral ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                      {copiedReferral ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                  {referralData.count > 0 && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+                        {referralData.count} {referralData.count === 1 ? 'person' : 'people'} joined
+                      </p>
+                      <div className="space-y-1">
+                        {referralData.referrals.map((r, i) => (
+                          <p key={i} className="text-sm text-foreground">{r.name}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* PREFERENCES */}
           <div>
