@@ -540,17 +540,26 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Inline referral code — md+ only */}
+            {/* Inline referral card — md+ only */}
             {referralData?.referral_code && (
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-card">
-                <Gift className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                <span className="font-bold tracking-widest text-foreground text-xs">{referralData.referral_code}</span>
+              <div className="hidden md:flex items-center gap-3 p-3 rounded-2xl bg-card border border-border">
+                <Gift className="w-4 h-4 text-primary flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-primary leading-none mb-0.5">Your Referral Code</p>
+                  <p className="text-base font-bold tracking-widest text-foreground leading-none">{referralData.referral_code}</p>
+                  {referralData.count > 0 && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {referralData.count} {referralData.count === 1 ? 'person' : 'people'} joined
+                      {referralData.count <= 2 && ` — ${referralData.referrals.map((r: any) => r.name).join(', ')}`}
+                    </p>
+                  )}
+                </div>
                 <button
                   onClick={handleCopyReferralCode}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  className="p-1.5 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground flex-shrink-0"
                   aria-label="Copy referral code"
                 >
-                  {copiedReferral ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                  {copiedReferral ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>
               </div>
             )}
@@ -578,7 +587,8 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                   <p className="text-xl font-bold tracking-widest text-foreground">{referralData.referral_code}</p>
                   {referralData.count > 0 && (
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {referralData.count} {referralData.count === 1 ? 'person' : 'people'} joined — {referralData.referrals.map(r => r.name).join(', ')}
+                      {referralData.count} {referralData.count === 1 ? 'person' : 'people'} joined
+                      {referralData.count <= 2 && ` — ${referralData.referrals.map((r: any) => r.name).join(', ')}`}
                     </p>
                   )}
                 </div>
