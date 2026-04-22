@@ -1423,7 +1423,7 @@ export class DatabaseService {
       const { data, error } = await supabase
         .from('picks')
         .upsert({ user_id: userId, show_id: showId, note: note || null }, { onConflict: 'user_id,show_id' })
-        .select('*')
+        .select('*, shows(id, title, poster_path, tmdb_id)')
         .single();
 
       if (error) throw error;

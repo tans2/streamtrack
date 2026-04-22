@@ -75,11 +75,11 @@ export function NavBar({ variant, backHref, backLabel, pageTitle, actions }: Nav
   return (
     <div className="border-b border-border bg-card/50">
       <div className="container mx-auto px-3 sm:px-6 py-4">
-        <div className="flex items-center justify-between">
+        <div className="grid grid-cols-3 items-center">
           <ScoutBrand />
 
-          {/* Center nav links — hidden on mobile (bottom tab bar handles it) */}
-          <nav className="hidden md:flex items-center gap-1">
+          {/* Center nav links — always centered, hidden on mobile (bottom tab bar handles it) */}
+          <nav className="hidden md:flex items-center justify-center gap-1">
             {navLinks.map(({ label, href }) => {
               const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
               return (
@@ -101,11 +101,9 @@ export function NavBar({ variant, backHref, backLabel, pageTitle, actions }: Nav
             })}
           </nav>
 
-          {actions && (
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              {actions}
-            </div>
-          )}
+          <div className="flex items-center justify-end space-x-2 sm:space-x-4">
+            {actions}
+          </div>
         </div>
       </div>
     </div>

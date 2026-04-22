@@ -127,6 +127,13 @@ router.get('/referrals', authenticateToken, async (req: any, res) => {
       .eq('id', userId)
       .single();
 
+    // Generate and save a code on-the-fly if the user doesn't have one yet
+    let referralCode: string | null = me?.referral_code || null;
+    if (!referralCode) {
+      referralCode = AuthService.generateReferralCode();
+      await supabase.from('users').update({ referral_code: referralCode }).eq('id', userId);
+    }
+
     // Get all users referred by this user
     const { data: referrals } = await supabase
       .from('users')
@@ -137,7 +144,7 @@ router.get('/referrals', authenticateToken, async (req: any, res) => {
     res.json({
       success: true,
       data: {
-        referral_code: me?.referral_code || null,
+        referral_code: referralCode,
         referrals: (referrals || []).map((r: any) => ({ name: r.name, joined_at: r.created_at })),
         count: (referrals || []).length,
       }
