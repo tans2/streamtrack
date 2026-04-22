@@ -4,7 +4,7 @@ import { authenticateToken } from './auth';
 
 const router = express.Router();
 
-// Add a pick (completed shows only)
+// Add a pick (completed shows, or shows where user has reached season 2+)
 router.post('/', authenticateToken, async (req: any, res) => {
   try {
     const userId = req.user.id;
@@ -14,9 +14,9 @@ router.post('/', authenticateToken, async (req: any, res) => {
       return res.status(400).json({ success: false, error: 'showId is required' });
     }
 
-    const isCompleted = await DatabaseService.isShowCompleted(userId, showId);
-    if (!isCompleted) {
-      return res.status(400).json({ success: false, error: 'You can only pick shows you have completed' });
+    const isEligible = await DatabaseService.isEligibleForPick(userId, showId);
+    if (!isEligible) {
+      return res.status(400).json({ success: false, error: "You can only pick shows where you've completed at least one season" });
     }
 
     if (note && note.length > 200) {

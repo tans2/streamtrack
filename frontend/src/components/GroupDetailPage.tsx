@@ -253,7 +253,7 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
             <div className="flex gap-0">
               {/* Poster */}
               {posterUrl && (
-                <div className="w-32 sm:w-48 flex-shrink-0">
+                <div className="w-32 sm:w-48 lg:w-56 flex-shrink-0">
                   <ImageWithFallback
                     src={posterUrl}
                     alt={group.show.title}

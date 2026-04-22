@@ -1554,17 +1554,17 @@ export class DatabaseService {
     }
   }
 
-  static async isShowCompleted(userId: string, showId: string): Promise<boolean> {
+  static async isEligibleForPick(userId: string, showId: string): Promise<boolean> {
     try {
       const { data, error } = await supabase
         .from('user_shows')
-        .select('watch_status')
+        .select('watch_status, current_season')
         .eq('user_id', userId)
         .eq('show_id', showId)
         .single();
 
-      if (error) return false;
-      return data?.watch_status === 'completed';
+      if (error || !data) return false;
+      return data.watch_status === 'completed' || (data.current_season != null && data.current_season >= 2);
     } catch {
       return false;
     }
