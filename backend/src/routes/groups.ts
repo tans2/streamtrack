@@ -49,6 +49,30 @@ router.get('/', authenticateToken, async (req: any, res) => {
   }
 });
 
+// Public preview — no auth required, for invite landing page
+router.get('/public-preview/:inviteCode', async (req: any, res) => {
+  try {
+    const { inviteCode } = req.params;
+    const group = await DatabaseService.getGroupByInviteCode(inviteCode);
+    if (!group) {
+      return res.status(404).json({ success: false, error: 'Invalid invite code' });
+    }
+    const memberCount = await DatabaseService.getGroupMemberCount(group.id);
+    res.json({
+      success: true,
+      data: {
+        groupName: group.name,
+        showTitle: (group as any).shows?.title || null,
+        showPosterPath: (group as any).shows?.poster_path || null,
+        memberCount,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error fetching public group preview:', error);
+    res.status(500).json({ success: false, error: 'Failed to load group preview' });
+  }
+});
+
 // Preview group via invite code (must be before /:groupId to avoid conflict)
 router.get('/invite/:inviteCode', authenticateToken, async (req: any, res) => {
   try {

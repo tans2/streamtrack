@@ -1,17 +1,23 @@
 "use client";
 
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { List, Search, Bell, Users, ArrowRight } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { NavBar } from '@/components/ui/nav-bar';
-import { SignOutButton } from '@/components/ui/sign-out-button';
 import { staggerContainer, fadeInUp, fadeIn } from '@/lib/animations';
 
 export default function HomePage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && user) router.replace('/search');
+  }, [user, loading]);
+
+  if (loading || user) return null;
 
   const features = [
     {
@@ -56,16 +62,12 @@ export default function HomePage() {
             >
               My Watchlist
             </Button>
-            {user ? (
-              <SignOutButton variant="default" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6" />
-            ) : (
-              <Button
-                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6"
-                onClick={() => router.push('/auth')}
-              >
-                Sign In
-              </Button>
-            )}
+            <Button
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6"
+              onClick={() => router.push('/auth')}
+            >
+              Sign In
+            </Button>
           </>
         }
       />
@@ -78,11 +80,12 @@ export default function HomePage() {
             variants={fadeIn}
             initial="hidden"
             animate="show"
+            className="flex flex-col items-center sm:items-start text-center sm:text-left"
           >
             <img
               src="/logo.png"
               alt="Scout mascot"
-              className="w-36 h-36 sm:w-44 sm:h-44 mb-5"
+              className="w-36 h-36 sm:w-44 sm:h-44 mb-5 mx-auto sm:mx-0"
             />
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight">
               <span className="text-foreground">Meet </span>
@@ -93,18 +96,24 @@ export default function HomePage() {
             <p className="text-base sm:text-lg text-muted-foreground mt-4 sm:mt-6 max-w-md">
               Track your favorite shows across streaming platforms with friends.
             </p>
-            {!user && (
-              <div className="mt-6 sm:mt-8">
-                <Button
-                  size="lg"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8"
-                  onClick={() => router.push('/signup')}
-                >
-                  Get Started
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            )}
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3">
+              <Button
+                size="lg"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8"
+                onClick={() => router.push('/signup')}
+              >
+                Get Started
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="rounded-full px-8"
+                onClick={() => router.push('/search')}
+              >
+                Explore Shows
+              </Button>
+            </div>
           </motion.div>
 
           {/* Right column — Feature heading + stacked feature cards */}
@@ -139,48 +148,19 @@ export default function HomePage() {
           </motion.div>
         </div>
 
-        {/* CTA Section */}
-        <motion.div
-          className="bg-card/60 backdrop-blur-[12px] border border-border/50 rounded-3xl p-8 sm:p-12 text-center mb-16 sm:mb-24"
-          variants={fadeIn}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-        >
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary mb-3">
-            Ready to start?
-          </h2>
-          <p className="text-muted-foreground mb-8">
-            Start keeping up with your friends today.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button
-              size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8"
-              onClick={() => router.push('/signup')}
-            >
-              Get Started Now
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="rounded-full px-8"
-              onClick={() => router.push('/search')}
-            >
-              Explore Shows
-            </Button>
-          </div>
-        </motion.div>
-
         {/* Footer */}
         <footer className="pt-8 border-t border-border text-center pb-4">
           <div className="flex items-center justify-center gap-2 mb-2">
             <img src="/logo.png" alt="Scout" className="w-6 h-6" />
             <span className="text-sm font-semibold text-foreground">Scout</span>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground mb-2">
             &copy; 2026 Scout TV Tracking. All rights reserved.
           </p>
+          <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+            <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
+            <a href="/terms" className="hover:text-foreground transition-colors">Terms of Service</a>
+          </div>
         </footer>
       </div>
     </div>

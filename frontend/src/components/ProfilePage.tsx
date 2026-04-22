@@ -3,10 +3,9 @@ import { motion } from 'framer-motion';
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Play, Star, Loader2, Bell, BellOff, Users, Trash2, Plus, ArrowRight, Settings, Sparkles } from "lucide-react";
+import { Play, Star, Loader2, Bell, BellOff, Users, Trash2, Plus, ArrowRight, Settings, MoreHorizontal, Sparkles, Copy, Check, Gift } from "lucide-react";
 import { staggerContainer, fadeInUp } from '@/lib/animations';
 import { NavBar } from './ui/nav-bar';
-import { SignOutButton } from './ui/sign-out-button';
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -15,6 +14,7 @@ import { showService, Show } from '@/services/showService';
 import { notificationService } from '@/services/notificationService';
 import { watchGroupService, WatchGroup } from '@/services/watchGroupService';
 import { picksService } from '@/services/picksService';
+import { authService } from '@/services/authService';
 import { toast } from 'sonner';
 import ShowDetailsModal from './ShowDetailsModal';
 import CreateGroupDialog from './CreateGroupDialog';
@@ -51,7 +51,10 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [myGroups, setMyGroups] = useState<WatchGroup[]>([]);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [removeConfirm, setRemoveConfirm] = useState<{ showId: string; title: string } | null>(null);
+  const [openCardMenuId, setOpenCardMenuId] = useState<string | null>(null);
   const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
+  const [referralData, setReferralData] = useState<{ referral_code: string | null; referrals: { name: string; joined_at: string }[]; count: number } | null>(null);
+  const [copiedReferral, setCopiedReferral] = useState(false);
   const [myPickShowIds, setMyPickShowIds] = useState<Set<string>>(new Set());
   const [pickNoteInputs, setPickNoteInputs] = useState<Record<string, string>>({});
   const [pickPanelOpen, setPickPanelOpen] = useState<string | null>(null);
@@ -66,14 +69,31 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     loadGroups();
     loadEmailVerification();
     loadMyPicks();
+    loadReferrals();
   }, []);
+
+  const loadReferrals = async () => {
+    try {
+      const data = await authService.getReferrals();
+      setReferralData(data);
+    } catch (err) {
+      console.error('[Scout] loadReferrals failed:', err);
+    }
+  };
+
+  const handleCopyReferralCode = async () => {
+    if (!referralData?.referral_code) return;
+    await navigator.clipboard.writeText(referralData.referral_code);
+    setCopiedReferral(true);
+    setTimeout(() => setCopiedReferral(false), 2000);
+  };
 
   const loadMyPicks = async () => {
     try {
       const picks = await picksService.getMyPicks();
       setMyPickShowIds(new Set(picks.map((p) => p.show_id)));
-    } catch {
-      // silently fail
+    } catch (err) {
+      console.error('[Scout] loadMyPicks failed:', err);
     }
   };
 
@@ -99,7 +119,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     try {
       const note = pickNoteInputs[showId] || undefined;
       await picksService.addPick(showId, note);
-      setMyPickShowIds(prev => new Set([...prev, showId]));
+      setMyPickShowIds(prev => new Set(Array.from(prev).concat(showId)));
       toast.success(`Added "${showTitle}" to your Picks!`);
       setPickPanelOpen(null);
       setPickNoteInputs(prev => { const n = { ...prev }; delete n[showId]; return n; });
@@ -445,6 +465,14 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     return Math.round(((item.current_episode || 1) / episodeCount) * 100);
   };
 
+  const getCountdownLabel = (nextAirDate?: string | null): string | null => {
+    if (!nextAirDate) return null;
+    const days = Math.round((new Date(nextAirDate).getTime() - Date.now()) / 86400000);
+    if (days === 0) return "Airing today!";
+    if (days > 0) return `Next ep in ${days}d`;
+    return null;
+  };
+
   const getPosterUrl = (posterPath?: string) => {
     if (!posterPath) return '';
     return `https://image.tmdb.org/t/p/w300${posterPath}`;
@@ -461,7 +489,6 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
       <div className="min-h-screen text-foreground pb-20 md:pb-0">
         <NavBar
           variant="authenticated"
-          actions={<SignOutButton />}
         />
         <div className="max-w-[1400px] mx-auto px-3 sm:px-6 md:px-10 py-6">
           <div className="flex items-center gap-4 mb-10">
@@ -489,7 +516,6 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     <div className="min-h-screen text-foreground pb-20 md:pb-0">
       <NavBar
         variant="authenticated"
-        actions={<SignOutButton />}
       />
 
       <div className="max-w-[1400px] mx-auto px-3 sm:px-6 md:px-10 py-6">
@@ -525,6 +551,33 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
           </button>
         </div>
 
+        {/* Referral Code Card */}
+        {referralData?.referral_code && (
+          <div className="mb-8 p-4 rounded-2xl bg-card border border-border">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <Gift className="w-5 h-5 text-primary flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-0.5">Your Referral Code</p>
+                  <p className="text-xl font-bold tracking-widest text-foreground">{referralData.referral_code}</p>
+                  {referralData.count > 0 && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {referralData.count} {referralData.count === 1 ? 'person' : 'people'} joined — {referralData.referrals.map(r => r.name).join(', ')}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={handleCopyReferralCode}
+                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border text-sm font-medium hover:bg-muted/50 transition-colors flex-shrink-0"
+              >
+                {copiedReferral ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                {copiedReferral ? 'Copied!' : 'Copy Code'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Currently Watching */}
         <div className="mb-10">
           <h2 className="text-xl font-semibold flex items-center gap-2 mb-4 text-foreground">
@@ -556,16 +609,50 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                 className="w-36 sm:w-44 md:w-52 flex-shrink-0 snap-start"
               >
                 {/* Poster */}
-                <div
-                  className="aspect-[2/3] rounded-2xl overflow-hidden bg-muted mb-2 cursor-pointer group relative"
-                  onClick={() => handleShowClick(item, false)}
-                >
-                  <ImageWithFallback
-                    src={getPosterUrl(item.shows.poster_path)}
-                    alt={item.shows.title}
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                <div className="relative mb-2">
+                  <div
+                    className="aspect-[2/3] rounded-2xl overflow-hidden bg-muted cursor-pointer group relative"
+                    onClick={() => handleShowClick(item, false)}
+                  >
+                    <ImageWithFallback
+                      src={getPosterUrl(item.shows.poster_path)}
+                      alt={item.shows.title}
+                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                  </div>
+                  {/* ⋯ menu button */}
+                  <button
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+                    onClick={(e) => { e.stopPropagation(); setOpenCardMenuId(openCardMenuId === item.show_id ? null : item.show_id); }}
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
+                  {/* Dropdown menu */}
+                  {openCardMenuId === item.show_id && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setOpenCardMenuId(null)} />
+                      <div className="absolute top-10 right-2 z-20 bg-card border border-border rounded-xl shadow-lg py-1 min-w-[140px]">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest px-3 pt-1.5 pb-1">Change Status</p>
+                        {(['completed', 'want_to_watch', 'dropped'] as const).map(status => (
+                          <button
+                            key={status}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-muted/60 transition-colors"
+                            onClick={() => { handleStatusUpdate(item.show_id, status); setOpenCardMenuId(null); }}
+                          >
+                            {status === 'completed' ? 'Completed' : status === 'want_to_watch' ? 'Not Started' : 'Dropped'}
+                          </button>
+                        ))}
+                        <div className="border-t border-border my-1" />
+                        <button
+                          className="w-full text-left px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                          onClick={() => { setRemoveConfirm({ showId: item.show_id, title: item.shows.title }); setOpenCardMenuId(null); }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Title */}
@@ -668,6 +755,20 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
 
                 {/* Progress bar */}
                 <Progress value={getProgressPercent(item)} className="h-1.5" />
+                {/* Next episode countdown badge */}
+                {(() => {
+                  const label = getCountdownLabel(item.shows.next_air_date);
+                  if (!label) return null;
+                  const days = item.shows.next_air_date
+                    ? Math.round((new Date(item.shows.next_air_date).getTime() - Date.now()) / 86400000)
+                    : null;
+                  const isClose = days !== null && days <= 7;
+                  return (
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${isClose ? 'bg-green-500/15 text-green-600' : 'bg-muted text-muted-foreground'}`}>
+                      {label}
+                    </span>
+                  );
+                })()}
               </div>
             ))}
 
@@ -892,8 +993,8 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
             )}
           </div>
 
-          {/* Right Column: Watch Groups */}
-          <div>
+          {/* Right Column: Watch Groups — desktop only; mobile uses /groups tab */}
+          <div className="hidden md:block">
             <h3 className="text-lg font-semibold flex items-center gap-2 mb-4 text-foreground">
               <Users className="w-5 h-5 text-primary" />
               Watch Groups

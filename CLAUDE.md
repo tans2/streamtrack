@@ -381,6 +381,64 @@ Right column:
 - `allSynced` computed from `sortedMembers` — all members share the same progress value
 - 🎉 banner displayed above Sync Progress card when synced, only when `sortedMembers.length > 1`
 
+**Add to Watchlist Button (SearchPage):**
+- Restored below each search result card alongside the hover quick-add overlay
+- Opens a modal with status, season, and episode selectors (`openAddModal`)
+- When already in watchlist: button replaced with "✓ In Watchlist" indicator
+- Hover quick-add (`+` overlay on poster) still present for fast adds
+
+### 12. Bug Fix — Group Digest Showing "Unknown Show" (Completed)
+**Problem**: Daily digest group activity entries were all titled "Unknown Show" instead of the watch group name.
+
+**Root cause**: `updateShowStatus` in `database.ts` used `.select()` without joining `shows`, so `updated.shows?.title` was always `undefined`, falling back to `'Unknown Show'`.
+
+**Fix (`backend/src/routes/shows.ts`):**
+- `show_title` in queued `group_progress_update` events now uses `group.name` (the watch group name, e.g. "Game of Thrones Fan Club")
+- Show title moved into `episode_title` subtitle: `"${user} updated to S1E2 on ${show.title}"`
+- `updateShowStatus` select updated to `'*, shows(title)'` so show title is available for the subtitle
+
+### 13. Landing Page Feature Cards Updated (Completed)
+**Purpose**: Replace placeholder feature copy with accurate product descriptions.
+
+**Updated features (`frontend/src/app/page.tsx`):**
+- **My Watchlist** (List icon): "Save shows you love, track where you left off, and pick back up anytime across every platform."
+- **Universal Search** (Search icon): "Find any show and see exactly where to watch it, which seasons are available, and on what platform."
+- **Drop Alerts** (Bell icon): "Get notified when new episodes and seasons drop so you're never the last to know."
+- **Watch Groups** (Users icon): "Track shows with friends and know exactly where everyone's at, even from miles apart."
+- Replaced `TrendingUp` + `Calendar` icons with `List` + `Search`
+
+### 14. Private Beta Landing Page (Completed)
+**Purpose**: Separate marketing page to collect beta signups, hosted as a third Vercel project.
+
+**Location:** `beta-landing/` — separate Next.js app, deployed independently from `frontend/`
+
+**Design:**
+- Be Vietnam Pro font, Scout orange color tokens matching main app
+- Fox mascot logo (`w-32`) + "Meet Scout, your TV sidekick" hero
+- Two-column layout: 4 feature cards left, sticky signup card right
+- Features match main app: My Watchlist, Universal Search, Drop Alerts, Watch Groups
+- Platforms strip at bottom, fox logo in nav + footer
+- Favicon + apple-icon copied from main frontend (auto-detected by Next.js App Router)
+- OG image (`src/app/opengraph-image.tsx`): 1200×630 ImageResponse with fox logo + "Scout" + "Your TV Sidekick" + "PRIVATE BETA" badge
+
+**Signup flow:**
+- Form: name + email → `POST /api/signup` → inserts into `beta_signups` Supabase table
+- Duplicate email returns 409 with friendly error
+- Live signup count: `GET /api/signup-count` fetches count, displays "Join X others on the waitlist" when count > 0
+- Hero subtext: "Spots are limited. Sign up for early access and we'll reach out when you're in."
+
+**Database (`beta_signups` table):**
+- Migration SQL: `beta-landing/supabase-migration.sql`
+- Columns: `id, name, email, signed_up_at, notes, invited, invited_at`
+- RLS **disabled** (required for anon inserts to work — policy approach had 42501 errors)
+- Permissions applied: `GRANT INSERT, SELECT ON beta_signups TO anon;` + `GRANT USAGE ON SCHEMA public TO anon;`
+- View signups: Supabase Table Editor → `beta_signups`, or `SELECT name, email, signed_up_at FROM beta_signups ORDER BY signed_up_at DESC;`
+
+**Vercel deployment (third project):**
+- Root directory: `beta-landing/`
+- Framework: Next.js
+- Env vars required: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (same as main app)
+
 ---
 
 ## Database Migrations
@@ -414,7 +472,7 @@ CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users(password_rese
 ## Deployment Configuration
 
 ### Vercel Setup
-The project uses **separate Vercel projects** for frontend and backend:
+The project uses **three separate Vercel projects**:
 
 **Frontend Project:**
 - Root directory: `frontend/`
@@ -428,7 +486,13 @@ The project uses **separate Vercel projects** for frontend and backend:
 - Build command: `npm run vercel-build`
 - Output directory: `dist`
 
-**Important:** Both projects need to be configured to deploy from `main` branch for production.
+**Beta Landing Project:**
+- Root directory: `beta-landing/`
+- Framework: Next.js
+- Production branch: `main`
+- Env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+**Important:** All three projects need to be configured to deploy from `main` branch for production.
 
 ### Cron Jobs
 

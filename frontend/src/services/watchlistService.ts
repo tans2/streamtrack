@@ -26,6 +26,9 @@ export interface WatchlistItem {
     genres: any[];
     rating: number;
     popularity: number;
+    next_air_date?: string | null;
+    next_episode_season?: number | null;
+    next_episode_number?: number | null;
   };
 }
 

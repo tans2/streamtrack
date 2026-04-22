@@ -5,10 +5,10 @@ import { Sparkles, Search, Bookmark, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const tabs = [
-  { label: 'Picks', icon: Sparkles, href: '/picks' },
   { label: 'Search', icon: Search, href: '/search' },
   { label: 'Watchlist', icon: Bookmark, href: '/profile' },
   { label: 'Groups', icon: Users, href: '/groups' },
+  { label: 'Picks', icon: Sparkles, href: '/picks' },
 ];
 
 export function BottomTabBar() {

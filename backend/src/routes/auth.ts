@@ -28,7 +28,7 @@ export const authenticateToken = async (req: any, res: any, next: any) => {
 // Register new user
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, name, initialShows } = req.body;
+    const { email, password, name, initialShows, inviteCode } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
@@ -44,12 +44,24 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    const result = await AuthService.register(email, password, name, initialShows);
+    // Optional referral code — look up the referring user if provided
+    let referredByUserId: string | undefined;
+    if (inviteCode) {
+      const { supabase } = await import('../services/database');
+      const { data: referrer } = await supabase
+        .from('users')
+        .select('id')
+        .eq('referral_code', inviteCode.toUpperCase().trim())
+        .single();
+      if (referrer) {
+        referredByUserId = referrer.id;
+      }
+      // Invalid codes are silently ignored — registration always proceeds
+    }
 
-    res.status(201).json({
-      success: true,
-      data: result
-    });
+    const result = await AuthService.register(email, password, name, initialShows, referredByUserId);
+
+    res.status(201).json({ success: true, data: result });
   } catch (error: any) {
     console.error('Registration error:', error);
     res.status(400).json({
@@ -99,6 +111,47 @@ router.get('/me', authenticateToken, async (req: any, res) => {
       success: false,
       error: 'Failed to get user profile'
     });
+  }
+});
+
+// Get referral code and list of people the user has referred
+router.get('/referrals', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const { supabase } = await import('../services/database');
+
+    // Get the user's own referral code
+    const { data: me } = await supabase
+      .from('users')
+      .select('referral_code')
+      .eq('id', userId)
+      .single();
+
+    // Generate and save a code on-the-fly if the user doesn't have one yet
+    let referralCode: string | null = me?.referral_code || null;
+    if (!referralCode) {
+      referralCode = AuthService.generateReferralCode();
+      await supabase.from('users').update({ referral_code: referralCode }).eq('id', userId);
+    }
+
+    // Get all users referred by this user
+    const { data: referrals } = await supabase
+      .from('users')
+      .select('name, created_at')
+      .eq('referred_by_user_id', userId)
+      .order('created_at', { ascending: false });
+
+    res.json({
+      success: true,
+      data: {
+        referral_code: referralCode,
+        referrals: (referrals || []).map((r: any) => ({ name: r.name, joined_at: r.created_at })),
+        count: (referrals || []).length,
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching referrals:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch referrals' });
   }
 });
 
@@ -275,6 +328,46 @@ router.post('/reset-password', async (req, res) => {
       success: false,
       error: 'Failed to reset password. Please try again.'
     });
+  }
+});
+
+// Delete account — permanently removes all user data
+router.delete('/account', authenticateToken, async (req: any, res) => {
+  const userId = req.user.id;
+  try {
+    const { supabase } = await import('../services/database');
+
+    // Delete in FK-safe order
+    await supabase.from('pending_notification_events').delete().eq('user_id', userId);
+    await supabase.from('notification_log').delete().eq('user_id', userId);
+    await supabase.from('digest_log').delete().eq('user_id', userId);
+    await supabase.from('user_shows').delete().eq('user_id', userId);
+
+    // Delete groups where this user is the sole admin (no other members)
+    const { data: adminGroups } = await supabase
+      .from('watch_groups')
+      .select('id')
+      .eq('created_by', userId);
+    if (adminGroups?.length) {
+      for (const group of adminGroups) {
+        const { count } = await supabase
+          .from('watch_group_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('group_id', group.id);
+        if ((count ?? 0) <= 1) {
+          await supabase.from('watch_group_members').delete().eq('group_id', group.id);
+          await supabase.from('watch_groups').delete().eq('id', group.id);
+        }
+      }
+    }
+
+    await supabase.from('watch_group_members').delete().eq('user_id', userId);
+    await supabase.from('users').delete().eq('id', userId);
+
+    res.json({ success: true, message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete account' });
   }
 });
 

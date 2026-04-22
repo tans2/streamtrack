@@ -10,15 +10,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { NavBar } from '@/components/ui/nav-bar';
+import { OnboardingModal } from '@/components/OnboardingModal';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
-  const { login, register } = useAuth();
+  const { login, register, user } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,15 +31,29 @@ export default function AuthPage() {
     try {
       if (isLogin) {
         await login(email, password);
+        router.push('/search');
       } else {
-        await register(email, password, name);
+        const result = await register(email, password, name, undefined, inviteCode || undefined);
+        const userId = (result as any)?.id ?? email;
+        const onboarded = localStorage.getItem(`scout_onboarded_${userId}`);
+        if (!onboarded) {
+          setShowOnboarding(true);
+        } else {
+          router.push('/search');
+        }
       }
-      router.push('/');
     } catch (err: any) {
       console.error('Authentication error:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOnboardingComplete = () => {
+    const userId = user?.id ?? email;
+    localStorage.setItem(`scout_onboarded_${userId}`, '1');
+    setShowOnboarding(false);
+    router.push('/search');
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -126,6 +143,21 @@ export default function AuthPage() {
                 )}
               </div>
 
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="inviteCode" className="text-card-foreground">Referral Code</Label>
+                  <Input
+                    id="inviteCode"
+                    type="text"
+                    placeholder="Enter your referral code (optional)"
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                    onKeyDown={handleKeyDown}
+                    className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
+                  />
+                </div>
+              )}
+
               <Button
                 type="submit"
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground mt-6 rounded-full"
@@ -159,6 +191,8 @@ export default function AuthPage() {
         </Card>
       </div>
       </div>
+
+      <OnboardingModal open={showOnboarding} onComplete={handleOnboardingComplete} />
     </div>
   );
 }

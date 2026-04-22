@@ -8,7 +8,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name?: string, initialShows?: number[]) => Promise<void>;
+  register: (email: string, password: string, name?: string, initialShows?: number[], inviteCode?: string) => Promise<any>;
   logout: () => void;
   loading: boolean;
   updatePreferences: (updates: Partial<User>) => Promise<void>;
@@ -62,13 +62,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (email: string, password: string, name?: string, initialShows?: number[]) => {
+  const register = async (email: string, password: string, name?: string, initialShows?: number[], inviteCode?: string) => {
     try {
-      const result = await authService.register(email, password, name, initialShows);
+      const result = await authService.register(email, password, name, initialShows, inviteCode);
       setUser(result.user);
       setToken(result.token);
       localStorage.setItem('streamtrack_token', result.token);
       toast.success('Account created successfully!');
+      return result.user;
     } catch (error: any) {
       console.error('Registration error:', error);
       toast.error(error.message || 'Registration failed');

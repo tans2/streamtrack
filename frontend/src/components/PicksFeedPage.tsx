@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from './ui/button';
 import { NavBar } from './ui/nav-bar';
-import { SignOutButton } from './ui/sign-out-button';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -132,7 +131,7 @@ export default function PicksFeedPage() {
     setAddingId(tmdbId);
     try {
       await watchlistService.addToWatchlist(tmdbId);
-      setWatchlistTmdbIds(prev => new Set([...prev, tmdbId]));
+      setWatchlistTmdbIds(prev => new Set(Array.from(prev).concat(tmdbId)));
       toast.success('Added to your watchlist!');
     } catch (error: any) {
       toast.error(error.message || 'Failed to add to watchlist');
@@ -158,7 +157,6 @@ export default function PicksFeedPage() {
     <div className="min-h-screen bg-background pb-24">
       <NavBar
         variant="authenticated"
-        actions={<SignOutButton variant="ghost" className="text-sm" />}
       />
 
       <div className="container mx-auto px-3 sm:px-6 py-6 max-w-2xl">

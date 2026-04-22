@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Badge } from "./ui/badge";
 import {
   Crown, Loader2, Mail, CheckCircle2, AlertCircle,
-  Play, PauseCircle, Lock, ChevronRight, User, KeyRound, Globe, BarChart2, Tv, Users, Calendar
+  Play, PauseCircle, Lock, ChevronRight, User, KeyRound, Globe, BarChart2, Tv, Users, Calendar,
+  Copy, Check, Gift
 } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 import { NavBar } from './ui/nav-bar';
@@ -15,6 +16,11 @@ import { SignOutButton } from './ui/sign-out-button';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { notificationService } from '@/services/notificationService';
+import { authService } from '@/services/authService';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from './ui/alert-dialog';
 
 interface SettingsPageProps {
   onNavigate: (page: string) => void;
@@ -71,9 +77,25 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
   const [emailVerified, setEmailVerified] = useState(false);
   const [sendingVerification, setSendingVerification] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [referralData, setReferralData] = useState<{ referral_code: string | null; referrals: { name: string; joined_at: string }[]; count: number } | null>(null);
+  const [copiedReferral, setCopiedReferral] = useState(false);
 
-  const { user, updatePreferences } = useAuth();
+  const { user, updatePreferences, logout } = useAuth();
   const router = useRouter();
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      await authService.deleteAccount();
+      logout();
+      router.push('/');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete account');
+      setDeletingAccount(false);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -99,8 +121,25 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
         }
       }));
       loadNotificationPreferences();
+      loadReferrals();
     }
   }, [user]);
+
+  const loadReferrals = async () => {
+    try {
+      const data = await authService.getReferrals();
+      setReferralData(data);
+    } catch (err) {
+      console.error('[Scout] loadReferrals failed:', err);
+    }
+  };
+
+  const handleCopyReferralCode = async () => {
+    if (!referralData?.referral_code) return;
+    await navigator.clipboard.writeText(referralData.referral_code);
+    setCopiedReferral(true);
+    setTimeout(() => setCopiedReferral(false), 2000);
+  };
 
   const loadNotificationPreferences = async () => {
     try {
@@ -213,7 +252,6 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
       <NavBar
         variant="authenticated"
         pageTitle="Settings"
-        actions={<SignOutButton />}
       />
 
       <div className="container mx-auto px-3 sm:px-6 py-6 sm:py-10 max-w-2xl">
@@ -333,6 +371,48 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
               </CardContent>
             </Card>
           </div>
+
+          {/* REFERRAL CODE */}
+          {referralData?.referral_code && (
+            <div>
+              <SectionLabel>Referral Code</SectionLabel>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <IconPill><Gift className="w-4 h-4 text-primary" /></IconPill>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">Your Code</p>
+                      <p className="text-xs text-muted-foreground">Share with friends to invite them to Scout</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 bg-muted rounded-xl px-4 py-3">
+                      <p className="text-lg font-bold tracking-widest text-foreground">{referralData.referral_code}</p>
+                    </div>
+                    <button
+                      onClick={handleCopyReferralCode}
+                      className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border text-sm font-medium hover:bg-muted/50 transition-colors flex-shrink-0"
+                    >
+                      {copiedReferral ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                      {copiedReferral ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                  {referralData.count > 0 && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+                        {referralData.count} {referralData.count === 1 ? 'person' : 'people'} joined
+                      </p>
+                      <div className="space-y-1">
+                        {referralData.referrals.map((r, i) => (
+                          <p key={i} className="text-sm text-foreground">{r.name}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* PREFERENCES */}
           <div>
@@ -488,14 +568,30 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
             <Card>
               <CardContent className="p-0 divide-y divide-border">
                 {/* Privacy Policy row */}
-                <div className="flex items-center gap-3 p-4">
+                <button
+                  className="flex items-center gap-3 p-4 w-full text-left hover:bg-muted/40 transition-colors"
+                  onClick={() => window.open('/privacy', '_blank')}
+                >
                   <IconPill><Lock className="w-4 h-4 text-primary" /></IconPill>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">Privacy Policy</p>
                     <p className="text-xs text-muted-foreground">Manage your data</p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </div>
+                </button>
+
+                {/* Terms of Service row */}
+                <button
+                  className="flex items-center gap-3 p-4 w-full text-left hover:bg-muted/40 transition-colors"
+                  onClick={() => window.open('/terms', '_blank')}
+                >
+                  <IconPill><Lock className="w-4 h-4 text-primary" /></IconPill>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">Terms of Service</p>
+                    <p className="text-xs text-muted-foreground">Beta terms &amp; conditions</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </button>
 
                 {/* Existing switches — disabled, coming soon */}
                 <div className="opacity-75">
@@ -537,8 +633,60 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
             </Card>
           </div>
 
+          {/* ACCOUNT ACTIONS */}
+          <div>
+            <SectionLabel>Account Actions</SectionLabel>
+            <SignOutButton
+              variant="outline"
+              className="w-full border-border text-foreground hover:bg-muted/60 rounded-xl h-11"
+            />
+          </div>
+
+          {/* DANGER ZONE */}
+          <div>
+            <SectionLabel>Danger Zone</SectionLabel>
+            <Card className="border-destructive/30 bg-destructive/5 rounded-2xl">
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground mb-4">
+                  Permanently deletes your account, watchlist, groups, and all associated data. This cannot be undone.
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-xl h-11"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  Delete Account
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
         </div>
       </div>
+
+      {/* Delete Account Confirmation */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes your watchlist, groups, preferences, and all associated data.
+              This action <strong>cannot be undone</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingAccount}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteAccount}
+              disabled={deletingAccount}
+            >
+              {deletingAccount ? 'Deleting…' : 'Delete My Account'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
