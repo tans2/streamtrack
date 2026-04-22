@@ -633,6 +633,15 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
             </Card>
           </div>
 
+          {/* ACCOUNT ACTIONS */}
+          <div>
+            <SectionLabel>Account Actions</SectionLabel>
+            <SignOutButton
+              variant="outline"
+              className="w-full border-border text-foreground hover:bg-muted/60 rounded-xl h-11"
+            />
+          </div>
+
           {/* DANGER ZONE */}
           <div>
             <SectionLabel>Danger Zone</SectionLabel>
