@@ -159,7 +159,7 @@ export default function PicksFeedPage() {
         variant="authenticated"
       />
 
-      <div className="container mx-auto px-3 sm:px-6 py-6 max-w-2xl">
+      <div className="container mx-auto px-3 sm:px-6 py-6 max-w-2xl md:max-w-5xl">
         {/* Header */}
         <div className="flex items-center gap-2 mb-6">
           <Sparkles className="w-6 h-6 text-primary" />
@@ -176,7 +176,7 @@ export default function PicksFeedPage() {
             <img src="/logo.png" alt="Scout" className="w-16 h-16 mx-auto mb-4 opacity-30" />
             <h2 className="text-lg font-semibold text-foreground mb-2">No picks yet</h2>
             <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
-              Your picks feed shows up once you're in a Watch Group with friends. Complete a show and pick it to share with your group!
+              Your picks feed shows up once you're in a Watch Group with friends. Complete at least one season of a show and pick it to share with your group!
             </p>
             <Button
               variant="outline"
@@ -188,8 +188,8 @@ export default function PicksFeedPage() {
             </Button>
           </div>
         ) : (
-          <div className="space-y-8">
-            {/* Friends' picks feed */}
+          <div className={feed.length > 0 && myPicks.length > 0 ? "grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-6 md:gap-8" : "space-y-8"}>
+            {/* Friends' picks feed — left column on md+ */}
             {feed.length > 0 && (
               <section>
                 <h2 className="text-xs font-semibold tracking-widest text-primary uppercase mb-3">
@@ -215,8 +215,8 @@ export default function PicksFeedPage() {
               </section>
             )}
 
-            {/* My picks */}
-            {myPicks.length > 0 && (
+            {/* My picks — right column on md+ */}
+            {myPicks.length > 0 ? (
               <section>
                 <h2 className="text-xs font-semibold tracking-widest text-primary uppercase mb-3">
                   Your picks
@@ -240,21 +240,19 @@ export default function PicksFeedPage() {
                   ))}
                 </motion.div>
                 <p className="text-xs text-muted-foreground mt-3">
-                  To add a pick, go to your <button className="underline text-primary" onClick={() => router.push('/profile')}>Watchlist</button> → Completed tab.
+                  To add a pick, go to your <button className="underline text-primary" onClick={() => router.push('/profile')}>Watchlist</button> — complete at least one season to unlock picks.
                 </p>
               </section>
-            )}
-
-            {/* Prompt to pick if user has no picks yet */}
-            {myPicks.length === 0 && feed.length > 0 && (
+            ) : feed.length > 0 ? (
+              /* Prompt to pick if user has no picks yet but feed has content */
               <div className="text-center py-6 rounded-2xl border border-dashed border-border">
                 <Sparkles className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground mb-3">Share your favourite completed shows with your groups.</p>
+                <p className="text-sm text-muted-foreground mb-3">Share your favourite shows with your groups.</p>
                 <Button variant="outline" size="sm" className="rounded-full" onClick={() => router.push('/profile')}>
                   Add your first Pick
                 </Button>
               </div>
-            )}
+            ) : null}
           </div>
         )}
       </div>

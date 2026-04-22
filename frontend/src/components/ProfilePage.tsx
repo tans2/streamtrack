@@ -643,6 +643,18 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                             {status === 'completed' ? 'Completed' : status === 'want_to_watch' ? 'Not Started' : 'Dropped'}
                           </button>
                         ))}
+                        {(item.current_season || 1) >= 2 && (
+                          <>
+                            <div className="border-t border-border my-1" />
+                            <button
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted/60 transition-colors flex items-center gap-2"
+                              onClick={() => { handleTogglePick(item.show_id, item.shows.title); setOpenCardMenuId(null); }}
+                            >
+                              <Sparkles className={`w-3.5 h-3.5 ${myPickShowIds.has(item.show_id) ? 'text-primary fill-primary' : 'text-muted-foreground'}`} />
+                              {myPickShowIds.has(item.show_id) ? 'Remove Pick' : 'Pick this show'}
+                            </button>
+                          </>
+                        )}
                         <div className="border-t border-border my-1" />
                         <button
                           className="w-full text-left px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
@@ -886,7 +898,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                             disabled={togglingNotification === item.show_id}
                           />
                         </div>
-                        {item.watch_status === 'completed' && (
+                        {(item.watch_status === 'completed' || (item.current_season ?? 1) >= 2) && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -936,7 +948,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                           disabled={togglingNotification === item.show_id}
                         />
                       </div>
-                      {item.watch_status === 'completed' && (
+                      {(item.watch_status === 'completed' || (item.current_season ?? 1) >= 2) && (
                         <Button
                           variant="ghost"
                           size="sm"
