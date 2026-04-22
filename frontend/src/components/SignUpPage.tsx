@@ -202,7 +202,6 @@ export default function SignUpPage({ onNavigate }: SignUpPageProps) {
                   onChange={handleInputChange}
                   className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary uppercase"
                 />
-                <p className="text-xs text-muted-foreground">Have a referral code? Enter it here.</p>
               </div>
 
               <Button

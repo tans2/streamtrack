@@ -633,22 +633,23 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
             </Card>
           </div>
 
-          {/* ACCOUNT ACTIONS */}
+          {/* DANGER ZONE */}
           <div>
-            <SectionLabel>Account Actions</SectionLabel>
-            <div className="space-y-3">
-              <SignOutButton
-                variant="outline"
-                className="w-full border-border text-foreground hover:bg-muted/60 rounded-xl h-11"
-              />
-              <Button
-                variant="outline"
-                className="w-full border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-xl h-11"
-                onClick={() => setShowDeleteConfirm(true)}
-              >
-                Delete Account
-              </Button>
-            </div>
+            <SectionLabel>Danger Zone</SectionLabel>
+            <Card className="border-destructive/30 bg-destructive/5 rounded-2xl">
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground mb-4">
+                  Permanently deletes your account, watchlist, groups, and all associated data. This cannot be undone.
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-xl h-11"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  Delete Account
+                </Button>
+              </CardContent>
+            </Card>
           </div>
 
         </div>
