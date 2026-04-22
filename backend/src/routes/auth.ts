@@ -44,32 +44,24 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Invite code gate — only enforced when REQUIRE_INVITE_CODE=true
-    if (process.env.REQUIRE_INVITE_CODE === 'true') {
-      if (!inviteCode) {
-        return res.status(400).json({ success: false, error: 'An invite code is required to join the beta.' });
-      }
+    // Optional referral code — look up the referring user if provided
+    let referredByUserId: string | undefined;
+    if (inviteCode) {
       const { supabase } = await import('../services/database');
-      const { data: invite } = await supabase
-        .from('beta_invites')
-        .select('id, used_at')
-        .eq('code', inviteCode.toUpperCase().trim())
+      const { data: referrer } = await supabase
+        .from('users')
+        .select('id')
+        .eq('referral_code', inviteCode.toUpperCase().trim())
         .single();
-      if (!invite || invite.used_at) {
-        return res.status(400).json({ success: false, error: 'Invalid or already-used invite code.' });
+      if (referrer) {
+        referredByUserId = referrer.id;
       }
-      // Mark as used after successful registration (done below)
-      const result = await AuthService.register(email, password, name, initialShows);
-      await supabase.from('beta_invites').update({ used_at: new Date().toISOString() }).eq('id', invite.id);
-      return res.status(201).json({ success: true, data: result });
+      // Invalid codes are silently ignored — registration always proceeds
     }
 
-    const result = await AuthService.register(email, password, name, initialShows);
+    const result = await AuthService.register(email, password, name, initialShows, referredByUserId);
 
-    res.status(201).json({
-      success: true,
-      data: result
-    });
+    res.status(201).json({ success: true, data: result });
   } catch (error: any) {
     console.error('Registration error:', error);
     res.status(400).json({
@@ -119,6 +111,47 @@ router.get('/me', authenticateToken, async (req: any, res) => {
       success: false,
       error: 'Failed to get user profile'
     });
+  }
+});
+
+// Get referral code and list of people the user has referred
+router.get('/referrals', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const { supabase } = await import('../services/database');
+
+    // Get the user's own referral code
+    const { data: me } = await supabase
+      .from('users')
+      .select('referral_code')
+      .eq('id', userId)
+      .single();
+
+    // Generate and save a code on-the-fly if the user doesn't have one yet
+    let referralCode: string | null = me?.referral_code || null;
+    if (!referralCode) {
+      referralCode = AuthService.generateReferralCode();
+      await supabase.from('users').update({ referral_code: referralCode }).eq('id', userId);
+    }
+
+    // Get all users referred by this user
+    const { data: referrals } = await supabase
+      .from('users')
+      .select('name, created_at')
+      .eq('referred_by_user_id', userId)
+      .order('created_at', { ascending: false });
+
+    res.json({
+      success: true,
+      data: {
+        referral_code: referralCode,
+        referrals: (referrals || []).map((r: any) => ({ name: r.name, joined_at: r.created_at })),
+        count: (referrals || []).length,
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching referrals:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch referrals' });
   }
 });
 

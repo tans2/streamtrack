@@ -200,9 +200,8 @@ export default function SignUpPage({ onNavigate }: SignUpPageProps) {
                   placeholder="Enter your referral code (optional)"
                   value={formData.inviteCode}
                   onChange={handleInputChange}
-                  className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary uppercase"
+                  className="bg-input-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
                 />
-                <p className="text-xs text-muted-foreground">Have a referral code? Enter it here.</p>
               </div>
 
               <Button

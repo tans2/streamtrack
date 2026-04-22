@@ -96,7 +96,7 @@ export default function HomePage() {
             <p className="text-base sm:text-lg text-muted-foreground mt-4 sm:mt-6 max-w-md">
               Track your favorite shows across streaming platforms with friends.
             </p>
-            <div className="mt-6 sm:mt-8">
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3">
               <Button
                 size="lg"
                 className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8"
@@ -104,6 +104,14 @@ export default function HomePage() {
               >
                 Get Started
                 <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="rounded-full px-8"
+                onClick={() => router.push('/search')}
+              >
+                Explore Shows
               </Button>
             </div>
           </motion.div>
@@ -139,39 +147,6 @@ export default function HomePage() {
             ))}
           </motion.div>
         </div>
-
-        {/* CTA Section */}
-        <motion.div
-          className="bg-card/60 backdrop-blur-[12px] border border-border/50 rounded-3xl p-8 sm:p-12 text-center mb-16 sm:mb-24"
-          variants={fadeIn}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-        >
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary mb-3">
-            Ready to start?
-          </h2>
-          <p className="text-muted-foreground mb-8">
-            Start keeping up with your friends today.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button
-              size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8"
-              onClick={() => router.push('/signup')}
-            >
-              Get Started Now
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="rounded-full px-8"
-              onClick={() => router.push('/search')}
-            >
-              Explore Shows
-            </Button>
-          </div>
-        </motion.div>
 
         {/* Footer */}
         <footer className="pt-8 border-t border-border text-center pb-4">

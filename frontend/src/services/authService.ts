@@ -143,6 +143,16 @@ class AuthService {
     }
   }
 
+  // Get the user's referral code and list of people they've referred
+  async getReferrals(): Promise<{ referral_code: string | null; referrals: { name: string; joined_at: string }[]; count: number }> {
+    try {
+      const response = await apiClient.get(buildApiUrl('auth/referrals'));
+      return handleApiResponse(response);
+    } catch (error) {
+      throw new Error(handleApiError(error as AxiosError));
+    }
+  }
+
   // Reset password with token
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
     try {

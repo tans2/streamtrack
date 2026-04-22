@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Play, Star, Loader2, Bell, BellOff, Users, Trash2, Plus, ArrowRight, Settings, MoreHorizontal } from "lucide-react";
+import { Play, Star, Loader2, Bell, BellOff, Users, Trash2, Plus, ArrowRight, Settings, MoreHorizontal, Sparkles, Copy, Check, Gift } from "lucide-react";
 import { staggerContainer, fadeInUp } from '@/lib/animations';
 import { NavBar } from './ui/nav-bar';
 import { ImageWithFallback } from "./figma/ImageWithFallback";
@@ -13,6 +13,8 @@ import { watchlistService, WatchlistItem } from '@/services/watchlistService';
 import { showService, Show } from '@/services/showService';
 import { notificationService } from '@/services/notificationService';
 import { watchGroupService, WatchGroup } from '@/services/watchGroupService';
+import { picksService } from '@/services/picksService';
+import { authService } from '@/services/authService';
 import { toast } from 'sonner';
 import ShowDetailsModal from './ShowDetailsModal';
 import CreateGroupDialog from './CreateGroupDialog';
@@ -51,6 +53,12 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [removeConfirm, setRemoveConfirm] = useState<{ showId: string; title: string } | null>(null);
   const [openCardMenuId, setOpenCardMenuId] = useState<string | null>(null);
   const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
+  const [referralData, setReferralData] = useState<{ referral_code: string | null; referrals: { name: string; joined_at: string }[]; count: number } | null>(null);
+  const [copiedReferral, setCopiedReferral] = useState(false);
+  const [myPickShowIds, setMyPickShowIds] = useState<Set<string>>(new Set());
+  const [pickNoteInputs, setPickNoteInputs] = useState<Record<string, string>>({});
+  const [pickPanelOpen, setPickPanelOpen] = useState<string | null>(null);
+  const [addingPick, setAddingPick] = useState<string | null>(null);
 
   const { user } = useAuth();
   const router = useRouter();
@@ -60,7 +68,67 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     loadWatchlist();
     loadGroups();
     loadEmailVerification();
+    loadMyPicks();
+    loadReferrals();
   }, []);
+
+  const loadReferrals = async () => {
+    try {
+      const data = await authService.getReferrals();
+      setReferralData(data);
+    } catch (err) {
+      console.error('[Scout] loadReferrals failed:', err);
+    }
+  };
+
+  const handleCopyReferralCode = async () => {
+    if (!referralData?.referral_code) return;
+    await navigator.clipboard.writeText(referralData.referral_code);
+    setCopiedReferral(true);
+    setTimeout(() => setCopiedReferral(false), 2000);
+  };
+
+  const loadMyPicks = async () => {
+    try {
+      const picks = await picksService.getMyPicks();
+      setMyPickShowIds(new Set(picks.map((p) => p.show_id)));
+    } catch (err) {
+      console.error('[Scout] loadMyPicks failed:', err);
+    }
+  };
+
+  const handleTogglePick = async (showId: string, showTitle: string) => {
+    if (myPickShowIds.has(showId)) {
+      // Remove pick
+      try {
+        await picksService.removePick(showId);
+        setMyPickShowIds(prev => { const s = new Set(prev); s.delete(showId); return s; });
+        toast.success(`Removed "${showTitle}" from your Picks`);
+      } catch {
+        toast.error('Failed to remove pick');
+      }
+      setPickPanelOpen(null);
+      return;
+    }
+    // Open note panel
+    setPickPanelOpen(showId);
+  };
+
+  const handleConfirmPick = async (showId: string, showTitle: string) => {
+    setAddingPick(showId);
+    try {
+      const note = pickNoteInputs[showId] || undefined;
+      await picksService.addPick(showId, note);
+      setMyPickShowIds(prev => new Set(Array.from(prev).concat(showId)));
+      toast.success(`Added "${showTitle}" to your Picks!`);
+      setPickPanelOpen(null);
+      setPickNoteInputs(prev => { const n = { ...prev }; delete n[showId]; return n; });
+    } catch {
+      toast.error('Failed to add pick');
+    } finally {
+      setAddingPick(null);
+    }
+  };
 
   const loadEmailVerification = async () => {
     try {
@@ -483,6 +551,33 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
           </button>
         </div>
 
+        {/* Referral Code Card */}
+        {referralData?.referral_code && (
+          <div className="mb-8 p-4 rounded-2xl bg-card border border-border">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <Gift className="w-5 h-5 text-primary flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-0.5">Your Referral Code</p>
+                  <p className="text-xl font-bold tracking-widest text-foreground">{referralData.referral_code}</p>
+                  {referralData.count > 0 && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {referralData.count} {referralData.count === 1 ? 'person' : 'people'} joined — {referralData.referrals.map(r => r.name).join(', ')}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={handleCopyReferralCode}
+                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border text-sm font-medium hover:bg-muted/50 transition-colors flex-shrink-0"
+              >
+                {copiedReferral ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                {copiedReferral ? 'Copied!' : 'Copy Code'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Currently Watching */}
         <div className="mb-10">
           <h2 className="text-xl font-semibold flex items-center gap-2 mb-4 text-foreground">
@@ -791,6 +886,17 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                             disabled={togglingNotification === item.show_id}
                           />
                         </div>
+                        {item.watch_status === 'completed' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title={myPickShowIds.has(item.show_id) ? 'Remove Pick' : 'Pick this show'}
+                            className={`h-7 w-7 p-0 transition-colors ${myPickShowIds.has(item.show_id) ? 'text-primary hover:text-primary/70' : 'text-muted-foreground hover:text-primary'}`}
+                            onClick={() => handleTogglePick(item.show_id, item.shows.title)}
+                          >
+                            <Sparkles className={`w-3.5 h-3.5 ${myPickShowIds.has(item.show_id) ? 'fill-primary' : ''}`} />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -830,6 +936,17 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                           disabled={togglingNotification === item.show_id}
                         />
                       </div>
+                      {item.watch_status === 'completed' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title={myPickShowIds.has(item.show_id) ? 'Remove Pick' : 'Pick this show'}
+                          className={`h-8 w-8 p-0 transition-colors ${myPickShowIds.has(item.show_id) ? 'text-primary hover:text-primary/70' : 'text-muted-foreground hover:text-primary'}`}
+                          onClick={() => handleTogglePick(item.show_id, item.shows.title)}
+                        >
+                          <Sparkles className={`w-3.5 h-3.5 ${myPickShowIds.has(item.show_id) ? 'fill-primary' : ''}`} />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -839,6 +956,37 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
+                    {/* Pick note panel — shown when user clicks Sparkles to add a new pick */}
+                    {pickPanelOpen === item.show_id && (
+                      <div className="mt-2 pt-2 border-t border-border/50 space-y-2">
+                        <textarea
+                          className="w-full text-xs rounded-lg border border-border bg-muted/50 px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                          rows={2}
+                          maxLength={200}
+                          placeholder="Add a note (optional) — e.g. 'Perfect for a rainy day'"
+                          value={pickNoteInputs[item.show_id] || ''}
+                          onChange={e => setPickNoteInputs(prev => ({ ...prev, [item.show_id]: e.target.value }))}
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            className="h-7 text-xs rounded-full px-4"
+                            onClick={() => handleConfirmPick(item.show_id, item.shows.title)}
+                            disabled={addingPick === item.show_id}
+                          >
+                            {addingPick === item.show_id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Pick it'}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs rounded-full px-3"
+                            onClick={() => { setPickPanelOpen(null); setPickNoteInputs(prev => { const n = { ...prev }; delete n[item.show_id]; return n; }); }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </motion.div>
                 ))}
               </motion.div>

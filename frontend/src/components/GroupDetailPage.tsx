@@ -12,8 +12,9 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { watchGroupService, GroupDetail, GroupMember } from '@/services/watchGroupService';
+import { picksService, Pick } from '@/services/picksService';
 import { toast } from 'sonner';
-import { Copy, Check, Trash2, LogOut, UserMinus, Crown, Users, ArrowLeft, UserPlus, Loader2, BarChart2, Mail } from 'lucide-react';
+import { Copy, Check, Trash2, LogOut, UserMinus, Crown, Users, ArrowLeft, UserPlus, Loader2, BarChart2, Mail, Sparkles } from 'lucide-react';
 
 interface GroupDetailPageProps {
   groupId: string;
@@ -30,6 +31,7 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
   const [addEmail, setAddEmail] = useState('');
   const [addingMember, setAddingMember] = useState(false);
   const [showAllMembers, setShowAllMembers] = useState(false);
+  const [groupPicks, setGroupPicks] = useState<Pick[]>([]);
 
   const { user } = useAuth();
   const router = useRouter();
@@ -45,11 +47,24 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
     try {
       const data = await watchGroupService.getGroupDetails(groupId);
       setGroup(data);
+      // Load picks from group members
+      loadGroupPicks(data.members.map(m => m.user_id));
     } catch (error: any) {
       console.error('Error loading group:', error);
       toast.error(error.message || 'Failed to load group');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadGroupPicks = async (memberIds: string[]) => {
+    try {
+      const feed = await picksService.getFeed();
+      // Filter feed to only members of this group
+      const filtered = feed.filter(p => memberIds.includes(p.user_id));
+      setGroupPicks(filtered);
+    } catch {
+      // silently fail — group picks are a bonus feature
     }
   };
 
@@ -274,13 +289,187 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
           </CardContent>
         </Card>
 
-        {/* Two-column layout — on mobile Sync Progress comes first */}
-        <div className="flex flex-col-reverse md:grid md:grid-cols-[1fr_2fr] gap-6">
-          {/* Left Column */}
+        {/* Two-column layout — main content left/top, sidebar right/bottom */}
+        <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6">
+
+          {/* Left / top on mobile — Sync Progress + Group Picks */}
           <div className="space-y-4">
+
+            {/* Sync Progress */}
+            <Card className="rounded-2xl">
+              <CardContent className="p-5 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <BarChart2 className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold text-foreground">Sync Progress</h3>
+                  </div>
+                  <span className="text-xs text-muted-foreground">Sorted by Progress</span>
+                </div>
+
+                {allSynced && (
+                  <div className="mb-4 px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center gap-3">
+                    <span className="text-xl">🎉</span>
+                    <div>
+                      <p className="text-sm font-semibold text-green-600">Everyone's in sync!</p>
+                      <p className="text-xs text-muted-foreground">Your whole group is watching at the same place.</p>
+                    </div>
+                  </div>
+                )}
+
+                <motion.div
+                  className="space-y-1"
+                  variants={staggerContainer}
+                  initial="hidden"
+                  animate="show"
+                >
+                  {visibleMembers.map((member, index) => {
+                    const memberProgressValue = (member.progress.current_season || 1) * 1000 + (member.progress.current_episode || 1);
+                    const isCurrentUser = member.user_id === user?.id;
+                    const isBehind = memberProgressValue < myProgressValue;
+
+                    const prevMember = index > 0 ? sortedMembers[index - 1] : null;
+                    const prevProgressValue = prevMember
+                      ? (prevMember.progress.current_season || 1) * 1000 + (prevMember.progress.current_episode || 1)
+                      : Infinity;
+                    const showSpoilerLine = isBehind && prevProgressValue >= myProgressValue && !isCurrentUser;
+
+                    const relativeLabel = getRelativeLabel(member);
+
+                    return (
+                      <motion.div key={member.user_id} variants={fadeInUp}>
+                        {showSpoilerLine && (
+                          <div className="flex items-center gap-2 my-4">
+                            <div className="flex-1 border-t border-dashed border-orange-400/50" />
+                            <span className="text-[10px] text-orange-400 font-semibold uppercase tracking-widest px-2 flex items-center gap-1">
+                              ⚠ Spoiler Line
+                            </span>
+                            <div className="flex-1 border-t border-dashed border-orange-400/50" />
+                          </div>
+                        )}
+                        <div className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
+                          isCurrentUser ? 'bg-primary/5 border border-primary/20' : 'hover:bg-muted/40'
+                        }`}>
+                          {/* Avatar */}
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${
+                            isCurrentUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                          }`}>
+                            {member.name.charAt(0).toUpperCase()}
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium text-sm text-foreground truncate">
+                                {member.name}
+                              </span>
+                              {isCurrentUser && (
+                                <span className="text-xs text-muted-foreground">(You)</span>
+                              )}
+                              {member.role === 'admin' && (
+                                <Crown className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              S{member.progress.current_season || 1} • Ep {member.progress.current_episode || 1}
+                            </span>
+                          </div>
+
+                          {/* Badge + admin remove */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {relativeLabel && (
+                              <span className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border ${relativeLabel.color}`}>
+                                {relativeLabel.text}
+                              </span>
+                            )}
+                            {isAdmin && !isCurrentUser && (
+                              <button
+                                className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                                onClick={() => handleRemoveMember(member.user_id, member.name)}
+                                disabled={removingMember === member.user_id}
+                              >
+                                {removingMember === member.user_id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <UserMinus className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+
+                {sortedMembers.length > 4 && (
+                  <button
+                    className="w-full text-center text-sm text-primary hover:text-primary/80 mt-4 pt-3 border-t border-border transition-colors"
+                    onClick={() => setShowAllMembers(!showAllMembers)}
+                  >
+                    {showAllMembers
+                      ? 'Show less'
+                      : `View all ${sortedMembers.length} members`}
+                  </button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Group Picks */}
+            {groupPicks.length > 0 && (
+              <Card className="rounded-2xl">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Group Picks
+                    </p>
+                  </div>
+                  <motion.div
+                    className="space-y-3"
+                    variants={staggerContainer}
+                    initial="hidden"
+                    animate="show"
+                  >
+                    {groupPicks.map(pick => (
+                      <motion.div
+                        key={pick.id}
+                        variants={fadeInUp}
+                        className="flex items-center gap-3"
+                      >
+                        <div className="w-9 flex-shrink-0">
+                          <div className="aspect-[2/3] rounded-md overflow-hidden bg-muted">
+                            {pick.shows?.poster_path ? (
+                              <ImageWithFallback
+                                src={`https://image.tmdb.org/t/p/w200${pick.shows.poster_path}`}
+                                alt={pick.shows.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-muted" />
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{pick.shows?.title}</p>
+                          <p className="text-xs text-muted-foreground">picked by {pick.picker_name}</p>
+                          {pick.note && (
+                            <p className="text-xs text-muted-foreground italic mt-0.5 line-clamp-1">"{pick.note}"</p>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Right / bottom on mobile — sidebar */}
+          <div className="space-y-4">
+
             {/* Add New Scouts (admin only) */}
             {isAdmin && (
-              <Card>
+              <Card className="rounded-2xl">
                 <CardContent className="p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -317,7 +506,7 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
             )}
 
             {/* About the Show */}
-            <Card>
+            <Card className="rounded-2xl">
               <CardContent className="p-5">
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
                   About the Show
@@ -385,124 +574,6 @@ export default function GroupDetailPage({ groupId, onNavigate }: GroupDetailPage
             </div>
           </div>
 
-          {/* Right Column — Sync Progress */}
-          <Card>
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <BarChart2 className="w-5 h-5 text-primary" />
-                  <h3 className="font-semibold text-foreground">Sync Progress</h3>
-                </div>
-                <span className="text-xs text-muted-foreground">Sorted by Progress</span>
-              </div>
-
-              {allSynced && (
-                <div className="mb-4 px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center gap-3">
-                  <span className="text-xl">🎉</span>
-                  <div>
-                    <p className="text-sm font-semibold text-green-600">Everyone's in sync!</p>
-                    <p className="text-xs text-muted-foreground">Your whole group is watching at the same place.</p>
-                  </div>
-                </div>
-              )}
-
-              <motion.div
-                className="space-y-1"
-                variants={staggerContainer}
-                initial="hidden"
-                animate="show"
-              >
-                {visibleMembers.map((member, index) => {
-                  const memberProgressValue = (member.progress.current_season || 1) * 1000 + (member.progress.current_episode || 1);
-                  const isCurrentUser = member.user_id === user?.id;
-                  const isBehind = memberProgressValue < myProgressValue;
-
-                  const prevMember = index > 0 ? sortedMembers[index - 1] : null;
-                  const prevProgressValue = prevMember
-                    ? (prevMember.progress.current_season || 1) * 1000 + (prevMember.progress.current_episode || 1)
-                    : Infinity;
-                  const showSpoilerLine = isBehind && prevProgressValue >= myProgressValue && !isCurrentUser;
-
-                  const relativeLabel = getRelativeLabel(member);
-
-                  return (
-                    <motion.div key={member.user_id} variants={fadeInUp}>
-                      {showSpoilerLine && (
-                        <div className="flex items-center gap-2 my-4">
-                          <div className="flex-1 border-t border-dashed border-orange-400/50" />
-                          <span className="text-[10px] text-orange-400 font-semibold uppercase tracking-widest px-2 flex items-center gap-1">
-                            ⚠ Spoiler Line
-                          </span>
-                          <div className="flex-1 border-t border-dashed border-orange-400/50" />
-                        </div>
-                      )}
-                      <div className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
-                        isCurrentUser ? 'bg-primary/5 border border-primary/20' : 'hover:bg-muted/40'
-                      }`}>
-                        {/* Avatar */}
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${
-                          isCurrentUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                        }`}>
-                          {member.name.charAt(0).toUpperCase()}
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-sm text-foreground truncate">
-                              {member.name}
-                            </span>
-                            {isCurrentUser && (
-                              <span className="text-xs text-muted-foreground">(You)</span>
-                            )}
-                            {member.role === 'admin' && (
-                              <Crown className="w-3 h-3 text-amber-500 flex-shrink-0" />
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            S{member.progress.current_season || 1} • Ep {member.progress.current_episode || 1}
-                          </span>
-                        </div>
-
-                        {/* Badge + admin remove */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {relativeLabel && (
-                            <span className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border ${relativeLabel.color}`}>
-                              {relativeLabel.text}
-                            </span>
-                          )}
-                          {isAdmin && !isCurrentUser && (
-                            <button
-                              className="text-muted-foreground hover:text-destructive transition-colors p-1"
-                              onClick={() => handleRemoveMember(member.user_id, member.name)}
-                              disabled={removingMember === member.user_id}
-                            >
-                              {removingMember === member.user_id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <UserMinus className="w-4 h-4" />
-                              )}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
-
-              {sortedMembers.length > 4 && (
-                <button
-                  className="w-full text-center text-sm text-primary hover:text-primary/80 mt-4 pt-3 border-t border-border transition-colors"
-                  onClick={() => setShowAllMembers(!showAllMembers)}
-                >
-                  {showAllMembers
-                    ? 'Show less'
-                    : `View all ${sortedMembers.length} members`}
-                </button>
-              )}
-            </CardContent>
-          </Card>
         </div>
       </motion.div>
     </div>
