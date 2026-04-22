@@ -539,21 +539,37 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
               </div>
             </div>
           </div>
-          <button
-            onClick={() => router.push('/settings')}
-            className="relative p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-            aria-label="Settings"
-          >
-            <Settings className="w-5 h-5" />
-            {emailVerified === false && (
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-background" />
+          <div className="flex items-center gap-2">
+            {/* Inline referral code — md+ only */}
+            {referralData?.referral_code && (
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-card">
+                <Gift className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                <span className="font-bold tracking-widest text-foreground text-xs">{referralData.referral_code}</span>
+                <button
+                  onClick={handleCopyReferralCode}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Copy referral code"
+                >
+                  {copiedReferral ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                </button>
+              </div>
             )}
-          </button>
+            <button
+              onClick={() => router.push('/settings')}
+              className="relative p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              aria-label="Settings"
+            >
+              <Settings className="w-5 h-5" />
+              {emailVerified === false && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-background" />
+              )}
+            </button>
+          </div>
         </div>
 
-        {/* Referral Code Card */}
+        {/* Referral Code Card — mobile only (md+ shows inline in header) */}
         {referralData?.referral_code && (
-          <div className="mb-8 p-4 rounded-2xl bg-card border border-border">
+          <div className="md:hidden mb-8 p-4 rounded-2xl bg-card border border-border">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3">
                 <Gift className="w-5 h-5 text-primary flex-shrink-0" />
@@ -795,6 +811,44 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
               </div>
             </div>
           </div>
+
+          {/* Pick note panel — for Currently Watching shows (appears below carousel) */}
+          {pickPanelOpen && watchingShows.some(s => s.show_id === pickPanelOpen) && (() => {
+            const show = watchingShows.find(s => s.show_id === pickPanelOpen)!;
+            return (
+              <div className="mt-3 p-4 rounded-2xl border border-primary/30 bg-card space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  Pick "{show.shows.title}"
+                </p>
+                <textarea
+                  className="w-full text-xs rounded-lg border border-border bg-muted/50 px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                  rows={2}
+                  maxLength={200}
+                  placeholder="Add a note (optional) — e.g. 'Perfect for a rainy day'"
+                  value={pickNoteInputs[pickPanelOpen] || ''}
+                  onChange={e => setPickNoteInputs(prev => ({ ...prev, [pickPanelOpen!]: e.target.value }))}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs rounded-full px-4"
+                    onClick={() => handleConfirmPick(pickPanelOpen, show.shows.title)}
+                    disabled={addingPick === pickPanelOpen}
+                  >
+                    {addingPick === pickPanelOpen ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Pick it'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs rounded-full px-3"
+                    onClick={() => { setPickPanelOpen(null); setPickNoteInputs(prev => { const n = { ...prev }; delete n[pickPanelOpen!]; return n; }); }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Bottom Section — Two Columns */}
