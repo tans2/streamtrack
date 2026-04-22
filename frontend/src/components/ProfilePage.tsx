@@ -76,8 +76,8 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     try {
       const data = await authService.getReferrals();
       setReferralData(data);
-    } catch {
-      // silently fail
+    } catch (err) {
+      console.error('[Scout] loadReferrals failed:', err);
     }
   };
 
@@ -92,8 +92,8 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     try {
       const picks = await picksService.getMyPicks();
       setMyPickShowIds(new Set(picks.map((p) => p.show_id)));
-    } catch {
-      // silently fail
+    } catch (err) {
+      console.error('[Scout] loadMyPicks failed:', err);
     }
   };
 

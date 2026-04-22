@@ -1423,11 +1423,20 @@ export class DatabaseService {
       const { data, error } = await supabase
         .from('picks')
         .upsert({ user_id: userId, show_id: showId, note: note || null }, { onConflict: 'user_id,show_id' })
-        .select('*, shows(id, title, poster_path, tmdb_id)')
+        .select('id, user_id, show_id, note, created_at')
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Fetch show data separately — PostgREST joins on new tables can fail
+      // until the schema cache reloads (same pattern as getPicksFeed)
+      const { data: show } = await supabase
+        .from('shows')
+        .select('id, title, poster_path, tmdb_id')
+        .eq('id', showId)
+        .single();
+
+      return { ...data, shows: show };
     } catch (error) {
       console.error('Error adding pick:', error);
       return null;
@@ -1452,14 +1461,26 @@ export class DatabaseService {
 
   static async getUserPicks(userId: string) {
     try {
-      const { data, error } = await supabase
+      const { data: picks, error } = await supabase
         .from('picks')
-        .select('*, shows(id, title, poster_path, tmdb_id)')
+        .select('id, user_id, show_id, note, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      if (!picks || picks.length === 0) return [];
+
+      // Fetch show data separately (avoids PostgREST schema cache issues)
+      const showIds = picks.map((p: any) => p.show_id);
+      const { data: shows } = await supabase
+        .from('shows')
+        .select('id, title, poster_path, tmdb_id')
+        .in('id', showIds);
+
+      const showMap: Record<string, any> = {};
+      (shows || []).forEach((s: any) => { showMap[s.id] = s; });
+
+      return picks.map((p: any) => ({ ...p, shows: showMap[p.show_id] || null }));
     } catch (error) {
       console.error('Error fetching user picks:', error);
       return [];
@@ -1491,16 +1512,26 @@ export class DatabaseService {
 
       const peerIds = Array.from(new Set(peers.map((p: any) => p.user_id)));
 
-      // Fetch picks with show info (no users join — fetch names separately)
+      // Fetch picks (no PostgREST joins — schema cache may not recognise new FK)
       const { data: picks, error: picksError } = await supabase
         .from('picks')
-        .select('*, shows(id, title, poster_path, tmdb_id)')
+        .select('id, user_id, show_id, note, created_at')
         .in('user_id', peerIds)
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (picksError) throw picksError;
       if (!picks || picks.length === 0) return [];
+
+      // Fetch show data separately
+      const feedShowIds = Array.from(new Set(picks.map((p: any) => p.show_id)));
+      const { data: feedShows } = await supabase
+        .from('shows')
+        .select('id, title, poster_path, tmdb_id')
+        .in('id', feedShowIds);
+
+      const showMap: Record<string, any> = {};
+      (feedShows || []).forEach((s: any) => { showMap[s.id] = s; });
 
       // Fetch user names separately
       const pickerIds = Array.from(new Set(picks.map((p: any) => p.user_id)));
@@ -1514,6 +1545,7 @@ export class DatabaseService {
 
       return picks.map((p: any) => ({
         ...p,
+        shows: showMap[p.show_id] || null,
         picker_name: userMap[p.user_id] || 'Someone',
       }));
     } catch (error) {

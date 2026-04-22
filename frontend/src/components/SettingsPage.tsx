@@ -129,8 +129,8 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
     try {
       const data = await authService.getReferrals();
       setReferralData(data);
-    } catch {
-      // silently fail
+    } catch (err) {
+      console.error('[Scout] loadReferrals failed:', err);
     }
   };
 
