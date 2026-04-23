@@ -1176,7 +1176,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                       <div className="w-8 flex-shrink-0">
                         <div className="aspect-[2/3] rounded-md overflow-hidden bg-muted">
                           <ImageWithFallback
-                            src={getPosterUrl(pick.shows?.poster_path)}
+                            src={getPosterUrl(pick.shows?.poster_path ?? undefined)}
                             alt={pick.shows?.title || ''}
                             className="w-full h-full object-cover"
                           />
