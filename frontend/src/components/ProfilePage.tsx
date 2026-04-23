@@ -13,7 +13,7 @@ import { watchlistService, WatchlistItem } from '@/services/watchlistService';
 import { showService, Show } from '@/services/showService';
 import { notificationService } from '@/services/notificationService';
 import { watchGroupService, WatchGroup } from '@/services/watchGroupService';
-import { picksService } from '@/services/picksService';
+import { picksService, Pick } from '@/services/picksService';
 import { authService } from '@/services/authService';
 import { toast } from 'sonner';
 import ShowDetailsModal from './ShowDetailsModal';
@@ -56,6 +56,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [referralData, setReferralData] = useState<{ referral_code: string | null; referrals: { name: string; joined_at: string }[]; count: number } | null>(null);
   const [copiedReferral, setCopiedReferral] = useState(false);
   const [myPickShowIds, setMyPickShowIds] = useState<Set<string>>(new Set());
+  const [myPicksList, setMyPicksList] = useState<Pick[]>([]);
   const [pickNoteInputs, setPickNoteInputs] = useState<Record<string, string>>({});
   const [pickPanelOpen, setPickPanelOpen] = useState<string | null>(null);
   const [addingPick, setAddingPick] = useState<string | null>(null);
@@ -92,6 +93,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     try {
       const picks = await picksService.getMyPicks();
       setMyPickShowIds(new Set(picks.map((p) => p.show_id)));
+      setMyPicksList(picks);
     } catch (err) {
       console.error('[Scout] loadMyPicks failed:', err);
     }
@@ -99,10 +101,10 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
 
   const handleTogglePick = async (showId: string, showTitle: string) => {
     if (myPickShowIds.has(showId)) {
-      // Remove pick
       try {
         await picksService.removePick(showId);
         setMyPickShowIds(prev => { const s = new Set(prev); s.delete(showId); return s; });
+        setMyPicksList(prev => prev.filter(p => p.show_id !== showId));
         toast.success(`Removed "${showTitle}" from your Picks`);
       } catch {
         toast.error('Failed to remove pick');
@@ -110,7 +112,6 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
       setPickPanelOpen(null);
       return;
     }
-    // Open note panel
     setPickPanelOpen(showId);
   };
 
@@ -118,8 +119,9 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
     setAddingPick(showId);
     try {
       const note = pickNoteInputs[showId] || undefined;
-      await picksService.addPick(showId, note);
+      const newPick = await picksService.addPick(showId, note);
       setMyPickShowIds(prev => new Set(Array.from(prev).concat(showId)));
+      if (newPick) setMyPicksList(prev => [newPick, ...prev]);
       toast.success(`Added "${showTitle}" to your Picks!`);
       setPickPanelOpen(null);
       setPickNoteInputs(prev => { const n = { ...prev }; delete n[showId]; return n; });
@@ -1069,66 +1071,137 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
             )}
           </div>
 
-          {/* Right Column: Watch Groups — desktop only; mobile uses /groups tab */}
-          <div className="hidden md:block">
-            <h3 className="text-lg font-semibold flex items-center gap-2 mb-4 text-foreground">
-              <Users className="w-5 h-5 text-primary" />
-              Watch Groups
-            </h3>
+          {/* Right Column: Watch Groups + Picks previews — desktop only */}
+          <div className="hidden md:block space-y-6">
 
-            {myGroups.length === 0 ? (
-              <div className="text-center py-10 bg-card/50 rounded-2xl border border-border/50">
-                <Users className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No groups yet</p>
+            {/* Watch Groups */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-semibold tracking-widest text-primary uppercase flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5" />
+                  Watch Groups
+                </h3>
+                <button
+                  onClick={() => setShowCreateGroup(true)}
+                  className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" /> New Group
+                </button>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {myGroups.map(group => {
-                  const posterUrl = group.shows?.poster_path
-                    ? `https://image.tmdb.org/t/p/w200${group.shows.poster_path}`
-                    : null;
-                  return (
+
+              {myGroups.length === 0 ? (
+                <div className="text-center py-8 bg-card/50 rounded-2xl border border-border/50">
+                  <Users className="w-7 h-7 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">No groups yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {myGroups.slice(0, 3).map(group => {
+                    const posterUrl = group.shows?.poster_path
+                      ? `https://image.tmdb.org/t/p/w200${group.shows.poster_path}`
+                      : null;
+                    return (
+                      <div
+                        key={group.id}
+                        className="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border hover:border-primary/50 transition-colors cursor-pointer"
+                        onClick={() => router.push(`/groups/${group.id}`)}
+                      >
+                        {posterUrl && (
+                          <div className="w-9 flex-shrink-0">
+                            <ImageWithFallback
+                              src={posterUrl}
+                              alt={group.shows?.title || ''}
+                              width={36}
+                              height={54}
+                              className="rounded-lg w-full"
+                            />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{group.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{group.shows?.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            <Users className="w-3 h-3 inline mr-1" />
+                            {group.member_count} member{group.member_count !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {myGroups.length > 3 && (
+                <button
+                  onClick={() => router.push('/groups')}
+                  className="mt-2 text-xs text-primary hover:underline flex items-center gap-1"
+                >
+                  See all {myGroups.length} groups <ArrowRight className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Your Picks */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-semibold tracking-widest text-primary uppercase flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Your Picks
+                </h3>
+                {myPicksList.length > 3 && (
+                  <button
+                    onClick={() => router.push('/picks')}
+                    className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                  >
+                    See all <ArrowRight className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              {myPicksList.length === 0 ? (
+                <div className="text-center py-8 rounded-2xl border border-dashed border-border/50">
+                  <Sparkles className="w-5 h-5 text-muted-foreground mx-auto mb-1.5" />
+                  <p className="text-xs text-muted-foreground">No picks yet</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Complete a season to start picking</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {myPicksList.slice(0, 3).map(pick => (
                     <div
-                      key={group.id}
-                      className="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border hover:border-primary/50 transition-colors cursor-pointer"
-                      onClick={() => router.push(`/groups/${group.id}`)}
+                      key={pick.id}
+                      className="flex items-center gap-2.5 p-2.5 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors cursor-pointer"
+                      onClick={() => router.push('/picks')}
                     >
-                      {posterUrl && (
-                        <div className="w-10 flex-shrink-0">
+                      <div className="w-8 flex-shrink-0">
+                        <div className="aspect-[2/3] rounded-md overflow-hidden bg-muted">
                           <ImageWithFallback
-                            src={posterUrl}
-                            alt={group.shows?.title || ''}
-                            width={40}
-                            height={60}
-                            className="rounded-lg w-full"
+                            src={getPosterUrl(pick.shows?.poster_path)}
+                            alt={pick.shows?.title || ''}
+                            className="w-full h-full object-cover"
                           />
                         </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{group.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{group.shows?.title}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          <Users className="w-3 h-3 inline mr-1" />
-                          {group.member_count} member{group.member_count !== 1 ? 's' : ''}
-                        </p>
                       </div>
-                      <span className="hidden sm:flex text-sm text-primary font-medium items-center gap-1 flex-shrink-0">
-                        See Group <ArrowRight className="w-3.5 h-3.5" />
-                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground truncate">{pick.shows?.title}</p>
+                        {pick.note && (
+                          <p className="text-[10px] text-muted-foreground italic truncate">"{pick.note}"</p>
+                        )}
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  ))}
+                  {myPicksList.length <= 3 && (
+                    <button
+                      onClick={() => router.push('/picks')}
+                      className="mt-1 text-xs text-primary hover:underline flex items-center gap-1"
+                    >
+                      See all Picks <ArrowRight className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
 
-            <Button
-              variant="outline"
-              className="w-full mt-4 rounded-xl"
-              onClick={() => setShowCreateGroup(true)}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Start New Group
-            </Button>
           </div>
         </div>
       </div>
