@@ -439,6 +439,66 @@ Right column:
 - Framework: Next.js
 - Env vars required: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (same as main app)
 
+### 15. Picks — Social Discovery Feature (Completed)
+**Purpose**: Lightweight, privacy-respecting recommendations inside the existing watch-group social graph. Users "pick" shows they vouch for; anyone sharing a group with them sees those picks — without exposing full watchlists.
+
+**Design decisions (confirmed with user — do not change without asking):**
+- Social graph is derived from `watch_group_members` — no separate friends system
+- **Eligibility rule**: a show can be picked if `watch_status === 'completed'` **OR** `current_season >= 2` (i.e., at least one season finished). Enforced server-side in `DatabaseService.isEligibleForPick()`; frontend mirrors the same condition to show/hide Sparkles buttons.
+- Optional short note per pick (≤200 chars, enforced both ends)
+- One row per (user, show); un-pick deletes, re-pick re-inserts (UNIQUE constraint)
+
+**Backend:**
+- `backend/src/routes/picks.ts` — `POST /` (add, validates eligibility), `DELETE /:showId`, `GET /mine`, `GET /feed`
+- `DatabaseService` methods: `addPick`, `removePick`, `getUserPicks`, `getPicksFeed`, `isEligibleForPick`
+- **CRITICAL — PostgREST schema cache**: all picks queries use *separate queries* (fetch picks → fetch shows by IDs → merge in JS), NOT PostgREST FK-join syntax (`shows(id, title)`). Joins fail on tables created via raw SQL until Supabase refreshes its schema cache. Keep this pattern for any new table.
+- Feed query: picks from all users sharing any group with me, newest first, LIMIT 50, users/show data merged in
+
+**Frontend:**
+- `frontend/src/services/picksService.ts` — `Pick` interface + service (note: `Pick` shadows TS's utility type; also `poster_path` is `string | null | undefined`, coerce with `?? undefined` when passing to helpers typed `string | undefined`)
+- `frontend/src/app/picks/page.tsx` + `frontend/src/components/PicksFeedPage.tsx` — feed page; `max-w-2xl md:max-w-5xl`, 2-column `md:grid-cols-[3fr_2fr]` when both feed and own picks exist; empty state with fox logo
+- `ProfilePage.tsx` pick UX:
+  - Completed/Dropped tabs: Sparkles button on each row when eligible
+  - Currently Watching carousel: "Pick this show" entry in the ⋯ card menu when `current_season >= 2`; the **note panel renders below the whole carousel** (keyed by `pickPanelOpen` + `watchingShows` lookup) because the carousel cards have no room for an inline panel
+  - State: `myPickShowIds: Set<string>` (membership checks) AND `myPicksList: Pick[]` (sidebar previews) — both kept in sync optimistically in `handleTogglePick`/`handleConfirmPick`
+- Nav: Picks is in desktop NavBar links and mobile bottom tab bar (Sparkles icon)
+
+### 16. Per-User Referral Codes (Completed — replaced admin beta_invites)
+**Purpose**: Every user gets a shareable referral code; referrals are tracked. Replaces the earlier admin-generated `beta_invites` system (migration 005 still exists but the system is superseded).
+
+**Backend (`backend/src/routes/auth.ts`):**
+- `POST /register` accepts optional `inviteCode`; looks up `users.referral_code` (uppercased/trimmed) and sets `referred_by_user_id` on the new user
+- `GET /referrals` (auth) returns `{ referral_code, referrals: [{name, joined_at}], count }`
+- **On-the-fly backfill**: if the caller has no `referral_code`, the endpoint generates one via `AuthService.generateReferralCode()` and saves it — so existing accounts always get a code even if migration backfill was missed
+
+**Frontend:**
+- ProfilePage: full referral card on mobile (`md:hidden`); on desktop an inline compact card sits in the profile header next to the settings gear (`hidden md:flex`) — Gift icon, "Your Referral Code" label, code, icon-only copy button
+- **Referred-names rule**: show joined names only when `count <= 2`; for 3+ show just "N people joined"
+- SettingsPage also surfaces the referral code
+- Migration: `008_referral_codes.sql` (adds `referral_code TEXT UNIQUE`, `referred_by_user_id`, backfills existing rows)
+
+### 17. Beta-Readiness Features (Completed)
+- **Account deletion**: `DELETE /api/auth/account` deletes user data in FK-safe order; SettingsPage DANGER ZONE section with AlertDialog confirm → logout → redirect home
+- **Privacy Policy & Terms**: `frontend/src/app/privacy/page.tsx`, `frontend/src/app/terms/page.tsx`; linked from Settings row and landing footer
+- **Onboarding modal**: `frontend/src/components/OnboardingModal.tsx` — 3 steps (name confirm, platform selection, email verification prompt) after first registration; gated by `localStorage['scout_onboarded_' + user.id]`
+- **Group invite landing**: `GET /api/groups/public-preview/:inviteCode` (no auth) powers a personalized unauthenticated landing at `/groups/join` (show poster, group name, member count, Create Account / Sign In CTAs with redirect back to join flow)
+- **Next-episode countdown**: `shows.next_air_date/next_episode_season/next_episode_number` (migration 006) updated during episode polling; ProfilePage shows "Next ep in Nd" / "Airing today!" badge (green when ≤7 days)
+- **In-app bug report button**: `frontend/src/components/ui/bug-report-button.tsx` — files GitHub issues, auth-gated
+
+### 18. Profile Page Desktop Sidebar — Groups + Picks Previews (Completed)
+**Purpose**: Make ProfilePage the desktop hub. The right column (`hidden md:block`, so mobile is untouched) shows *previews* of both social features with links to full pages, instead of listing everything.
+
+**Structure (right column, `space-y-6`):**
+- **WATCH GROUPS** section: xs uppercase primary label + `+ New Group` text link (opens CreateGroupDialog); `myGroups.slice(0, 3)` cards; "See all N groups →" link to `/groups` only when >3
+- **YOUR PICKS** section: same label style; "See all →" in header when >3; `myPicksList.slice(0, 3)` compact cards (w-8 poster, title, italic truncated note) each navigating to `/picks`; "See all Picks →" below cards when 1–3; dashed-border empty state ("Complete a season to start picking") when 0
+- Section label pattern used app-wide: `text-xs font-semibold tracking-widest text-primary uppercase`
+
+### 19. Responsive Layout Fixes (Completed)
+- **NavBar centering**: authenticated variant uses `grid grid-cols-3 items-center` (logo | centered links | actions) — the right column div always renders even when `actions` is empty, so links never shift. Do NOT revert to `flex justify-between`.
+- **GroupDetailPage**: plain `grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6` — main content (Sync Progress + Group Picks) first in DOM = left on desktop = top on mobile; sidebar (Add Scouts, About Show, Delete/Leave) second. No `flex-col-reverse` tricks. Hero poster `w-32 sm:w-48 lg:w-56`.
+- **PicksFeedPage**: see section 15
+- Desktop NavBar links: Search | Watchlist | Groups | Picks (all four exist — check before adding nav entries)
+
 ---
 
 ## Database Migrations
@@ -466,6 +526,20 @@ ALTER TABLE users
 CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users(password_reset_token)
   WHERE password_reset_token IS NOT NULL;
 ```
+
+### Beta Invites Migration (`005_beta_invites.sql`) — SUPERSEDED
+Creates `beta_invites` table. Superseded by per-user referral codes (008); kept for history.
+
+### Next Air Date Migration (`006_next_air_date.sql`)
+Adds `next_air_date`, `next_episode_season`, `next_episode_number` to `shows` for the countdown badge.
+
+### Picks Migration (`007_picks.sql`)
+Creates `picks` table: `id, user_id (FK users), show_id (FK shows), note, created_at`, UNIQUE `(user_id, show_id)`, indexes on both FKs.
+
+### Referral Codes Migration (`008_referral_codes.sql`)
+Adds `users.referral_code TEXT UNIQUE` + `users.referred_by_user_id UUID REFERENCES users(id)`; backfills existing users with random 8-char uppercase codes; indexes both columns.
+
+**Reminder:** migrations are run manually in the Supabase SQL Editor — creating a migration file does nothing until the user runs it. When a feature depends on a new table/column, tell the user which migration(s) to run. New tables also hit the PostgREST schema-cache issue (see Known Issues).
 
 ---
 
@@ -518,12 +592,25 @@ Configured in `.github/workflows/cron-send-digest.yml`:
 ## API Endpoints Summary
 
 ### Auth (`/api/auth`)
-- `POST /register` - Create new account
+- `POST /register` - Create new account (optional `inviteCode` = a referral code; sets `referred_by_user_id`)
 - `POST /login` - Login
 - `GET /me` - Get current user (requires auth)
+- `GET /referrals` - Get own referral code + referred users; generates a code on the fly if missing (requires auth)
 - `PUT /preferences` - Update preferences (requires auth)
 - `POST /forgot-password` - Request password reset
 - `POST /reset-password` - Reset password with token
+- `DELETE /account` - Delete account and all user data, FK-safe order (requires auth)
+
+### Picks (`/api/picks`)
+- `POST /` - Add a pick, body `{ showId, note? }`; 400 unless completed or season ≥ 2 (requires auth)
+- `DELETE /:showId` - Remove a pick (requires auth)
+- `GET /mine` - Own picks with show data (requires auth)
+- `GET /feed` - Picks from users sharing any watch group, newest first (requires auth)
+
+### Groups (`/api/groups`) — key routes
+- `GET /public-preview/:inviteCode` - **No auth** — group name, show, member count for the invite landing page
+- `GET /invite/:inviteCode` - Authenticated invite preview
+- `POST /join`, `POST /`, `GET /`, `GET /:groupId`, `DELETE /:groupId`, `DELETE /:groupId/leave`, `POST /:groupId/add-member`
 
 ### Shows (`/api/shows`)
 - `GET /popular` - Get popular shows
@@ -552,6 +639,19 @@ Configured in `.github/workflows/cron-send-digest.yml`:
 ---
 
 ## Known Issues & Solutions
+
+### New API Routes Return 404 in Production (READ THIS FIRST)
+**Symptom:** Frontend console shows `Route /api/<new-thing> not found` from `streamtrack-backend.vercel.app` even though the code is committed and pushed.
+**Root cause:** All three Vercel projects deploy production **from `main` only**. Code that exists only on a feature branch (e.g. `feat/steph`) is invisible to the production backend — the feature-branch frontend preview still calls the production backend. This burned an entire debugging session on the Picks launch: picks, referrals, and layout changes all "failed" until `feat/steph` was merged to `main`.
+**Rule:** if a feature "doesn't work" in the deployed app, check `git log origin/main` FIRST — before touching code. If the commits aren't on `main`, that's the bug.
+
+### PostgREST FK Joins Fail on Newly Created Tables
+**Symptom:** Supabase queries using join syntax (`.select('*, shows(id, title)')`) error on a table created via raw SQL in the SQL Editor.
+**Root cause:** PostgREST caches the schema and doesn't immediately learn new FK relationships.
+**Rule:** for any new table, use separate queries and merge in JS (fetch rows → collect IDs → `.in('id', ids)` → build a map). See the picks methods in `backend/src/services/database.ts` for the canonical pattern.
+
+### Silent Catch Blocks Hide Real Errors
+Frontend loaders once used `catch { /* silently fail */ }`, which masked production 404s for days. Always `console.error('[Scout] <fn> failed:', err)` in catch blocks — the `[Scout]` prefix makes user-reported console dumps greppable.
 
 ### Backend Not Auto-Deploying
 **Issue:** Frontend deploys but backend doesn't when pushing to main.
@@ -714,9 +814,13 @@ NEXT_PUBLIC_API_URL=http://localhost:5001  # or production backend URL
 ## Database Schema (Supabase)
 
 ### Core Tables
-- **users** - User accounts with auth, preferences, subscription tier
-- **shows** - TV show metadata from TMDB
-- **user_shows** - User watchlist (many-to-many with progress tracking)
+- **users** - User accounts with auth, preferences, subscription tier, `referral_code`, `referred_by_user_id`
+- **shows** - TV show metadata from TMDB, incl. `next_air_date` / `next_episode_season` / `next_episode_number`
+- **user_shows** - User watchlist; key fields: `watch_status` (`watching` | `completed` | `want_to_watch` | `dropped`), `current_season`, `current_episode`, `notifications_enabled`
+
+### Social Tables
+- **watch_groups** / **watch_group_members** - Watch parties around a show; membership defines the picks social graph
+- **picks** - User show recommendations; UNIQUE `(user_id, show_id)`, optional `note`
 
 ### Notification Tables
 - **episode_cache** - Cached episode data for new episode detection
@@ -789,9 +893,19 @@ NEXT_PUBLIC_API_URL=http://localhost:5001  # or production backend URL
 ---
 
 ## Git Workflow
-- **main** - Production branch, auto-deploys to Vercel
-- **feat/*** - Feature branches, merge to main when ready
-- Always test locally before merging to main
+- **main** - Production branch, auto-deploys all three Vercel projects
+- **feat/steph** - The active staging branch. **User rule: ALL changes and new features land on `feat/steph` first, then merge to `main`.** Never commit directly to `main`.
+- After merging, fast-forward `feat/steph` back to `main` (`git checkout feat/steph && git merge origin/main --ff-only && git push`) so the two branches stay identical between features — the user checks this.
+- Vercel builds `feat/steph` as a preview; a preview build failure (type error etc.) is a real signal — fix it on `feat/steph` before merging.
+- The frontend build runs `tsc` strictly: `string | null` is not assignable to `string | undefined` params (coerce with `?? undefined`), and ES5 target means no `Set` spread (use `Array.from(set)`)
+
+## Working Style Notes (learned from sessions — follow these)
+- **Verify root cause before writing code.** The biggest failures came from fixing symptoms (query syntax, CSS) when the real cause was deployment state. Check what's actually deployed, read the console errors literally, and confirm which branch serves production.
+- **Frontend + backend must ship together.** A frontend calling a new endpoint is broken until the backend route is on `main`. Treat them as one unit when merging.
+- **Mirror server rules in the UI.** Eligibility/validation rules (e.g., picks require a completed season) are enforced in the backend route AND replicated in frontend conditions that show/hide the affected controls. When changing a rule, update both and grep for every render site (desktop + mobile variants often duplicate the same condition).
+- **Design system tokens**: Scout orange `--primary: 24 91% 55%`, cards `rounded-2xl bg-card border border-border`, section labels `text-xs font-semibold tracking-widest text-primary uppercase`, pill buttons `rounded-full`. Fox mascot for empty states. Match these instead of inventing new styles.
+- **Mobile and desktop are separate JSX blocks** in most components (`hidden md:flex` / `md:hidden`). A change to one usually needs the same change in the other — search the file for the sibling block.
+- **The user tests on real devices** (phone, iPad, large laptop) against deployed previews, not localhost. Breakpoint choices matter: `md:` = 768px is the mobile/desktop divide; verify layouts make sense at 768–1024 (iPad), not just at 1400px.
 
 ---
 
