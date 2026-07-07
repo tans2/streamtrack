@@ -1,14 +1,13 @@
 {
   "name": "scout-beta-landing",
   "version": "1.0.0",
-  "description": "Scout Beta Landing Page - Collect early access signups",
+  "description": "Scout Beta Landing Page - Invite-only marketing page",
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start -p 3001"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.38.4",
     "lucide-react": "^0.544.0",
     "next": "14.0.4",
     "react": "^18.2.0",
