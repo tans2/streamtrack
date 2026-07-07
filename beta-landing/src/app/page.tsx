@@ -1,49 +1,8 @@
-'use client';
+import { List, Search, Bell, Users, Ticket, ArrowRight } from 'lucide-react';
 
-import { useState, useEffect } from 'react';
-import { CheckCircle, Loader2, List, Search, Bell, Users } from 'lucide-react';
+const APP_URL = 'https://tvscout.vercel.app';
 
 export default function BetaLandingPage() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [error, setError] = useState('');
-  const [signupCount, setSignupCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    fetch('/api/signup-count')
-      .then(r => r.json())
-      .then(d => { if (d.count > 0) setSignupCount(d.count); })
-      .catch(() => {});
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch('/api/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Something went wrong');
-      }
-
-      setIsSubmitted(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign up. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const features = [
     {
       icon: <List className="w-6 h-6" />,
@@ -109,11 +68,11 @@ export default function BetaLandingPage() {
                 and watch together with friends — all in one place.
               </p>
               <p className="text-sm text-muted-foreground">
-                Spots are limited. Sign up for early access and we'll reach out when you're in.
+                Scout is currently invite-only.
               </p>
             </div>
 
-            {/* Two-column: features left, signup right */}
+            {/* Two-column: features left, invite card right */}
             <div className="grid md:grid-cols-2 gap-10 items-start max-w-4xl mx-auto mb-20">
 
               {/* Features */}
@@ -131,86 +90,29 @@ export default function BetaLandingPage() {
                 ))}
               </div>
 
-              {/* Signup card */}
+              {/* Invite-only card */}
               <div className="sticky top-8">
-                <div className="bg-white rounded-2xl shadow-xl border border-border p-8">
-                  {isSubmitted ? (
-                    <div className="text-center py-6">
-                      <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <CheckCircle className="w-8 h-8 text-primary" />
-                      </div>
-                      <h3 className="text-xl font-bold text-foreground mb-2">You're on the list!</h3>
-                      <p className="text-muted-foreground text-sm">
-                        We'll email you as soon as your early access is ready.
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="mb-6">
-                        <h2 className="text-xl font-bold text-foreground mb-1">Get Early Access</h2>
-                        <p className="text-sm text-muted-foreground">
-                          {signupCount !== null
-                            ? `Join ${signupCount} others on the waitlist`
-                            : 'No spam, ever.'}
-                        </p>
-                      </div>
-
-                      <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                          <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1.5">
-                            Name
-                          </label>
-                          <input
-                            type="text"
-                            id="name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            required
-                            placeholder="Your name"
-                            className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:border-primary transition-colors text-sm"
-                          />
-                        </div>
-
-                        <div>
-                          <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">
-                            Email
-                          </label>
-                          <input
-                            type="email"
-                            id="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            placeholder="you@example.com"
-                            className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:border-primary transition-colors text-sm"
-                          />
-                        </div>
-
-                        {error && (
-                          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                            {error}
-                          </div>
-                        )}
-
-                        <button
-                          type="submit"
-                          disabled={isSubmitting}
-                          className="w-full py-3 px-4 bg-primary text-white font-semibold rounded-full hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm"
-                        >
-                          {isSubmitting ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Signing up...
-                            </>
-                          ) : (
-                            'Join the Beta'
-                          )}
-                        </button>
-                      </form>
-                    </>
-                  )}
+                <div className="bg-white rounded-2xl shadow-xl border border-border p-8 text-center">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Ticket className="w-8 h-8 text-primary" />
+                  </div>
+                  <h2 className="text-xl font-bold text-foreground mb-2">Scout is invite-only</h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+                    Every Scout member has a referral code to share.
+                    Got one from a friend? You're in — create your account below.
+                  </p>
+                  <a
+                    href={`${APP_URL}/auth`}
+                    className="w-full py-3 px-4 bg-primary text-white font-semibold rounded-full hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 text-sm"
+                  >
+                    Create your account
+                    <ArrowRight className="w-4 h-4" />
+                  </a>
+                  <p className="text-xs text-muted-foreground mt-4">
+                    No code yet? Ask a friend who's already on Scout —
+                    or join a Watch Group they invite you to.
+                  </p>
                 </div>
-
               </div>
             </div>
 
@@ -242,7 +144,7 @@ export default function BetaLandingPage() {
               <span className="text-sm text-muted-foreground">· Track Your Shows</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              © 2025 Scout
+              © 2026 Scout
             </p>
           </div>
         </footer>

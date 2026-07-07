@@ -407,8 +407,8 @@ Right column:
 - **Watch Groups** (Users icon): "Track shows with friends and know exactly where everyone's at, even from miles apart."
 - Replaced `TrendingUp` + `Calendar` icons with `List` + `Search`
 
-### 14. Private Beta Landing Page (Completed)
-**Purpose**: Separate marketing page to collect beta signups, hosted as a third Vercel project.
+### 14. Private Beta Landing Page (Completed — waitlist CLOSED April 2026)
+**Purpose**: Separate marketing page, hosted as a third Vercel project. Originally collected waitlist signups; the public form was **removed in April 2026** (see section 20) — the page now markets Scout and directs visitors to invite-only signup at `https://tvscout.vercel.app/auth` via referral codes.
 
 **Location:** `beta-landing/` — separate Next.js app, deployed independently from `frontend/`
 
@@ -428,11 +428,11 @@ Right column:
 - Hero subtext: "Spots are limited. Sign up for early access and we'll reach out when you're in."
 
 **Database (`beta_signups` table):**
-- Migration SQL: `beta-landing/supabase-migration.sql`
+- Original migration SQL: `beta-landing/supabase-migration.sql`
 - Columns: `id, name, email, signed_up_at, notes, invited, invited_at`
-- RLS **disabled** (required for anon inserts to work — policy approach had 42501 errors)
-- Permissions applied: `GRANT INSERT, SELECT ON beta_signups TO anon;` + `GRANT USAGE ON SCHEMA public TO anon;`
-- View signups: Supabase Table Editor → `beta_signups`, or `SELECT name, email, signed_up_at FROM beta_signups ORDER BY signed_up_at DESC;`
+- **Security update (migration 009)**: RLS is now ENABLED with zero policies and anon/authenticated grants revoked — service-role only. The old state (RLS off + `GRANT SELECT TO anon`) let anyone with the public anon key read all waitlist names/emails via PostgREST.
+- Existing rows retained as the seed list for referral-code invite emails
+- View signups: Supabase Table Editor → `beta_signups` (service role), or SQL Editor
 
 **Vercel deployment (third project):**
 - Root directory: `beta-landing/`
@@ -499,6 +499,15 @@ Right column:
 - **PicksFeedPage**: see section 15
 - Desktop NavBar links: Search | Watchlist | Groups | Picks (all four exist — check before adding nav entries)
 
+### 20. Beta Waitlist Closed → Referral-Only Signup (Completed April 2026)
+**Trigger**: Supabase linter flagged `beta_signups` with RLS disabled; the `GRANT SELECT TO anon` also exposed all waitlist PII (names + emails) to anyone with the public anon key.
+
+**Changes:**
+- `beta-landing/src/app/page.tsx` rewritten as a static server component: signup form removed, replaced with an invite-only card ("Every Scout member has a referral code to share") + CTA to `https://tvscout.vercel.app/auth`. Hero/features/platforms marketing preserved.
+- `beta-landing/src/app/api/` (signup + signup-count routes) deleted — no anon-key DB access remains in beta-landing; its `NEXT_PUBLIC_SUPABASE_*` env vars are no longer needed.
+- Migration `009_beta_signups_rls.sql`: enables RLS (no policies = service-role only), revokes anon/authenticated grants, drops old permissive policies.
+- Signup avenue is now referral codes (section 16) + group invite links (section 17). Existing `beta_signups` rows kept as the invite-wave seed list for `send-beta-invite.ts`.
+
 ---
 
 ## Database Migrations
@@ -538,6 +547,9 @@ Creates `picks` table: `id, user_id (FK users), show_id (FK shows), note, create
 
 ### Referral Codes Migration (`008_referral_codes.sql`)
 Adds `users.referral_code TEXT UNIQUE` + `users.referred_by_user_id UUID REFERENCES users(id)`; backfills existing users with random 8-char uppercase codes; indexes both columns.
+
+### Beta Signups RLS Migration (`009_beta_signups_rls.sql`)
+Security fix: enables RLS on `beta_signups` with no policies (service-role only), revokes anon/authenticated grants, drops old permissive policies. Ships together with the beta-landing waitlist form removal — running it while the old form was live would have broken signups.
 
 **Reminder:** migrations are run manually in the Supabase SQL Editor — creating a migration file does nothing until the user runs it. When a feature depends on a new table/column, tell the user which migration(s) to run. New tables also hit the PostgREST schema-cache issue (see Known Issues).
 
