@@ -138,6 +138,9 @@ npx ts-node src/scripts/test-poll-show.ts
 
 # Clean up future episodes from cache
 npx ts-node src/scripts/cleanup-cache.ts
+
+# Activation & engagement snapshot (signups, funnel, groups, retention proxy)
+npx ts-node src/scripts/stats.ts
 ```
 
 ### 2. Password Reset Feature (Completed)
@@ -508,6 +511,22 @@ Right column:
 - Migration `009_beta_signups_rls.sql`: enables RLS (no policies = service-role only), revokes anon/authenticated grants, drops old permissive policies.
 - Signup avenue is now referral codes (section 16) + group invite links (section 17). Existing `beta_signups` rows kept as the invite-wave seed list for `send-beta-invite.ts`.
 
+### 21. Security Hardening + Phase 0 Instrumentation (Completed)
+**Trigger**: A full-codebase audit ahead of putting Scout in front of strangers. Two findings converted a *missing env var* into a full auth bypass, and the app had no way to measure whether anyone was using it.
+
+**Security fixes (all fail-closed now):**
+- **JWT secret** (`backend/src/services/auth.ts`): previously `process.env.JWT_SECRET || 'your-secret-key-change-in-production'`. If the var were ever unset, tokens were signed with a public string and anyone could forge a session for any user. Now throws at startup. **The backend will not boot without `JWT_SECRET`** — this is intentional. Resolved via an IIFE so the type is a definite `string` (jsonwebtoken's overloads reject `string | undefined`).
+- **CRON_SECRET** (`backend/src/utils/cron-auth.ts`, new): the old guard `if (cronSecret && header !== ...)` skipped entirely when the var was empty, silently making `/poll`, `/send-digests`, and three `/debug/*` endpoints public — including one returning other users' names and emails. New shared `verifyCronSecret()` fails closed (503) and uses `crypto.timingSafeEqual`. Applied to all 5 sites in `routes/notifications.ts`; the same logic is inlined in `api/cron/poll-episodes.ts` and `api/cron/send-digest.ts` (they load from `dist/` at runtime and can't import from `src/`). Those two also dropped their `NODE_ENV === 'production'` condition, which disabled auth entirely in dev.
+- **CORS** (`backend/src/index.ts`): `origin.includes('.vercel.app')` trusted every other Vercel customer's deployment *and* any host merely containing the substring (`https://evil-vercel.app.attacker.com`), with `credentials: true`. Replaced with an exact regex plus an own-project prefix allowlist via `VERCEL_PREVIEW_PREFIXES`.
+- **Auth rate limiting** (`backend/src/index.ts`): the only limiter was 100 req/15min across all of `/api/`. Added `credentialLimiter` (10/15min, `skipSuccessfulRequests` so legitimate users are never locked out) on login + reset-password, and `accountCreationLimiter` (10/hour, counts all outcomes) on register + forgot-password.
+
+**Phase 0 instrumentation** — the app previously recorded *zero* activity: login performed no write, there were no sessions or pageviews, and `user_shows.updated_at` is overwritten in place. DAU/WAU and retention were unanswerable even from raw SQL.
+- **`users.last_seen_at`** (migration 010) written on every `GET /api/auth/me`, which the frontend calls on app load — so it captures *passive* sessions (opening Scout just to look) that any write-based proxy misses. Awaited rather than fire-and-forget, because serverless functions can be frozen the instant a response is sent; a failure logs and never breaks the request.
+- **PostHog** (`frontend/src/components/analytics-provider.tsx`): pageviews on pathname change, `identify()` on login, `reset()` on logout, plus an exported `trackEvent()` helper for future funnel events. **Completely inert without `NEXT_PUBLIC_POSTHOG_KEY`.** Deliberately avoids `useSearchParams()` — in the App Router that requires a Suspense boundary and fails the production build without one.
+- **`backend/src/scripts/stats.ts`**: prints signups, the activation funnel (added a show / joined a group / made a pick), watch-group size distribution, `last_seen_at` engagement, referral share, and digest volume.
+
+**Note:** historical activity cannot be backfilled — `last_seen_at` is seeded from `created_at` and only becomes meaningful after the app has been live with tracking for a week or so.
+
 ---
 
 ## Database Migrations
@@ -547,6 +566,9 @@ Creates `picks` table: `id, user_id (FK users), show_id (FK shows), note, create
 
 ### Referral Codes Migration (`008_referral_codes.sql`)
 Adds `users.referral_code TEXT UNIQUE` + `users.referred_by_user_id UUID REFERENCES users(id)`; backfills existing users with random 8-char uppercase codes; indexes both columns.
+
+### Last Seen Migration (`010_last_seen_at.sql`)
+Adds `users.last_seen_at TIMESTAMP WITH TIME ZONE` + index, seeded from `created_at`. Written on every `GET /api/auth/me`. This is the only activity signal in the product — without it, DAU/WAU and retention are uncomputable.
 
 ### Beta Signups RLS Migration (`009_beta_signups_rls.sql`)
 Security fix: enables RLS on `beta_signups` with no policies (service-role only), revokes anon/authenticated grants, drops old permissive policies. Ships together with the beta-landing waitlist form removal — running it while the old form was live would have broken signups.
@@ -795,6 +817,9 @@ export const serviceName = new ServiceName();
 # Server
 PORT=5001
 NODE_ENV=development
+
+# REQUIRED — the backend now REFUSES TO BOOT without this (no insecure fallback).
+# Verify it is set in Vercel before deploying. openssl rand -hex 32
 JWT_SECRET=<long-random-string>
 
 # Supabase
@@ -814,11 +839,24 @@ EMAIL_FROM=Scout <onboarding@resend.dev>
 # URLs (FRONTEND_URL must be set in Vercel for digest email links)
 FRONTEND_URL=http://localhost:3000
 CORS_ORIGIN=http://localhost:3000
+
+# Vercel preview origins allowed by CORS. Only "<prefix>.vercel.app" and
+# "<prefix>-*.vercel.app" are accepted — other Vercel customers' deployments
+# can no longer call this API with credentials.
+VERCEL_PREVIEW_PREFIXES=tvscout,streamtrack,scout
 ```
+
+See `backend/.env.example` for the full annotated list.
+
+**CRON_SECRET is now mandatory** for the cron and debug endpoints — if unset they return 503 rather than running unauthenticated, which means episode polling and the daily digest stop. Local testing therefore requires it in `backend/.env`.
 
 ### Frontend
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:5001  # or production backend URL
+
+# Optional — analytics is completely inert without a key.
+NEXT_PUBLIC_POSTHOG_KEY=
+NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
 ```
 
 ---

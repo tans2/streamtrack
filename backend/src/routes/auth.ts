@@ -2,7 +2,7 @@ import express from 'express';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { AuthService } from '../services/auth';
-import { DatabaseService } from '../services/database';
+import { DatabaseService, supabase } from '../services/database';
 import { EmailService } from '../services/email';
 
 const router = express.Router();
@@ -101,6 +101,20 @@ router.post('/login', async (req, res) => {
 // Get current user profile
 router.get('/me', authenticateToken, async (req: any, res) => {
   try {
+    // Activity signal. The frontend calls /me on app load, so this records
+    // passive sessions (opening Scout just to look) that a write-based proxy
+    // would miss. Awaited rather than fire-and-forget because serverless
+    // functions can be frozen the moment the response is sent — but a failure
+    // here must never break the request.
+    const { error: lastSeenError } = await supabase
+      .from('users')
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq('id', req.user.id);
+
+    if (lastSeenError) {
+      console.error('[Scout] last_seen_at update failed:', lastSeenError);
+    }
+
     res.json({
       success: true,
       data: req.user

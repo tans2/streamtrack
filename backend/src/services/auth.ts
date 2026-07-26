@@ -4,7 +4,20 @@ import crypto from 'crypto';
 import { supabase } from './database';
 import { TMDBService } from './tmdb';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+// Fail closed: a missing secret must never silently fall back to a known
+// default, which would let anyone forge a token for any user. Resolved through
+// an IIFE so the exported type is a definite `string` rather than
+// `string | undefined` (jsonwebtoken's overloads reject the latter).
+const JWT_SECRET: string = (() => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error(
+      'JWT_SECRET is not set. Refusing to start with an insecure default — ' +
+      'set JWT_SECRET to a long random string in the environment.'
+    );
+  }
+  return secret;
+})();
 const JWT_EXPIRES_IN = '7d';
 
 export interface User {
