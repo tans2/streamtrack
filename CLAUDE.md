@@ -684,6 +684,7 @@ Configured in `.github/workflows/cron-send-digest.yml`:
 2. GitHub → repo → **Actions** → select each cron workflow → **Enable workflow**. A push alone resets the 60-day clock but does **not** re-enable an already-disabled workflow. (The Claude session's GitHub token gets 403 on the enable API — this step is manual.)
 3. On each workflow, **Run workflow** (`workflow_dispatch`) once to confirm it succeeds instead of waiting for the schedule.
 **Check state from a session:** `gh api repos/tans2/streamtrack/actions/workflows --jq '.workflows[] | "\(.name) \(.state)"'`
+**Prevention — `.github/workflows/keepalive.yml`** (weekly, Mondays 09:23 UTC, also manually runnable): re-enables any disabled workflow, and if the last commit on `main` is 45+ days old pushes an empty `chore: keepalive` commit to `main` (then fast-forwards `feat/steph` if it has no unmerged work). This is the **only** sanctioned direct-to-`main` commit, it's bot-authored, and it never fires while the repo is in active use. Each keepalive commit triggers a no-op Vercel redeploy of all three projects — expected and harmless. It cannot restore an already-paused Supabase project.
 
 ### New API Routes Return 404 in Production (READ THIS FIRST)
 **Symptom:** Frontend console shows `Route /api/<new-thing> not found` from `streamtrack-backend.vercel.app` even though the code is committed and pushed.
