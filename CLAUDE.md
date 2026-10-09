@@ -674,6 +674,17 @@ Configured in `.github/workflows/cron-send-digest.yml`:
 
 ## Known Issues & Solutions
 
+### Crons Silently Stop After the Repo Goes Quiet (happened Oct 2026)
+**Symptom:** No digest emails, no new-episode detection, and Supabase may be paused — with no error anywhere.
+**Root cause — a two-stage chain:**
+1. GitHub disables *scheduled* workflows after **60 days without repository activity**. Both `cron-poll-episodes.yml` and `cron-send-digest.yml` went to state `disabled_inactivity` (last run 2026-09-25).
+2. The poll cron was what kept the database busy. Supabase free-tier projects **pause after ~7 days of inactivity**, so once the crons stop, the DB follows.
+**Recovery (order matters):**
+1. Supabase dashboard → the project → **Restore** if it shows as paused. Wait until it's healthy.
+2. GitHub → repo → **Actions** → select each cron workflow → **Enable workflow**. A push alone resets the 60-day clock but does **not** re-enable an already-disabled workflow. (The Claude session's GitHub token gets 403 on the enable API — this step is manual.)
+3. On each workflow, **Run workflow** (`workflow_dispatch`) once to confirm it succeeds instead of waiting for the schedule.
+**Check state from a session:** `gh api repos/tans2/streamtrack/actions/workflows --jq '.workflows[] | "\(.name) \(.state)"'`
+
 ### New API Routes Return 404 in Production (READ THIS FIRST)
 **Symptom:** Frontend console shows `Route /api/<new-thing> not found` from `streamtrack-backend.vercel.app` even though the code is committed and pushed.
 **Root cause:** All three Vercel projects deploy production **from `main` only**. Code that exists only on a feature branch (e.g. `feat/steph`) is invisible to the production backend — the feature-branch frontend preview still calls the production backend. This burned an entire debugging session on the Picks launch: picks, referrals, and layout changes all "failed" until `feat/steph` was merged to `main`.
