@@ -1,0 +1,66 @@
+name: Keepalive
+
+# GitHub disables scheduled workflows in PUBLIC repos after 60 days without
+# repository activity. That silently stopped both crons in Sept 2026, and with
+# no cron traffic the Supabase free-tier project paused too.
+#
+# Two safeguards, run weekly:
+#  1. Re-enable any workflow GitHub has disabled (covers the case where one was
+#     switched off anyway).
+#  2. If the last commit is 45+ days old, push an empty commit so the repo counts
+#     as active. When you're actively developing this never commits anything.
+
+on:
+  schedule:
+    - cron: "23 9 * * 1" # Mondays 09:23 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write # push the keepalive commit
+  actions: write # re-enable disabled workflows
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Re-enable any disabled workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/actions/workflows" \
+            --jq '.workflows[] | select(.state != "active") | "\(.id) \(.name)"' |
+          while read -r id name; do
+            echo "Re-enabling: $name"
+            gh api -X PUT "repos/${{ github.repository }}/actions/workflows/$id/enable"
+          done
+
+      - name: Commit if the repo has been idle for 45+ days
+        run: |
+          days=$(( ($(date +%s) - $(git log -1 --format=%ct)) / 86400 ))
+          echo "Last commit on main was $days day(s) ago."
+          if [ "$days" -lt 45 ]; then
+            echo "Repo is active — nothing to do."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore: keepalive (repo idle ${days} days)"
+          git push origin HEAD:main
+
+          # Keep feat/steph identical to main, but only when it has no unmerged
+          # work of its own (i.e. a fast-forward is possible).
+          if git fetch origin feat/steph && git merge-base --is-ancestor origin/feat/steph HEAD; then
+            git push origin HEAD:feat/steph
+          else
+            echo "feat/steph has unmerged commits — leaving it alone."
+          fi
