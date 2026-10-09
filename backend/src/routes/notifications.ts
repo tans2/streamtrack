@@ -4,6 +4,7 @@ import { authenticateToken } from './auth';
 import { DatabaseService, supabase } from '../services/database';
 import { EmailService } from '../services/email';
 import { NotificationService } from '../services/notification';
+import { verifyCronSecret } from '../utils/cron-auth';
 
 const router = express.Router();
 
@@ -242,15 +243,7 @@ router.get('/history', authenticateToken, async (req: any, res) => {
 router.post('/poll', async (req, res) => {
   try {
     // Verify cron secret for manual triggers
-    const cronSecret = process.env.CRON_SECRET;
-    const authHeader = req.headers.authorization;
-
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized'
-      });
-    }
+    if (!verifyCronSecret(req, res)) return;
 
     const batchSize = Math.min(parseInt(req.query.batch as string) || 30, 50);
 
@@ -301,15 +294,7 @@ router.post('/check-show/:showId', authenticateToken, async (req: any, res) => {
 // Debug: Get pending notification events (admin only)
 router.get('/debug/pending-events', async (req, res) => {
   try {
-    const cronSecret = process.env.CRON_SECRET;
-    const authHeader = req.headers.authorization;
-
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized'
-      });
-    }
+    if (!verifyCronSecret(req, res)) return;
 
     const { data: events, error } = await supabase
       .from('pending_notification_events')
@@ -345,15 +330,7 @@ router.get('/debug/pending-events', async (req, res) => {
 // Debug: Poll a specific show by TMDB ID (admin only)
 router.post('/debug/poll-show', async (req, res) => {
   try {
-    const cronSecret = process.env.CRON_SECRET;
-    const authHeader = req.headers.authorization;
-
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized'
-      });
-    }
+    if (!verifyCronSecret(req, res)) return;
 
     const { tmdbId } = req.body;
     if (!tmdbId) {
@@ -423,15 +400,7 @@ router.post('/debug/poll-show', async (req, res) => {
 // Debug: Clean up future episodes from cache (admin only)
 router.post('/debug/cleanup-cache', async (req, res) => {
   try {
-    const cronSecret = process.env.CRON_SECRET;
-    const authHeader = req.headers.authorization;
-
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized'
-      });
-    }
+    if (!verifyCronSecret(req, res)) return;
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -466,15 +435,7 @@ router.post('/debug/cleanup-cache', async (req, res) => {
 // Manual trigger for sending daily digests (admin/cron only)
 router.post('/send-digests', async (req, res) => {
   try {
-    const cronSecret = process.env.CRON_SECRET;
-    const authHeader = req.headers.authorization;
-
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized'
-      });
-    }
+    if (!verifyCronSecret(req, res)) return;
 
     console.log('Manual digest trigger: sending daily digests...');
     const results = await NotificationService.sendDailyDigests();

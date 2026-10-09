@@ -7,6 +7,7 @@ import { BugReportButton } from '@/components/ui/bug-report-button';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ToastProvider } from '@/components/ui/toast-provider';
 import { BottomTabBar } from '@/components/ui/bottom-tab-bar';
+import { AnalyticsProvider } from '@/components/analytics-provider';
 
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['latin'],
@@ -34,6 +35,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
+            <AnalyticsProvider />
             {children}
             <BottomTabBar />
             <div className="fixed bottom-20 right-6 md:bottom-6 z-50 flex flex-col gap-2 items-center">

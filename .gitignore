@@ -12,6 +12,9 @@ build/
 coverage/
 .env
 .env.*
+# ...but example/template files carry no secrets and must be committed
+!.env.example
+!**/.env.example
 *.tgz
 .npmrc
 .cache/
